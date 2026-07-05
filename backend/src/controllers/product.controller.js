@@ -2,13 +2,15 @@ const supabase = require('../config/supabase');
 
 // Obtener todos los productos
 const getProducts = async (req, res) => {
-  const { storeId, q, category } = req.query;
+  const { storeId, q, category, province, municipality } = req.query;
 
   try {
     let query = supabase.from('products').select('*');
     if (storeId) query = query.eq('store_id', storeId);
     if (category) query = query.eq('category_id', category);
     if (q) query = query.ilike('name', `%${q}%`);
+    if (province) query = query.eq('province', province);
+    if (municipality) query = query.eq('municipality', municipality);
 
     const { data, error } = await query;
 
@@ -51,12 +53,12 @@ const getProductById = async (req, res) => {
 // Crear un nuevo producto (solo admins teóricamente)
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, category_id, image_url, store_id } = req.body;
+    const { name, description, price, stock, category_id, image_url, store_id, province, municipality } = req.body;
     
     const { data, error } = await supabase
       .from('products')
       .insert([
-        { name, description, price, stock, category_id, image_url, store_id }
+        { name, description, price, stock, category_id, image_url, store_id, province, municipality }
       ])
       .select();
 
