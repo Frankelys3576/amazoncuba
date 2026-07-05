@@ -5,10 +5,10 @@ import './SellerDashboard.css';
 const SellerDashboard = () => {
   // Datos simulados para el MVP
   const stats = [
-    { label: 'Ventas Totales', value: '$4,250.00', icon: <DollarSign size={24} />, color: '#10b981' },
-    { label: 'Pedidos Pendientes', value: '12', icon: <ShoppingCart size={24} />, color: '#f59e0b' },
-    { label: 'Productos Activos', value: '45', icon: <PackageOpen size={24} />, color: '#3b82f6' },
-    { label: 'Crecimiento', value: '+14%', icon: <TrendingUp size={24} />, color: '#8b5cf6' },
+    { label: 'Ventas Totales', value: '$4,250.00', icon: <DollarSign size={28} />, gradient: 'grad-green' },
+    { label: 'Pedidos Pendientes', value: '12', icon: <ShoppingCart size={28} />, gradient: 'grad-orange' },
+    { label: 'Productos Activos', value: '45', icon: <PackageOpen size={28} />, gradient: 'grad-blue' },
+    { label: 'Crecimiento', value: '+14%', icon: <TrendingUp size={28} />, gradient: 'grad-purple' },
   ];
 
   const recentOrders = [
@@ -20,12 +20,17 @@ const SellerDashboard = () => {
 
   return (
     <div className="seller-dashboard">
-      <h1 className="seller-page-title">Resumen de tu Negocio</h1>
+      <div className="dashboard-welcome-banner">
+        <div>
+          <h1 className="seller-page-title" style={{color: 'white', margin: 0}}>Resumen de tu Negocio</h1>
+          <p className="welcome-subtitle">Aquí tienes un vistazo rápido al rendimiento de tu tienda de hoy.</p>
+        </div>
+      </div>
       
       <div className="dashboard-stats-grid">
         {stats.map((stat, index) => (
-          <div key={index} className="stat-card">
-            <div className="stat-icon-wrapper" style={{ backgroundColor: `${stat.color}15`, color: stat.color }}>
+          <div key={index} className={`stat-card premium-card ${stat.gradient}`}>
+            <div className="stat-icon-wrapper-premium">
               {stat.icon}
             </div>
             <div className="stat-details">
@@ -37,7 +42,7 @@ const SellerDashboard = () => {
       </div>
 
       <div className="dashboard-content-grid">
-        <div className="dashboard-chart-card">
+        <div className="dashboard-chart-card premium-panel">
           <div className="card-header">
             <h3>Visión General de Ventas</h3>
           </div>
@@ -55,10 +60,10 @@ const SellerDashboard = () => {
           </div>
         </div>
 
-        <div className="dashboard-recent-card">
+        <div className="dashboard-recent-card premium-panel">
           <div className="card-header">
             <h3>Pedidos Recientes</h3>
-            <button className="btn-link">Ver todos</button>
+            <button className="btn-link premium-link">Ver todos</button>
           </div>
           <div className="recent-orders-list">
             {recentOrders.map((order) => (
