@@ -7,12 +7,15 @@ const SellerLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState('Mi Negocio');
+  const [storeId, setStoreId] = useState(null);
   
   useEffect(() => {
     // Check if seller is logged in
-    const storeId = localStorage.getItem('seller_store_id');
-    if (!storeId) {
+    const id = localStorage.getItem('seller_store_id');
+    if (!id) {
       navigate('/login'); // Redirect to login
+    } else {
+      setStoreId(id);
     }
     // Ideally we would fetch the store name from the API here
   }, [navigate]);
@@ -80,7 +83,9 @@ const SellerLayout = () => {
           </div>
           <div className="topbar-actions">
             <a 
-              href={import.meta.env.PROD ? 'https://frontend-topaz-ten-91.vercel.app' : 'http://localhost:5173'} 
+              href={import.meta.env.PROD 
+                ? `https://frontend-topaz-ten-91.vercel.app/negocio/${storeId}` 
+                : `http://localhost:5173/negocio/${storeId}`} 
               className="view-store-link" 
               target="_blank" 
               rel="noopener noreferrer"
