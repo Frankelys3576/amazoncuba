@@ -5,6 +5,7 @@ import './SellerOrders.css';
 
 const SellerOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   
   // Datos simulados para pedidos
   const [orders, setOrders] = useState([
@@ -15,10 +16,17 @@ const SellerOrders = () => {
     { id: 'ORD-005', customer: 'Miguel Díaz', date: '2026-07-03 11:10 AM', total: 210.00, items: 3, status: 'Entregado' },
   ]);
 
-  const filteredOrders = orders.filter(o => 
-    o.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    o.customer.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOrders = orders.filter(o => {
+    const matchesSearch = o.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          o.customer.toLowerCase().includes(searchTerm.toLowerCase());
+                          
+    let matchesStatus = true;
+    if (statusFilter === 'pending') matchesStatus = o.status === 'Pendiente';
+    if (statusFilter === 'shipped') matchesStatus = o.status === 'Enviado';
+    if (statusFilter === 'delivered') matchesStatus = o.status === 'Entregado';
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const markAsShipped = (id) => {
     setOrders(orders.map(o => o.id === id ? { ...o, status: 'Enviado' } : o));
@@ -42,7 +50,11 @@ const SellerOrders = () => {
             />
           </div>
           <div className="toolbar-actions">
-            <select className="filter-select">
+            <select 
+              className="filter-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="shipped">Enviados</option>
