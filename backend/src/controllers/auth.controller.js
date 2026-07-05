@@ -4,14 +4,14 @@ const register = async (req, res) => {
   try {
     const { email, password, full_name, store_name } = req.body;
 
-    // Registramos al usuario en Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
+    // Usamos el API de Admin para crear al usuario saltándonos los límites de tasa 
+    // y autoconfirmando el email (útil para números de teléfono falsos)
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          full_name,
-        }
+      email_confirm: true,
+      user_metadata: {
+        full_name,
       }
     });
 
