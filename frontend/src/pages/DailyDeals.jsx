@@ -5,7 +5,9 @@ import './DailyDeals.css';
 
 const DailyDeals = () => {
   const [deals, setDeals] = useState([]);
+  const [allDeals, setAllDeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   useEffect(() => {
     const fetchDeals = async () => {
@@ -18,6 +20,7 @@ const DailyDeals = () => {
         // to act as our "daily deals" so they don't change on every refresh
         const selectedDeals = allProducts.filter(p => p.id % 4 === 0).slice(0, 12);
         
+        setAllDeals(selectedDeals);
         setDeals(selectedDeals);
       } catch (error) {
         console.error("Error fetching deals:", error);
@@ -29,6 +32,22 @@ const DailyDeals = () => {
     fetchDeals();
   }, []);
 
+  const handleFilter = (filter) => {
+    setActiveFilter(filter);
+    if (filter === 'all') {
+      setDeals(allDeals);
+    } else if (filter === 'electronica') {
+      setDeals(allDeals.filter(p => p.category_id === 1)); // 1 is Electrónica
+    } else if (filter === 'hogar') {
+      setDeals(allDeals.filter(p => p.category_id === 4)); // 4 is Hogar
+    } else if (filter === 'menos50') {
+      // Usar precio base (p.price) descontado o solo el p.price base
+      // DealProductCard le aplica descuento entre 15 y 40% a p.price
+      // Vamos a filtrar sobre el precio original para hacerlo simple
+      setDeals(allDeals.filter(p => p.price < 50));
+    }
+  };
+
   return (
     <div className="daily-deals-container">
       <div className="deals-header">
@@ -37,10 +56,30 @@ const DailyDeals = () => {
       </div>
       
       <div className="deals-filters">
-        <button className="deal-filter-btn active">Todas las Ofertas</button>
-        <button className="deal-filter-btn">Electrónica</button>
-        <button className="deal-filter-btn">Hogar</button>
-        <button className="deal-filter-btn">Menos de $50</button>
+        <button 
+          className={`deal-filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => handleFilter('all')}
+        >
+          Todas las Ofertas
+        </button>
+        <button 
+          className={`deal-filter-btn ${activeFilter === 'electronica' ? 'active' : ''}`}
+          onClick={() => handleFilter('electronica')}
+        >
+          Electrónica
+        </button>
+        <button 
+          className={`deal-filter-btn ${activeFilter === 'hogar' ? 'active' : ''}`}
+          onClick={() => handleFilter('hogar')}
+        >
+          Hogar
+        </button>
+        <button 
+          className={`deal-filter-btn ${activeFilter === 'menos50' ? 'active' : ''}`}
+          onClick={() => handleFilter('menos50')}
+        >
+          Menos de $50
+        </button>
       </div>
       
       {loading ? (
