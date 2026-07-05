@@ -99,7 +99,7 @@ const SellerOrders = () => {
             </thead>
             <tbody>
               {filteredOrders.map(order => (
-                <tr key={order.id}>
+                <tr key={order.id} onClick={() => setSelectedOrder(order)} style={{cursor: 'pointer'}}>
                   <td data-label="ID Pedido"><strong>{order.id}</strong></td>
                   <td data-label="Cliente">{order.customer}</td>
                   <td data-label="Fecha">{order.date}</td>
@@ -123,7 +123,10 @@ const SellerOrders = () => {
                         <button 
                           className="btn-icon check" 
                           title="Marcar como Enviado"
-                          onClick={() => markAsShipped(order.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsShipped(order.id);
+                          }}
                         >
                           <CheckCircle size={16} />
                         </button>
