@@ -6,6 +6,8 @@ export const getProducts = async (params = {}) => {
     if (params.storeId) query.append('storeId', params.storeId);
     if (params.q) query.append('q', params.q);
     if (params.category) query.append('category', params.category);
+    if (params.province) query.append('province', params.province);
+    if (params.municipality) query.append('municipality', params.municipality);
 
     const queryString = query.toString();
     const url = queryString ? `${API_URL}/products?${queryString}` : `${API_URL}/products`;

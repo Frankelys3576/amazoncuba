@@ -3,20 +3,27 @@ import Hero from '../components/Hero';
 import CategoryCard from '../components/CategoryCard';
 import ProductCard from '../components/ProductCard';
 import { getProducts } from '../services/api';
+import { useLocation } from '../context/LocationContext';
 import './Home.css';
 
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const { location } = useLocation();
+
   useEffect(() => {
     const fetchProducts = async () => {
-      const data = await getProducts();
+      setLoading(true);
+      const data = await getProducts({
+        province: location.province,
+        municipality: location.municipality
+      });
       setProducts(data);
       setLoading(false);
     };
     fetchProducts();
-  }, []);
+  }, [location.province, location.municipality]);
   return (
     <div className="home-page">
       <Hero />
