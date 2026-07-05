@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
 import { getProducts, createProduct } from './services/api';
+import { cubaLocations } from './utils/cubaLocations';
 import './SellerProducts.css';
 
 const SellerProducts = () => {
@@ -16,7 +17,9 @@ const SellerProducts = () => {
     stock: '',
     category_id: 1, // Default category
     image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', // Default image
-    description: ''
+    description: '',
+    province: 'La Habana',
+    municipality: 'Plaza de la Revolución'
   });
   const [addingProduct, setAddingProduct] = useState(false);
   
@@ -59,13 +62,16 @@ const SellerProducts = () => {
         store_id: storeId,
         price: parseFloat(newProduct.price),
         stock: parseInt(newProduct.stock, 10),
-        category_id: parseInt(newProduct.category_id, 10)
+        category_id: parseInt(newProduct.category_id, 10),
+        province: newProduct.province,
+        municipality: newProduct.municipality
       });
       setProducts([addedProduct, ...products]);
       setShowAddModal(false);
       setNewProduct({
         name: '', price: '', stock: '', category_id: 1, 
-        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', description: ''
+        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', description: '',
+        province: 'La Habana', municipality: 'Plaza de la Revolución'
       });
     } catch (error) {
       alert('Error al agregar el producto');
@@ -205,6 +211,39 @@ const SellerProducts = () => {
                   value={newProduct.image_url}
                   onChange={e => setNewProduct({...newProduct, image_url: e.target.value})}
                 />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Provincia</label>
+                  <select 
+                    value={newProduct.province}
+                    onChange={e => {
+                      const newProv = e.target.value;
+                      setNewProduct({
+                        ...newProduct, 
+                        province: newProv, 
+                        municipality: cubaLocations[newProv][0] 
+                      });
+                    }}
+                    required
+                  >
+                    {Object.keys(cubaLocations).map(prov => (
+                      <option key={prov} value={prov}>{prov}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Municipio</label>
+                  <select 
+                    value={newProduct.municipality}
+                    onChange={e => setNewProduct({...newProduct, municipality: e.target.value})}
+                    required
+                  >
+                    {cubaLocations[newProduct.province].map(mun => (
+                      <option key={mun} value={mun}>{mun}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="form-group">
                 <label>Descripción</label>
