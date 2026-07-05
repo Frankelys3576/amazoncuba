@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginSeller, registerSeller } from './services/api';
 import './SellerAuth.css';
 
 const SellerAuth = () => {
@@ -12,19 +13,43 @@ const SellerAuth = () => {
     storeName: ''
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      // Simular login con el negocio ID 1 (El Rincón del Chef)
-      localStorage.setItem('seller_store_id', '1');
-      navigate('/dashboard');
-    } else {
-      alert('Solicitud enviada. Tu cuenta de vendedor está pendiente de aprobación por un administrador.');
-      setIsLogin(true); // Regresar al login
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        // Log in using backend
+        const response = await loginSeller(formData.email, formData.password);
+        
+        // Simular negocio 1 para MVP
+        localStorage.setItem('seller_store_id', '1');
+        localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
+        navigate('/dashboard');
+      } else {
+        // Register using backend
+        await registerSeller({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.fullName
+        });
+        
+        alert('Cuenta creada exitosamente. Por favor, inicia sesión.');
+        setIsLogin(true); // Cambiar a pestaña de login
+      }
+    } catch (err) {
+      setError(err.message || 'Ocurrió un error. Verifica tus datos.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,6 +64,8 @@ const SellerAuth = () => {
         <div className="auth-card">
           <h2>{isLogin ? 'Iniciar sesión' : 'Solicitar cuenta'}</h2>
           
+          {error && <div className="auth-error" style={{color: 'red', marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '5px', fontSize: '14px'}}>{error}</div>}
+
           <form onSubmit={handleSubmit} className="auth-form">
             {!isLogin && (
               <>
@@ -94,8 +121,8 @@ const SellerAuth = () => {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary btn-block auth-submit-btn">
-              {isLogin ? 'Continuar' : 'Enviar solicitud de vendedor'}
+            <button type="submit" className="btn btn-primary btn-block seller-auth-btn" disabled={loading}>
+              {loading ? 'Cargando...' : (isLogin ? 'Continuar' : 'Enviar solicitud de vendedor')}
             </button>
           </form>
 
