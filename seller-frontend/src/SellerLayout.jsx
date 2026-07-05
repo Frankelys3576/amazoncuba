@@ -79,9 +79,14 @@ const SellerLayout = () => {
             {/* Opcional: Buscador interno del dashboard */}
           </div>
           <div className="topbar-actions">
-            <Link to="/" className="view-store-link" target="_blank">
+            <a 
+              href={import.meta.env.PROD ? 'https://frontend-topaz-ten-91.vercel.app' : 'http://localhost:5173'} 
+              className="view-store-link" 
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
               Ver tienda pública
-            </Link>
+            </a>
           </div>
         </header>
         
