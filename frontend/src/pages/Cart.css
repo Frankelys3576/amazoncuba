@@ -165,3 +165,36 @@
   border-radius: 20px;
   padding: 12px;
 }
+
+@media (max-width: 768px) {
+  .cart-container {
+    padding: 15px 10px;
+  }
+  .cart-items-section {
+    padding: 15px 10px;
+  }
+  .cart-item {
+    gap: 10px;
+    padding: 15px 0;
+  }
+  .cart-item-image {
+    flex: 0 0 100px;
+    height: 100px;
+  }
+  .cart-item-title {
+    font-size: 15px;
+  }
+  .cart-item-price {
+    font-size: 16px;
+  }
+  .cart-item-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cart-header h2 {
+    font-size: 22px;
+  }
+  .price-label {
+    display: none;
+  }
+}
