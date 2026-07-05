@@ -28,7 +28,7 @@ const Home = () => {
   return (
     <div className="home-page">
       <Hero />
-      
+      <div className="home-content">
         {/* Carousel: Lo más vendido hoy */}
         {!loading && products.length > 0 && (
           <div className="home-carousel-section">
