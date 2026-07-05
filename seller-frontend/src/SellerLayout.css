@@ -26,19 +26,19 @@
 }
 
 .brand-icon {
-  color: #0f1111;
+  color: var(--brand-accent);
 }
 
 .seller-sidebar-header h2 {
   font-size: 18px;
   font-weight: 800;
   margin: 0;
-  color: #0f1111;
+  color: var(--brand-primary);
   letter-spacing: -0.5px;
 }
 
 .seller-sidebar-header h2 span {
-  color: #007185;
+  color: var(--brand-accent);
   font-weight: 500;
 }
 
@@ -53,8 +53,8 @@
 .store-avatar {
   width: 40px;
   height: 40px;
-  background-color: #eef2ff;
-  color: #007185;
+  background-color: var(--brand-primary);
+  color: white;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -109,12 +109,13 @@
 
 .seller-nav-link:hover {
   background-color: #f3f4f6;
-  color: #111827;
+  color: var(--brand-primary);
 }
 
 .seller-nav-link.active {
-  background-color: #eef2ff;
-  color: #007185;
+  background-color: rgba(0, 42, 143, 0.1);
+  color: var(--brand-primary);
+  border-right: 4px solid var(--brand-accent);
 }
 
 .seller-sidebar-footer {
@@ -152,8 +153,8 @@
 
 .seller-topbar {
   height: 64px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background-color: var(--brand-primary);
+  border-bottom: 1px solid var(--brand-secondary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -163,13 +164,17 @@
 
 .view-store-link {
   font-size: 14px;
-  color: #007185;
+  color: white;
   text-decoration: none;
   font-weight: 500;
+  background-color: rgba(255,255,255,0.2);
+  padding: 8px 16px;
+  border-radius: 4px;
 }
 
 .view-store-link:hover {
-  text-decoration: underline;
+  background-color: rgba(255,255,255,0.3);
+  text-decoration: none;
 }
 
 .seller-page-container {

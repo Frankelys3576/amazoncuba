@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #007185;
+  background-color: var(--brand-accent);
   color: white;
   border: none;
   padding: 10px 16px;
@@ -20,7 +20,7 @@
 }
 
 .btn-add-product:hover {
-  background-color: #005a6a;
+  background-color: var(--brand-accent-hover);
 }
 
 .seller-products-card {
@@ -158,8 +158,8 @@
 }
 
 .status-badge.active {
-  color: #007185;
-  background-color: #e6f7fa;
+  color: var(--brand-primary);
+  background-color: rgba(0, 42, 143, 0.1);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;

@@ -67,10 +67,39 @@
   box-shadow: 0 0 3px rgba(37, 99, 235, 0.5);
 }
 
-.auth-submit-btn {
-  margin-top: 15px;
-  margin-bottom: 15px;
-  border-radius: 3px;
+.seller-auth-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--brand-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.seller-auth-btn:hover {
+  background-color: var(--brand-accent-hover);
+}
+
+.seller-auth-toggle {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.seller-auth-toggle span {
+  color: var(--brand-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seller-auth-toggle span:hover {
+  text-decoration: underline;
 }
 
 .auth-terms {
