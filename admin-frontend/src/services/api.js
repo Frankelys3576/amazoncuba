@@ -119,3 +119,25 @@ export const updateStoreStatus = async (id, status) => {
     throw error;
   }
 };
+
+export const getOrders = async () => {
+  try {
+    const response = await fetch(`${API_URL}/orders`);
+    if (!response.ok) throw new Error('Error al obtener órdenes');
+    return await response.json();
+  } catch (error) {
+    console.error('API getOrders error:', error);
+    throw error;
+  }
+};
+
+export const getProducts = async () => {
+  try {
+    const response = await fetch(`${API_URL}/products`);
+    if (!response.ok) throw new Error('Error al obtener productos');
+    return await response.json();
+  } catch (error) {
+    console.error('API getProducts error:', error);
+    throw error;
+  }
+};
