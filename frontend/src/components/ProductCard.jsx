@@ -1,13 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { Star, ShoppingCart } from 'lucide-react';
+import './ProductCard.css';
+
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
 
   const handleAddToCart = (e) => {
-    e.preventDefault(); // Prevents navigating to product details when clicking the button
+    e.preventDefault();
+    e.stopPropagation();
     addToCart(product);
   };
+
+  // Generate a fake rating between 3.5 and 5.0
+  const rating = (3.5 + (product.id % 15) * 0.1).toFixed(1);
+  const reviewCount = 50 + (product.id * 7) % 500;
 
   return (
     <div className="product-card">
@@ -17,12 +25,30 @@ const ProductCard = ({ product }) => {
         </div>
         <div className="product-card-info">
           <h3 className="product-card-title">{product.name}</h3>
-          <p className="product-card-price">${product.price.toFixed(2)}</p>
+          <div className="product-card-rating">
+            <div className="stars">
+              {[1,2,3,4,5].map(i => (
+                <Star 
+                  key={i} 
+                  size={14} 
+                  className={i <= Math.round(parseFloat(rating)) ? 'star-filled' : 'star-empty'} 
+                />
+              ))}
+            </div>
+            <span className="review-count">{reviewCount.toLocaleString()}</span>
+          </div>
+          <p className="product-card-price">
+            <span className="price-symbol">$</span>
+            <span className="price-whole">{Math.floor(product.price)}</span>
+            <span className="price-decimal">{(product.price % 1).toFixed(2).substring(1)}</span>
+          </p>
+          <p className="product-card-delivery">Envío GRATIS a Cuba</p>
+          <button onClick={handleAddToCart} className="add-to-cart-btn-mobile">
+            <ShoppingCart size={16} />
+            Agregar
+          </button>
         </div>
       </Link>
-      <button onClick={handleAddToCart} className="btn btn-primary add-to-cart-btn">
-        Agregar al Carrito
-      </button>
     </div>
   );
 };
