@@ -65,9 +65,9 @@ const Navbar = () => {
         </div>
 
         {/* Botón Vender */}
-        <Link to="/vender" className="nav-sell-btn">
+        <a href="https://seller-cuba-amazon.vercel.app" className="nav-sell-btn" target="_blank" rel="noopener noreferrer">
           Vender un Producto
-        </Link>
+        </a>
 
         {/* Cart */}
         <Link to="/cart" className="nav-cart nav-item">

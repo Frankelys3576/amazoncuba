@@ -12,21 +12,21 @@ const SellerLayout = () => {
     // Check if seller is logged in
     const storeId = localStorage.getItem('seller_store_id');
     if (!storeId) {
-      navigate('/vender'); // Redirect to login
+      navigate('/login'); // Redirect to login
     }
     // Ideally we would fetch the store name from the API here
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('seller_store_id');
-    navigate('/vender');
+    navigate('/login');
   };
 
   const navItems = [
-    { path: '/seller/dashboard', icon: <LayoutDashboard size={20} />, label: 'Resumen' },
-    { path: '/seller/products', icon: <Package size={20} />, label: 'Mis Productos' },
-    { path: '/seller/orders', icon: <ShoppingBag size={20} />, label: 'Pedidos' },
-    { path: '/seller/settings', icon: <Settings size={20} />, label: 'Configuración' },
+    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Resumen' },
+    { path: '/products', icon: <Package size={20} />, label: 'Mis Productos' },
+    { path: '/orders', icon: <ShoppingBag size={20} />, label: 'Pedidos' },
+    { path: '/settings', icon: <Settings size={20} />, label: 'Configuración' },
   ];
 
   return (

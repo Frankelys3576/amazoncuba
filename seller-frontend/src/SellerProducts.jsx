@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
-import { getProducts } from '../../services/api';
+import { getProducts } from './services/api';
 import './SellerProducts.css';
 
 const SellerProducts = () => {

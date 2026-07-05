@@ -21,7 +21,7 @@ const SellerAuth = () => {
     if (isLogin) {
       // Simular login con el negocio ID 1 (El Rincón del Chef)
       localStorage.setItem('seller_store_id', '1');
-      navigate('/seller/dashboard');
+      navigate('/dashboard');
     } else {
       alert('Solicitud enviada. Tu cuenta de vendedor está pendiente de aprobación por un administrador.');
       setIsLogin(true); // Regresar al login
