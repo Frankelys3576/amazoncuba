@@ -68,7 +68,7 @@
 .home-products-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 0;
   margin-bottom: 40px;
 }
 
