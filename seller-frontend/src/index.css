@@ -100,16 +100,18 @@ a:hover {
     padding-left: 40% !important;
     display: flex;
     justify-content: flex-end;
-    align-items: center;
+    align-items: flex-start;
+    min-height: 48px;
   }
   
   .seller-products-table td::before {
     content: attr(data-label);
     position: absolute;
     left: 12px;
+    top: 12px;
     width: 35%;
     padding-right: 10px;
-    white-space: nowrap;
+    white-space: normal;
     text-align: left;
     font-weight: 600;
     color: #6b7280;
@@ -127,9 +129,12 @@ a:hover {
   .product-cell {
     justify-content: flex-end;
     text-align: right;
+    width: 100%;
   }
 
   .product-name {
     text-align: right;
+    white-space: normal;
+    word-break: break-word;
   }
 }
