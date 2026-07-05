@@ -232,6 +232,14 @@
   .navbar-sub a, .sub-menu-btn {
     padding: 4px 6px;
   }
+  .nav-cart {
+    margin-left: auto;
+    padding-right: 0;
+  }
+  .cart-count {
+    top: -18px;
+    left: 14px;
+  }
 }
 
 /* Location Modal Styles */
