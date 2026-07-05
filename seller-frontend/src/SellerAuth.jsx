@@ -44,7 +44,7 @@ const SellerAuth = () => {
           store_name: formData.storeName
         });
         
-        alert('Cuenta creada exitosamente. Por favor, inicia sesión.');
+        alert('Solicitud enviada correctamente. Tu cuenta está pendiente de aprobación por el Administrador.');
         setIsLogin(true); // Cambiar a pestaña de login
       }
     } catch (err) {
