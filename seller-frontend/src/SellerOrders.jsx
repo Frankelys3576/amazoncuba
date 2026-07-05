@@ -1,19 +1,40 @@
 import React, { useState } from 'react';
-import { Search, Eye, CheckCircle } from 'lucide-react';
+import { Search, Eye, CheckCircle, X, Package, MapPin, Phone, Mail } from 'lucide-react';
 // import './SellerProducts.css'; // Usamos estilos similares a products y dashboard
 import './SellerOrders.css';
 
 const SellerOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState(null);
   
-  // Datos simulados para pedidos
+  // Datos simulados para pedidos con más detalles
   const [orders, setOrders] = useState([
-    { id: 'ORD-001', customer: 'Carlos Martínez', date: '2026-07-05 10:42 AM', total: 45.00, items: 2, status: 'Pendiente' },
-    { id: 'ORD-002', customer: 'Ana González', date: '2026-07-05 09:15 AM', total: 120.50, items: 1, status: 'Enviado' },
-    { id: 'ORD-003', customer: 'Roberto Fernández', date: '2026-07-04 16:30 PM', total: 32.00, items: 4, status: 'Entregado' },
-    { id: 'ORD-004', customer: 'Elena Sánchez', date: '2026-07-04 14:20 PM', total: 89.99, items: 1, status: 'Pendiente' },
-    { id: 'ORD-005', customer: 'Miguel Díaz', date: '2026-07-03 11:10 AM', total: 210.00, items: 3, status: 'Entregado' },
+    { 
+      id: 'ORD-001', customer: 'Carlos Martínez', date: '2026-07-05 10:42 AM', total: 45.00, items: 2, status: 'Pendiente',
+      email: 'carlos@example.com', phone: '+53 51234567', address: 'Calle 23 #123, Vedado, La Habana',
+      products: [{ name: 'Café Cubita 250g', qty: 2, price: 22.50 }]
+    },
+    { 
+      id: 'ORD-002', customer: 'Ana González', date: '2026-07-05 09:15 AM', total: 120.50, items: 1, status: 'Enviado',
+      email: 'ana@example.com', phone: '+53 59876543', address: 'Ave. 41 #4102, Playa, La Habana',
+      products: [{ name: 'Ventilador Recargable', qty: 1, price: 120.50 }]
+    },
+    { 
+      id: 'ORD-003', customer: 'Roberto Fernández', date: '2026-07-04 16:30 PM', total: 32.00, items: 4, status: 'Entregado',
+      email: 'roberto@example.com', phone: '+53 54443322', address: 'Calle San Rafael #45, Centro Habana',
+      products: [{ name: 'Jabón de baño', qty: 4, price: 8.00 }]
+    },
+    { 
+      id: 'ORD-004', customer: 'Elena Sánchez', date: '2026-07-04 14:20 PM', total: 89.99, items: 1, status: 'Pendiente',
+      email: 'elena@example.com', phone: '+53 52221100', address: 'Calle 100 #200, Marianao',
+      products: [{ name: 'Licuadora Oster', qty: 1, price: 89.99 }]
+    },
+    { 
+      id: 'ORD-005', customer: 'Miguel Díaz', date: '2026-07-03 11:10 AM', total: 210.00, items: 3, status: 'Entregado',
+      email: 'miguel@example.com', phone: '+53 55556677', address: 'Calle Línea #98, Vedado, La Habana',
+      products: [{ name: 'Arrocera 1.5L', qty: 1, price: 150.00 }, { name: 'Frijoles Negros 1kg', qty: 2, price: 30.00 }]
+    },
   ]);
 
   const filteredOrders = orders.filter(o => {
@@ -91,7 +112,13 @@ const SellerOrders = () => {
                   </td>
                   <td>
                     <div className="action-buttons">
-                      <button className="btn-icon" title="Ver detalles"><Eye size={16} /></button>
+                      <button 
+                        className="btn-icon" 
+                        title="Ver detalles"
+                        onClick={() => setSelectedOrder(order)}
+                      >
+                        <Eye size={16} />
+                      </button>
                       {order.status === 'Pendiente' && (
                         <button 
                           className="btn-icon check" 
@@ -116,6 +143,84 @@ const SellerOrders = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de Detalles del Pedido */}
+      {selectedOrder && (
+        <div className="modal-overlay">
+          <div className="modal-content order-details-modal">
+            <div className="modal-header">
+              <h2>Detalles del Pedido: {selectedOrder.id}</h2>
+              <button className="close-btn" onClick={() => setSelectedOrder(null)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="order-details-body">
+              <div className="order-status-banner">
+                <span className="status-label">Estado actual:</span>
+                <span className={`status-badge badge-${selectedOrder.status.toLowerCase()}`}>
+                  {selectedOrder.status}
+                </span>
+                {selectedOrder.status === 'Pendiente' && (
+                  <button 
+                    className="btn-primary" 
+                    style={{marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px'}}
+                    onClick={() => {
+                      markAsShipped(selectedOrder.id);
+                      setSelectedOrder({...selectedOrder, status: 'Enviado'});
+                    }}
+                  >
+                    <CheckCircle size={16} /> Marcar como Enviado
+                  </button>
+                )}
+              </div>
+
+              <div className="order-info-grid">
+                <div className="info-card">
+                  <h3><MapPin size={18} /> Información del Cliente</h3>
+                  <p><strong>{selectedOrder.customer}</strong></p>
+                  <p><Phone size={14} style={{marginRight: '8px'}} /> {selectedOrder.phone}</p>
+                  <p><Mail size={14} style={{marginRight: '8px'}} /> {selectedOrder.email}</p>
+                  <p style={{marginTop: '8px', color: '#4b5563'}}>{selectedOrder.address}</p>
+                </div>
+                
+                <div className="info-card">
+                  <h3><Package size={18} /> Resumen del Pedido</h3>
+                  <p><strong>Fecha:</strong> {selectedOrder.date}</p>
+                  <p><strong>Total de artículos:</strong> {selectedOrder.items}</p>
+                  <h2 style={{color: 'var(--brand-primary)', marginTop: '16px'}}>
+                    Total: ${selectedOrder.total.toFixed(2)}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="order-products-list">
+                <h3>Productos Comprados</h3>
+                <table className="seller-products-table" style={{marginTop: '12px'}}>
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Cantidad</th>
+                      <th>Precio Unit.</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOrder.products.map((prod, idx) => (
+                      <tr key={idx}>
+                        <td>{prod.name}</td>
+                        <td>{prod.qty}</td>
+                        <td>${prod.price.toFixed(2)}</td>
+                        <td><strong>${(prod.qty * prod.price).toFixed(2)}</strong></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
