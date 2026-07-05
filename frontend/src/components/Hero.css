@@ -28,3 +28,9 @@
     height: 400px;
   }
 }
+
+@media (max-width: 768px) {
+  .hero-container {
+    display: none;
+  }
+}

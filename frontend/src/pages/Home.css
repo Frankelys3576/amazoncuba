@@ -179,3 +179,10 @@
   }
 }
 
+@media (max-width: 768px) {
+  .home-content {
+    margin-top: 10px;
+    padding: 0 10px;
+  }
+}
+
