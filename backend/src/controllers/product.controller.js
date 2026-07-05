@@ -53,12 +53,12 @@ const getProductById = async (req, res) => {
 // Crear un nuevo producto (solo admins teóricamente)
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, category_id, image_url, store_id, province, municipality } = req.body;
+    const { name, description, price, stock, category_id, image_url, store_id, province, municipality, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
     
     const { data, error } = await supabase
       .from('products')
       .insert([
-        { name, description, price, stock, category_id, image_url, store_id, province, municipality }
+        { name, description, price, stock, category_id, image_url, store_id, province, municipality, image_url_2, image_url_3, image_url_4, image_url_5 }
       ])
       .select();
 

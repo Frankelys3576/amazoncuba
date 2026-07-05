@@ -19,6 +19,17 @@ export const getProducts = async (params = {}) => {
   }
 };
 
+export const getCategories = async () => {
+  try {
+    const response = await fetch(`${API_URL}/categories`);
+    if (!response.ok) throw new Error('Error al obtener categorías');
+    return await response.json();
+  } catch (error) {
+    console.error('API getCategories error:', error);
+    return [];
+  }
+};
+
 export const createProduct = async (productData) => {
   try {
     const response = await fetch(`${API_URL}/products`, {

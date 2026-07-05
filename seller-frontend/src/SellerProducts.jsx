@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
-import { getProducts, createProduct } from './services/api';
+import { getProducts, createProduct, getCategories } from './services/api';
 import { cubaLocations } from './utils/cubaLocations';
 import './SellerProducts.css';
 
 const SellerProducts = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -15,8 +16,12 @@ const SellerProducts = () => {
     name: '',
     price: '',
     stock: '',
-    category_id: 1, // Default category
+    category_id: '', // Empty initially to force selection
     image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', // Default image
+    image_url_2: '',
+    image_url_3: '',
+    image_url_4: '',
+    image_url_5: '',
     description: '',
     province: 'La Habana',
     municipality: 'Plaza de la Revolución'
@@ -38,8 +43,12 @@ const SellerProducts = () => {
         } else {
           setProducts(storeProducts);
         }
+
+        // Fetch categories
+        const fetchedCategories = await getCategories();
+        setCategories(fetchedCategories);
       } catch (error) {
-        console.error("Error fetching store products:", error);
+        console.error("Error fetching store data:", error);
       } finally {
         setLoading(false);
       }
@@ -69,9 +78,10 @@ const SellerProducts = () => {
       setProducts([addedProduct, ...products]);
       setShowAddModal(false);
       setNewProduct({
-        name: '', price: '', stock: '', category_id: 1, 
-        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', description: '',
-        province: 'La Habana', municipality: 'Plaza de la Revolución'
+        name: '', price: '', stock: '', category_id: '', 
+        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
+        image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
+        description: '', province: 'La Habana', municipality: 'Plaza de la Revolución'
       });
     } catch (error) {
       alert('Error al agregar el producto');
@@ -204,13 +214,65 @@ const SellerProducts = () => {
                   />
                 </div>
               </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Categoría</label>
+                  <select 
+                    required 
+                    value={newProduct.category_id}
+                    onChange={e => setNewProduct({...newProduct, category_id: e.target.value})}
+                  >
+                    <option value="" disabled>Seleccione una categoría</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div className="form-group">
-                <label>URL de Imagen</label>
+                <label>URL de Imagen Principal</label>
                 <input 
                   type="url" 
                   value={newProduct.image_url}
                   onChange={e => setNewProduct({...newProduct, image_url: e.target.value})}
+                  required
                 />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>URL Imagen 2 (Opcional)</label>
+                  <input 
+                    type="url" 
+                    value={newProduct.image_url_2}
+                    onChange={e => setNewProduct({...newProduct, image_url_2: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>URL Imagen 3 (Opcional)</label>
+                  <input 
+                    type="url" 
+                    value={newProduct.image_url_3}
+                    onChange={e => setNewProduct({...newProduct, image_url_3: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>URL Imagen 4 (Opcional)</label>
+                  <input 
+                    type="url" 
+                    value={newProduct.image_url_4}
+                    onChange={e => setNewProduct({...newProduct, image_url_4: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>URL Imagen 5 (Opcional)</label>
+                  <input 
+                    type="url" 
+                    value={newProduct.image_url_5}
+                    onChange={e => setNewProduct({...newProduct, image_url_5: e.target.value})}
+                  />
+                </div>
               </div>
               <div className="form-row">
                 <div className="form-group">

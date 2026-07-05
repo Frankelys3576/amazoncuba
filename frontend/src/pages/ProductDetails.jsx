@@ -13,12 +13,20 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [activeImage, setActiveImage] = useState('');
+  const [productImages, setProductImages] = useState([]);
   const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchProduct = async () => {
       const data = await getProductById(id);
       setProduct(data);
+      if (data) {
+        // Collect all valid image URLs
+        const images = [data.image_url, data.image_url_2, data.image_url_3, data.image_url_4, data.image_url_5].filter(Boolean);
+        setProductImages(images);
+        if (images.length > 0) setActiveImage(images[0]);
+      }
       if (data && data.category_id) {
         const related = await getProducts({ category: data.category_id });
         // Filter out the current product and take up to 4
@@ -45,7 +53,23 @@ const ProductDetails = () => {
         
         {/* Columna Izquierda: Imagen */}
         <div className="product-image-section">
-          <img src={product.image_url} alt={product.name} className="product-main-image" />
+          {productImages.length > 1 && (
+            <div className="product-thumbnails">
+              {productImages.map((img, index) => (
+                <img 
+                  key={index} 
+                  src={img} 
+                  alt={`${product.name} - foto ${index + 1}`} 
+                  className={`thumbnail ${activeImage === img ? 'active' : ''}`}
+                  onMouseEnter={() => setActiveImage(img)}
+                  onClick={() => setActiveImage(img)}
+                />
+              ))}
+            </div>
+          )}
+          <div className="product-main-image-container">
+            <img src={activeImage || product.image_url} alt={product.name} className="product-main-image" />
+          </div>
         </div>
 
         {/* Columna Central: Información */}
