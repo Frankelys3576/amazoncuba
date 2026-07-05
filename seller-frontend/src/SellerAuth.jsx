@@ -40,7 +40,8 @@ const SellerAuth = () => {
         await registerSeller({
           email: formData.email,
           password: formData.password,
-          full_name: formData.fullName
+          full_name: formData.fullName,
+          store_name: formData.storeName
         });
         
         alert('Cuenta creada exitosamente. Por favor, inicia sesión.');

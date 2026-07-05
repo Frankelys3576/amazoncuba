@@ -2,7 +2,7 @@ const supabase = require('../config/supabase');
 
 const register = async (req, res) => {
   try {
-    const { email, password, full_name } = req.body;
+    const { email, password, full_name, store_name } = req.body;
 
     // Registramos al usuario en Supabase Auth
     const { data, error } = await supabase.auth.signUp({
@@ -17,9 +17,23 @@ const register = async (req, res) => {
 
     if (error) throw error;
 
-    // Opcional: Podríamos crear un registro en la tabla 'users' pública si es necesario
-    // Pero Supabase lo maneja internamente. Por ahora devolvemos la info.
-    res.status(201).json({ message: 'Usuario registrado exitosamente', user: data.user });
+    // Crear la tienda pendiente en la base de datos
+    if (store_name) {
+      const { error: storeError } = await supabase.from('stores').insert([
+        { 
+          name: store_name, 
+          description: `Nueva tienda de ${full_name}`,
+          status: 'pending' 
+        }
+      ]);
+      
+      if (storeError) {
+        console.error('Error creating store:', storeError);
+        // Podríamos manejar este error o simplemente dejarlo pasar
+      }
+    }
+
+    res.status(201).json({ message: 'Usuario y tienda registrados exitosamente', user: data.user });
   } catch (error) {
     console.error('Registration error:', error.message);
     res.status(400).json({ error: error.message || 'Error al registrar el usuario' });
