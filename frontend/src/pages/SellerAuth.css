@@ -1,0 +1,113 @@
+.seller-auth-page {
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  background-color: var(--white); /* White background like Amazon login */
+  min-height: calc(100vh - 110px);
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-logo {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--brand-primary);
+}
+
+.auth-logo span {
+  font-weight: 400;
+  color: var(--brand-accent);
+  font-size: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius-sm);
+  padding: 20px 25px;
+  margin-bottom: 25px;
+}
+
+.auth-card h2 {
+  font-weight: 500;
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #a6a6a6;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--brand-link);
+  box-shadow: 0 0 3px rgba(37, 99, 235, 0.5);
+}
+
+.auth-submit-btn {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  border-radius: 3px;
+}
+
+.auth-terms {
+  font-size: 12px;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+.auth-toggle {
+  width: 100%;
+}
+
+.divider-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.divider-line {
+  flex-grow: 1;
+  height: 1px;
+  background-color: #e2e8f0;
+}
+
+.divider-text {
+  padding: 0 10px;
+  font-size: 12px;
+  color: #767676;
+}
+
+.auth-toggle-btn {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--text-main);
+  border-radius: 3px;
+}
+
+.auth-toggle-btn:hover {
+  background-color: #e2e8f0;
+}

@@ -1,0 +1,30 @@
+.hero-container {
+  position: relative;
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  z-index: 1; /* Below navbar */
+}
+
+.hero-images {
+  position: relative;
+  width: 100%;
+  height: auto;
+  /* Fade into the gray background (var(--amazon-bg-gray)) at the bottom */
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%);
+}
+
+.hero-image {
+  width: 100%;
+  height: auto;
+  min-height: 250px;
+  object-fit: cover;
+  object-position: top center;
+}
+
+@media (min-width: 1000px) {
+  .hero-images {
+    height: 400px;
+  }
+}

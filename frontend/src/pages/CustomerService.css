@@ -1,0 +1,185 @@
+.customer-service-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-color);
+  min-height: calc(100vh - 120px);
+}
+
+.cs-hero {
+  background-color: var(--brand-secondary);
+  color: white;
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cs-hero h1 {
+  margin-bottom: 24px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.cs-search-bar {
+  display: flex;
+  width: 100%;
+  max-width: 600px;
+  height: 50px;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.cs-search-bar input {
+  flex-grow: 1;
+  border: none;
+  padding: 0 20px;
+  font-size: 16px;
+  outline: none;
+}
+
+.cs-search-bar button {
+  background-color: var(--brand-accent);
+  border: none;
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cs-search-bar button:hover {
+  background-color: var(--brand-accent-hover);
+}
+
+.cs-content {
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.cs-content h2 {
+  font-size: 22px;
+  color: var(--text-color);
+  margin-bottom: 24px;
+}
+
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 60px;
+}
+
+.cs-card {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.cs-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+.cs-icon {
+  color: var(--brand-secondary);
+  margin-bottom: 16px;
+}
+
+.cs-card h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--brand-primary);
+}
+
+.cs-card p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.cs-faq-section {
+  margin-bottom: 60px;
+}
+
+.cs-faqs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cs-faq-item {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.cs-faq-item.active {
+  border-color: var(--brand-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.cs-faq-question {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.cs-faq-answer {
+  padding: 0 20px 20px;
+  color: #475569;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.cs-contact-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius-md);
+  padding: 40px;
+  text-align: center;
+}
+
+.cs-contact-box p {
+  margin-bottom: 24px;
+  color: #64748b;
+}
+
+.cs-contact-btn {
+  background-color: var(--brand-secondary);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cs-contact-btn:hover {
+  background-color: var(--brand-primary);
+}
+
+@media (max-width: 768px) {
+  .cs-grid {
+    grid-template-columns: 1fr;
+  }
+}
