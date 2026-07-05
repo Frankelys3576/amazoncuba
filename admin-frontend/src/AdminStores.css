@@ -16,34 +16,121 @@
   max-width: 600px;
 }
 
-.filter-container {
+/* ============ Tabs ============ */
+.store-tabs {
+  display: flex;
+  gap: 8px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 6px;
+}
+
+.store-tab {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background-color: var(--bg-card);
-  padding: 8px 16px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--border-color);
-  width: fit-content;
-  margin-top: 16px;
-  color: var(--text-muted);
-}
-
-.store-filter {
-  background: transparent;
+  gap: 8px;
+  padding: 10px 18px;
   border: none;
-  color: var(--text-main);
+  border-radius: var(--border-radius-sm);
+  background-color: transparent;
+  color: var(--text-muted);
   font-size: 14px;
-  outline: none;
+  font-weight: 500;
   cursor: pointer;
-  padding: 4px;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
 
-.store-filter option {
-  background-color: var(--bg-sidebar);
+.store-tab:hover {
+  background-color: rgba(255,255,255,0.05);
   color: var(--text-main);
 }
 
+.store-tab.active {
+  background-color: var(--brand-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.store-tab.has-pending:not(.active) {
+  color: #f59e0b;
+}
+
+.tab-label {
+  white-space: nowrap;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 6px;
+  background-color: rgba(255,255,255,0.1);
+}
+
+.store-tab.active .tab-count {
+  background-color: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+.tab-count.pending {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.store-tab.active .tab-count.pending {
+  background-color: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+.tab-count.approved {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.store-tab.active .tab-count.approved {
+  background-color: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+.tab-count.rejected {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.store-tab.active .tab-count.rejected {
+  background-color: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+/* ============ Empty State ============ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  gap: 12px;
+  grid-column: 1 / -1;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  color: var(--text-main);
+}
+
+.empty-state p {
+  font-size: 14px;
+}
+
+/* ============ Store Cards ============ */
 .stores-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -58,6 +145,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.store-card:hover {
+  border-color: var(--brand-primary);
 }
 
 .store-card-header {
@@ -72,12 +164,29 @@
   align-items: center;
 }
 
+.store-logo-wrapper {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
 .store-logo {
   width: 50px;
   height: 50px;
   border-radius: 8px;
   object-fit: cover;
   background-color: #fff;
+}
+
+.store-logo-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  background-color: rgba(59, 130, 246, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-primary);
 }
 
 .store-info h3 {
