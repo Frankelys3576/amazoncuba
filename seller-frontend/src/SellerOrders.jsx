@@ -100,17 +100,17 @@ const SellerOrders = () => {
             <tbody>
               {filteredOrders.map(order => (
                 <tr key={order.id}>
-                  <td><strong>{order.id}</strong></td>
-                  <td>{order.customer}</td>
-                  <td>{order.date}</td>
-                  <td>{order.items} art.</td>
-                  <td><span className="product-price">${order.total.toFixed(2)}</span></td>
-                  <td>
+                  <td data-label="ID Pedido"><strong>{order.id}</strong></td>
+                  <td data-label="Cliente">{order.customer}</td>
+                  <td data-label="Fecha">{order.date}</td>
+                  <td data-label="Artículos">{order.items} art.</td>
+                  <td data-label="Total"><span className="product-price">${order.total.toFixed(2)}</span></td>
+                  <td data-label="Estado">
                     <span className={`status-badge badge-${order.status.toLowerCase()}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Acciones">
                     <div className="action-buttons">
                       <button 
                         className="btn-icon" 
@@ -208,10 +208,10 @@ const SellerOrders = () => {
                   <tbody>
                     {selectedOrder.products.map((prod, idx) => (
                       <tr key={idx}>
-                        <td>{prod.name}</td>
-                        <td>{prod.qty}</td>
-                        <td>${prod.price.toFixed(2)}</td>
-                        <td><strong>${(prod.qty * prod.price).toFixed(2)}</strong></td>
+                        <td data-label="Producto">{prod.name}</td>
+                        <td data-label="Cantidad">{prod.qty}</td>
+                        <td data-label="Precio Unit.">${prod.price.toFixed(2)}</td>
+                        <td data-label="Subtotal"><strong>${(prod.qty * prod.price).toFixed(2)}</strong></td>
                       </tr>
                     ))}
                   </tbody>

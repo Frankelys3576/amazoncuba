@@ -128,22 +128,22 @@ const SellerProducts = () => {
               <tbody>
                 {filteredProducts.map(product => (
                   <tr key={product.id}>
-                    <td>
+                    <td data-label="Producto">
                       <div className="product-cell">
                         <img src={product.image_url} alt={product.name} />
                         <span className="product-name">{product.name}</span>
                       </div>
                     </td>
-                    <td><span className="product-price">${product.price}</span></td>
-                    <td>
+                    <td data-label="Precio"><span className="product-price">${product.price}</span></td>
+                    <td data-label="Inventario">
                       <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>
                         {product.stock || Math.floor(Math.random() * 50) + 1} en stock
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Estado">
                       <span className="status-badge active">Activo</span>
                     </td>
-                    <td>
+                    <td data-label="Acciones">
                       <div className="action-buttons">
                         <button className="btn-icon edit"><Edit2 size={16} /></button>
                         <button className="btn-icon delete"><Trash2 size={16} /></button>
