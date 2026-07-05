@@ -145,11 +145,13 @@
 
 .cart-count {
   position: absolute;
-  top: -6px;
-  left: 18px;
+  top: -12px;
+  left: 12px;
   color: var(--brand-accent);
   font-weight: 800;
   font-size: 18px;
+  text-align: center;
+  width: 24px;
 }
 
 .cart-label {
