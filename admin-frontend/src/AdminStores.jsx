@@ -6,7 +6,7 @@ import './AdminStores.css';
 
 const AdminStores = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialFilter = searchParams.get('filter') || 'all';
+  const initialFilter = searchParams.get('filter') || 'pending';
   
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
