@@ -130,3 +130,14 @@ export const getOrders = async () => {
     throw error;
   }
 };
+
+export const getUsers = async () => {
+  try {
+    const response = await fetch(`${API_URL}/users`);
+    if (!response.ok) throw new Error('Error al obtener usuarios');
+    return await response.json();
+  } catch (error) {
+    console.error('API getUsers error:', error);
+    return [];
+  }
+};
