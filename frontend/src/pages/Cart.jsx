@@ -65,7 +65,7 @@ const Cart = () => {
                     </div>
                   </div>
                   <div className="cart-item-price">
-                    ${item.price.toFixed(2)}
+                    ${item.price.toFixed(2)} {item.currency || 'USD'}
                   </div>
                 </div>
               ))}
@@ -74,7 +74,7 @@ const Cart = () => {
           
           {cart.length > 0 && (
             <div className="cart-subtotal-bottom">
-              Subtotal ({cartCount} productos): <span className="bold-price">${cartTotal.toFixed(2)}</span>
+              Subtotal ({cartCount} productos): <span className="bold-price">${cartTotal.toFixed(2)} {cart[0]?.currency || 'USD'}</span>
             </div>
           )}
         </div>
@@ -84,7 +84,7 @@ const Cart = () => {
             <div className="checkout-panel">
               <div className="checkout-subtotal">
                 Subtotal ({cartCount} productos): <br/>
-                <span className="bold-price">${cartTotal.toFixed(2)}</span>
+                <span className="bold-price">${cartTotal.toFixed(2)} {cart[0]?.currency || 'USD'}</span>
               </div>
               <div style={{marginTop: '15px', fontSize: '13px', color: '#666', lineHeight: '1.4'}}>
                 Para concretar tu compra, contacta directamente al vendedor de cada producto usando el botón verde "Contactar al Vendedor" en la lista de artículos.

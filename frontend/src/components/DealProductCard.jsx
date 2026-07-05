@@ -29,10 +29,10 @@ const DealProductCard = ({ product }) => {
           </div>
           <div className="deal-price-row">
             <span className="deal-price-discount">-{discountPercentage}%</span>
-            <span className="deal-price-current">${product.price.toFixed(2)}</span>
+            <span className="deal-price-current">${product.price.toFixed(2)} {product.currency || 'USD'}</span>
           </div>
           <div className="deal-price-original">
-            Precio típico: <span>${originalPrice.toFixed(2)}</span>
+            Precio típico: <span>${originalPrice.toFixed(2)} {product.currency || 'USD'}</span>
           </div>
           <h3 className="deal-title">{product.name}</h3>
         </div>

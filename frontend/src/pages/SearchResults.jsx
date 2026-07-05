@@ -123,7 +123,8 @@ const SearchResults = () => {
                   <div className="search-grid-price-block">
                     <span className="price-symbol">$</span>
                     <span className="price-whole">{Math.floor(item.price)}</span>
-                    <span className="price-fraction">{(item.price % 1).toFixed(2).substring(2)}</span>
+                    <span className="price-fraction">{((item.price % 1) * 100).toFixed(0).padStart(2, '0')}</span>
+                    <span style={{ fontSize: '12px', color: '#565959', marginLeft: '4px', verticalAlign: 'top' }}>{item.currency || 'USD'}</span>
                   </div>
                   
                   <div className="search-grid-shipping">

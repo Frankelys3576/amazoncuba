@@ -79,9 +79,8 @@ const ProductDetails = () => {
           <div className="product-price-large">
             <span className="price-symbol">$</span>
             <span className="price-whole">{Math.floor(product.price)}</span>
-            <span className="price-fraction">
-              {(product.price % 1).toFixed(2).substring(2)}
-            </span>
+            <span className="price-fraction">{((product.price % 1) * 100).toFixed(0).padStart(2, '0')}</span>
+            <span style={{ fontSize: '14px', color: '#565959', marginLeft: '6px', verticalAlign: 'top' }}>{product.currency || 'USD'}</span>
           </div>
           <hr className="divider" />
           <div className="product-description">
@@ -93,7 +92,7 @@ const ProductDetails = () => {
         {/* Columna Derecha: Panel de Compra */}
         <div className="product-buy-section">
           <div className="buy-panel">
-            <div className="buy-panel-price">${product.price.toFixed(2)}</div>
+            <div className="buy-panel-price">${product.price.toFixed(2)} {product.currency || 'USD'}</div>
             <div className="buy-panel-stock">
               {product.stock > 0 ? <span className="in-stock">En Stock</span> : <span className="out-of-stock">Agotado</span>}
             </div>

@@ -40,7 +40,8 @@ const ProductCard = ({ product }) => {
           <p className="product-card-price">
             <span className="price-symbol">$</span>
             <span className="price-whole">{Math.floor(product.price)}</span>
-            <span className="price-decimal">{(product.price % 1).toFixed(2).substring(1)}</span>
+            <span className="price-fraction">{((product.price % 1) * 100).toFixed(0).padStart(2, '0')}</span>
+            <span style={{ fontSize: '12px', color: '#565959', marginLeft: '4px', verticalAlign: 'top' }}>{product.currency || 'USD'}</span>
           </p>
           <p className="product-card-delivery">Envío GRATIS a Cuba</p>
           <button onClick={handleAddToCart} className="add-to-cart-btn-mobile">

@@ -15,6 +15,7 @@ const SellerProducts = () => {
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
+    currency: 'USD',
     stock: '',
     category_id: '',
     image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80',
@@ -85,7 +86,7 @@ const SellerProducts = () => {
       setProducts([addedProduct, ...products]);
       setShowAddModal(false);
       setNewProduct({
-        name: '', price: '', stock: '', category_id: '', 
+        name: '', price: '', currency: 'USD', stock: '', category_id: '', 
         image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
         image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
         description: '', delivery_locations: []
@@ -153,7 +154,7 @@ const SellerProducts = () => {
                         <span className="product-name">{product.name}</span>
                       </div>
                     </td>
-                    <td data-label="Precio"><span className="product-price">${product.price}</span></td>
+                    <td data-label="Precio"><span className="product-price">{Number(product.price).toFixed(2)} {product.currency || 'USD'}</span></td>
                     <td data-label="Inventario">
                       <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>
                         {product.stock || Math.floor(Math.random() * 50) + 1} en stock
@@ -203,23 +204,34 @@ const SellerProducts = () => {
                 />
               </div>
               <div className="form-row">
-                <div className="form-group">
-                  <label>Precio ($)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    required 
-                    value={newProduct.price}
-                    onChange={e => setNewProduct({...newProduct, price: e.target.value})}
-                  />
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label>Precio</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={newProduct.price}
+                      onChange={e => setNewProduct({...newProduct, price: e.target.value})}
+                      required
+                      style={{ flex: 1 }}
+                    />
+                    <select 
+                      value={newProduct.currency}
+                      onChange={e => setNewProduct({...newProduct, currency: e.target.value})}
+                      style={{ width: '90px' }}
+                    >
+                      <option value="USD">USD</option>
+                      <option value="CUP">CUP</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Inventario (Stock)</label>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Stock</label>
                   <input 
                     type="number" 
-                    required 
                     value={newProduct.stock}
                     onChange={e => setNewProduct({...newProduct, stock: e.target.value})}
+                    required
                   />
                 </div>
               </div>

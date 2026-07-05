@@ -66,15 +66,17 @@ const getProductById = async (req, res) => {
 // Crear un nuevo producto (solo admins teóricamente)
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, category_id, image_url, store_id, province, municipality, delivery_locations, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
+    const { name, description, price, currency, stock, category_id, image_url, store_id, province, municipality, delivery_locations, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
     
     // Si no mandan delivery_locations, creamos uno básico por retrocompatibilidad
     const locationsArray = delivery_locations || [`${province}:${municipality}`];
+    // Si no mandan moneda, por defecto es USD
+    const productCurrency = currency || 'USD';
 
     const { data, error } = await supabase
       .from('products')
       .insert([
-        { name, description, price, stock, category_id, image_url, store_id, province, municipality, delivery_locations: locationsArray, image_url_2, image_url_3, image_url_4, image_url_5 }
+        { name, description, price, currency: productCurrency, stock, category_id, image_url, store_id, province, municipality, delivery_locations: locationsArray, image_url_2, image_url_3, image_url_4, image_url_5 }
       ])
       .select();
 
