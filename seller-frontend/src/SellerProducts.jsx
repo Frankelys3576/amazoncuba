@@ -16,17 +16,18 @@ const SellerProducts = () => {
     name: '',
     price: '',
     stock: '',
-    category_id: '', // Empty initially to force selection
-    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', // Default image
+    category_id: '',
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80',
     image_url_2: '',
     image_url_3: '',
     image_url_4: '',
     image_url_5: '',
     description: '',
-    province: 'La Habana',
-    municipality: 'Plaza de la Revolución'
+    delivery_locations: []
   });
   const [addingProduct, setAddingProduct] = useState(false);
+  const [tempProv, setTempProv] = useState('La Habana');
+  const [tempMun, setTempMun] = useState('Plaza de la Revolución');
   
   useEffect(() => {
     const fetchStoreProducts = async () => {
@@ -63,8 +64,13 @@ const SellerProducts = () => {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    setAddingProduct(true);
+    if (newProduct.delivery_locations.length === 0) {
+      alert("Debes agregar al menos una ubicación de entrega.");
+      return;
+    }
+
     try {
+      setAddingProduct(true);
       const storeId = localStorage.getItem('seller_store_id');
       const addedProduct = await createProduct({
         ...newProduct,
@@ -72,8 +78,9 @@ const SellerProducts = () => {
         price: parseFloat(newProduct.price),
         stock: parseInt(newProduct.stock, 10),
         category_id: parseInt(newProduct.category_id, 10),
-        province: newProduct.province,
-        municipality: newProduct.municipality
+        // Send the first location as primary just for backwards compatibility, if needed
+        province: newProduct.delivery_locations[0].split(':')[0],
+        municipality: newProduct.delivery_locations[0].split(':')[1]
       });
       setProducts([addedProduct, ...products]);
       setShowAddModal(false);
@@ -81,8 +88,10 @@ const SellerProducts = () => {
         name: '', price: '', stock: '', category_id: '', 
         image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
         image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
-        description: '', province: 'La Habana', municipality: 'Plaza de la Revolución'
+        description: '', delivery_locations: []
       });
+      setTempProv('La Habana');
+      setTempMun('Plaza de la Revolución');
     } catch (error) {
       alert('Error al agregar el producto');
       console.error(error);
@@ -274,37 +283,65 @@ const SellerProducts = () => {
                   />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Provincia</label>
-                  <select 
-                    value={newProduct.province}
-                    onChange={e => {
-                      const newProv = e.target.value;
-                      setNewProduct({
-                        ...newProduct, 
-                        province: newProv, 
-                        municipality: cubaLocations[newProv][0] 
-                      });
-                    }}
-                    required
-                  >
-                    {Object.keys(cubaLocations).map(prov => (
-                      <option key={prov} value={prov}>{prov}</option>
-                    ))}
-                  </select>
+              <div className="form-group" style={{gridColumn: '1 / -1'}}>
+                <label>Ubicaciones de Entrega (Agrega al menos una)</label>
+                
+                {/* Lista de ubicaciones agregadas */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                  {newProduct.delivery_locations.map((loc, idx) => (
+                    <div key={idx} style={{ background: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '15px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      {loc}
+                      <button type="button" onClick={() => {
+                        const newLocs = [...newProduct.delivery_locations];
+                        newLocs.splice(idx, 1);
+                        setNewProduct({...newProduct, delivery_locations: newLocs});
+                      }} style={{ background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer', display: 'flex' }}><X size={14}/></button>
+                    </div>
+                  ))}
                 </div>
-                <div className="form-group">
-                  <label>Municipio</label>
-                  <select 
-                    value={newProduct.municipality}
-                    onChange={e => setNewProduct({...newProduct, municipality: e.target.value})}
-                    required
+
+                <div className="form-row" style={{ alignItems: 'flex-end', background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Provincia</label>
+                    <select 
+                      value={tempProv}
+                      onChange={(e) => {
+                        setTempProv(e.target.value);
+                        setTempMun('Toda la provincia');
+                      }}
+                    >
+                      <option value="Toda Cuba">Toda Cuba (Nacional)</option>
+                      {Object.keys(cubaLocations).map(prov => (
+                        <option key={prov} value={prov}>{prov}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Municipio</label>
+                    <select 
+                      value={tempMun}
+                      onChange={(e) => setTempMun(e.target.value)}
+                      disabled={tempProv === 'Toda Cuba'}
+                    >
+                      <option value="Toda la provincia">Toda la provincia</option>
+                      {tempProv !== 'Toda Cuba' && cubaLocations[tempProv]?.map(mun => (
+                        <option key={mun} value={mun}>{mun}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary"
+                    style={{ height: '38px', padding: '0 15px', whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      const newLoc = tempProv === 'Toda Cuba' ? 'Toda Cuba:Toda Cuba' : `${tempProv}:${tempMun}`;
+                      if (!newProduct.delivery_locations.includes(newLoc)) {
+                        setNewProduct({...newProduct, delivery_locations: [...newProduct.delivery_locations, newLoc]});
+                      }
+                    }}
                   >
-                    {cubaLocations[newProduct.province].map(mun => (
-                      <option key={mun} value={mun}>{mun}</option>
-                    ))}
-                  </select>
+                    + Agregar
+                  </button>
                 </div>
               </div>
               <div className="form-group">

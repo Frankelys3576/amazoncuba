@@ -9,8 +9,21 @@ const getProducts = async (req, res) => {
     if (storeId) query = query.eq('store_id', storeId);
     if (category) query = query.eq('category_id', category);
     if (q) query = query.ilike('name', `%${q}%`);
-    if (province) query = query.eq('province', province);
-    if (municipality) query = query.eq('municipality', municipality);
+    
+    if (province && municipality) {
+      const searchTags = [
+        `${province}:${municipality}`,
+        `${province}:Toda la provincia`,
+        `Toda Cuba:Toda Cuba`
+      ];
+      query = query.overlaps('delivery_locations', searchTags);
+    } else if (province) {
+      const searchTags = [
+        `${province}:Toda la provincia`,
+        `Toda Cuba:Toda Cuba`
+      ];
+      query = query.overlaps('delivery_locations', searchTags);
+    }
 
     const { data, error } = await query;
 
@@ -53,12 +66,15 @@ const getProductById = async (req, res) => {
 // Crear un nuevo producto (solo admins teóricamente)
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, category_id, image_url, store_id, province, municipality, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
+    const { name, description, price, stock, category_id, image_url, store_id, province, municipality, delivery_locations, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
     
+    // Si no mandan delivery_locations, creamos uno básico por retrocompatibilidad
+    const locationsArray = delivery_locations || [`${province}:${municipality}`];
+
     const { data, error } = await supabase
       .from('products')
       .insert([
-        { name, description, price, stock, category_id, image_url, store_id, province, municipality, image_url_2, image_url_3, image_url_4, image_url_5 }
+        { name, description, price, stock, category_id, image_url, store_id, province, municipality, delivery_locations: locationsArray, image_url_2, image_url_3, image_url_4, image_url_5 }
       ])
       .select();
 
