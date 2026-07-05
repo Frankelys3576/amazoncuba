@@ -1,5 +1,5 @@
-import React from 'react';
-import { DollarSign, ShoppingCart, PackageOpen, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { DollarSign, ShoppingCart, PackageOpen, TrendingUp, X, ChevronRight } from 'lucide-react';
 import './SellerDashboard.css';
 
 const SellerDashboard = () => {
@@ -18,6 +18,36 @@ const SellerDashboard = () => {
     { id: 'ORD-004', customer: 'Elena S.', date: 'Ayer, 14:20 PM', amount: '$89.99', status: 'Pendiente' },
   ];
 
+  const [selectedStat, setSelectedStat] = useState(null);
+
+  const handleStatClick = (stat) => {
+    let details = [];
+    if (stat.label === 'Ventas Totales') {
+      details = [
+        { title: 'Venta de Pedido #ORD-001', value: '+$45.00', desc: 'Hoy, 10:42 AM' },
+        { title: 'Venta de Pedido #ORD-002', value: '+$120.50', desc: 'Hoy, 09:15 AM' },
+        { title: 'Venta de Pedido #ORD-003', value: '+$32.00', desc: 'Ayer, 16:30 PM' },
+      ];
+    } else if (stat.label === 'Pedidos Pendientes') {
+      details = [
+        { title: 'Pedido #ORD-001', value: 'Carlos M.', desc: 'Esperando envío' },
+        { title: 'Pedido #ORD-004', value: 'Elena S.', desc: 'Esperando envío' },
+      ];
+    } else if (stat.label === 'Productos Activos') {
+      details = [
+        { title: 'Café Cubita 250g', value: '25 un.', desc: 'En stock' },
+        { title: 'Ventilador Recargable', value: '5 un.', desc: 'En stock' },
+        { title: 'Arrocera 1.5L', value: '12 un.', desc: 'En stock' }
+      ];
+    } else {
+      details = [
+        { title: 'Conversión de Visitas', value: '+5.2%', desc: 'Crecimiento semanal' },
+        { title: 'Retención de Clientes', value: '+8.8%', desc: 'Crecimiento mensual' },
+      ];
+    }
+    setSelectedStat({ ...stat, details });
+  };
+
   return (
     <div className="seller-dashboard">
       <div className="dashboard-welcome-banner">
@@ -29,7 +59,13 @@ const SellerDashboard = () => {
       
       <div className="dashboard-stats-grid">
         {stats.map((stat, index) => (
-          <div key={index} className={`stat-card premium-card ${stat.gradient}`}>
+          <div 
+            key={index} 
+            className={`stat-card premium-card ${stat.gradient}`} 
+            onClick={() => handleStatClick(stat)}
+            style={{cursor: 'pointer'}}
+            title="Toca para ver detalles"
+          >
             <div className="stat-icon-wrapper-premium">
               {stat.icon}
             </div>
@@ -84,6 +120,56 @@ const SellerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Detalles de la Tarjeta */}
+      {selectedStat && (
+        <div className="modal-overlay" onClick={() => setSelectedStat(null)}>
+          <div className="modal-content" style={{maxWidth: '500px'}} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                <div className={`stat-icon-wrapper-premium ${selectedStat.gradient}`} style={{width: '40px', height: '40px'}}>
+                  {selectedStat.icon}
+                </div>
+                <h2>Detalles: {selectedStat.label}</h2>
+              </div>
+              <button className="close-btn" onClick={() => setSelectedStat(null)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="order-details-body" style={{padding: '0'}}>
+              <div style={{padding: '24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
+                <span style={{fontSize: '14px', color: '#64748b', fontWeight: '500'}}>Total General</span>
+                <div style={{fontSize: '36px', fontWeight: '800', color: '#0f172a', marginTop: '4px'}}>
+                  {selectedStat.value}
+                </div>
+              </div>
+              
+              <div style={{padding: '16px 24px'}}>
+                <h3 style={{fontSize: '15px', color: '#0f172a', marginBottom: '16px'}}>Desglose Detallado</h3>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  {selectedStat.details.map((item, idx) => (
+                    <div key={idx} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9'}}>
+                      <div style={{display: 'flex', flexDirection: 'column'}}>
+                        <strong style={{color: '#1e293b', fontSize: '14px'}}>{item.title}</strong>
+                        <span style={{color: '#64748b', fontSize: '12px', marginTop: '2px'}}>{item.desc}</span>
+                      </div>
+                      <div style={{fontWeight: '700', color: '#0f172a'}}>
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions" style={{padding: '16px 24px'}}>
+              <button className="btn-primary" style={{width: '100%'}} onClick={() => setSelectedStat(null)}>
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
