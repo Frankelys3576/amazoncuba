@@ -1,0 +1,27 @@
+.seller-orders .status-badge {
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.seller-orders .badge-pendiente {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.seller-orders .badge-enviado {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.seller-orders .badge-entregado {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.seller-orders .btn-icon.check:hover {
+  background-color: #dcfce7;
+  color: #16a34a;
+}

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './SellerAuth.css';
 
 const SellerAuth = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -16,11 +18,14 @@ const SellerAuth = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Aquí iría la lógica para enviar a Supabase a través de nuestro backend
-    console.log('Enviando datos:', formData);
-    alert(isLogin 
-      ? 'Iniciando sesión como vendedor...' 
-      : 'Solicitud enviada. Tu cuenta de vendedor está pendiente de aprobación por un administrador.');
+    if (isLogin) {
+      // Simular login con el negocio ID 1 (El Rincón del Chef)
+      localStorage.setItem('seller_store_id', '1');
+      navigate('/seller/dashboard');
+    } else {
+      alert('Solicitud enviada. Tu cuenta de vendedor está pendiente de aprobación por un administrador.');
+      setIsLogin(true); // Regresar al login
+    }
   };
 
   return (
