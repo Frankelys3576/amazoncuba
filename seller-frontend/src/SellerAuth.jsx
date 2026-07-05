@@ -41,6 +41,11 @@ const SellerAuth = () => {
         // Simular negocio 1 para MVP
         localStorage.setItem('seller_store_id', '1');
         localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
+        
+        // Guardar nombre del vendedor para mostrarlo en el panel
+        const fullName = response.user?.user_metadata?.full_name || response.user?.email || 'Vendedor';
+        localStorage.setItem('seller_name', fullName);
+        
         navigate('/dashboard');
       } else {
         // Validación de confirmación

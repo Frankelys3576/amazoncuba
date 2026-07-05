@@ -6,22 +6,26 @@ import './SellerLayout.css';
 const SellerLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [storeName, setStoreName] = useState('Mi Negocio');
+  const [sellerName, setSellerName] = useState('Vendedor');
   const [storeId, setStoreId] = useState(null);
   
   useEffect(() => {
     // Check if seller is logged in
     const id = localStorage.getItem('seller_store_id');
+    const name = localStorage.getItem('seller_name');
+    
     if (!id) {
       navigate('/login'); // Redirect to login
     } else {
       setStoreId(id);
+      if (name) setSellerName(name);
     }
-    // Ideally we would fetch the store name from the API here
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('seller_store_id');
+    localStorage.removeItem('seller_token');
+    localStorage.removeItem('seller_name');
     navigate('/login');
   };
 
@@ -43,11 +47,11 @@ const SellerLayout = () => {
         
         <div className="seller-store-info">
           <div className="store-avatar">
-            {storeName.charAt(0)}
+            {sellerName.charAt(0).toUpperCase()}
           </div>
           <div className="store-details">
             <span className="store-welcome">Bienvenido,</span>
-            <span className="store-name">{storeName}</span>
+            <span className="store-name">{sellerName}</span>
           </div>
         </div>
 
