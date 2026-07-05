@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Menu, X } from 'lucide-react';
 import './SellerLayout.css';
 
 const SellerLayout = () => {
@@ -8,6 +8,7 @@ const SellerLayout = () => {
   const navigate = useNavigate();
   const [sellerName, setSellerName] = useState('Vendedor');
   const [storeId, setStoreId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   useEffect(() => {
     // Check if seller is logged in
@@ -21,6 +22,11 @@ const SellerLayout = () => {
       if (name) setSellerName(name);
     }
   }, [navigate]);
+
+  // Close sidebar on route change in mobile
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('seller_store_id');
@@ -38,11 +44,19 @@ const SellerLayout = () => {
 
   return (
     <div className="seller-layout">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
+
       {/* Sidebar */}
-      <aside className="seller-sidebar">
+      <aside className={`seller-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="seller-sidebar-header">
           <Store className="brand-icon" size={28} />
           <h2>CubaAmazon <span>Seller</span></h2>
+          <button className="mobile-close-btn" onClick={() => setIsSidebarOpen(false)}>
+            <X size={24} />
+          </button>
         </div>
         
         <div className="seller-store-info">
@@ -82,8 +96,13 @@ const SellerLayout = () => {
       {/* Main Content Area */}
       <main className="seller-main-content">
         <header className="seller-topbar">
-          <div className="topbar-search">
-            {/* Opcional: Buscador interno del dashboard */}
+          <div className="topbar-mobile-left">
+            <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
+              <Menu size={24} />
+            </button>
+            <div className="topbar-search">
+              {/* Opcional: Buscador interno del dashboard */}
+            </div>
           </div>
           <div className="topbar-actions">
             <a 
