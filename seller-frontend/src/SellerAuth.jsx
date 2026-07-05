@@ -7,7 +7,8 @@ const SellerAuth = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    email: '',
+    identifier: '',
+    confirmIdentifier: '',
     password: '',
     fullName: '',
     storeName: ''
@@ -27,18 +28,31 @@ const SellerAuth = () => {
     setError(null);
 
     try {
+      // Formatear el identificador: si no tiene '@', asumimos que es un teléfono o usuario
+      // y le agregamos un dominio ficticio para que Supabase Auth lo acepte como email.
+      const formattedEmail = formData.identifier.includes('@') 
+        ? formData.identifier.toLowerCase().trim()
+        : `${formData.identifier.trim()}@phone.cubaamazon.com`;
+
       if (isLogin) {
         // Log in using backend
-        const response = await loginSeller(formData.email, formData.password);
+        const response = await loginSeller(formattedEmail, formData.password);
         
         // Simular negocio 1 para MVP
         localStorage.setItem('seller_store_id', '1');
         localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
         navigate('/dashboard');
       } else {
+        // Validación de confirmación
+        if (formData.identifier !== formData.confirmIdentifier) {
+          setError('El correo electrónico o número de teléfono no coinciden.');
+          setLoading(false);
+          return;
+        }
+
         // Register using backend
         await registerSeller({
-          email: formData.email,
+          email: formattedEmail,
           password: formData.password,
           full_name: formData.fullName,
           store_name: formData.storeName
@@ -99,16 +113,30 @@ const SellerAuth = () => {
             )}
 
             <div className="form-group">
-              <label htmlFor="email">Correo electrónico</label>
+              <label htmlFor="identifier">Correo electrónico o Número de teléfono</label>
               <input 
-                type="email" 
-                id="email" 
-                name="email" 
-                value={formData.email}
+                type="text" 
+                id="identifier" 
+                name="identifier" 
+                value={formData.identifier}
                 onChange={handleChange}
                 required
               />
             </div>
+
+            {!isLogin && (
+              <div className="form-group">
+                <label htmlFor="confirmIdentifier">Confirmar Correo o Número</label>
+                <input 
+                  type="text" 
+                  id="confirmIdentifier" 
+                  name="confirmIdentifier" 
+                  value={formData.confirmIdentifier}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="password">Contraseña</label>
