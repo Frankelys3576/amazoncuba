@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api');
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://backend-lilac-xi-77.vercel.app/api' : 'http://localhost:5001/api');
 
 export const getProducts = async (params = {}) => {
   try {
