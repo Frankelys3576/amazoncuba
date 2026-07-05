@@ -19,6 +19,23 @@ export const getProducts = async (params = {}) => {
   }
 };
 
+export const createProduct = async (productData) => {
+  try {
+    const response = await fetch(`${API_URL}/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(productData)
+    });
+    if (!response.ok) throw new Error('Error al crear el producto');
+    return await response.json();
+  } catch (error) {
+    console.error('API createProduct error:', error);
+    throw error;
+  }
+};
+
 export const getProductById = async (id) => {
   try {
     const response = await fetch(`${API_URL}/products/${id}`);

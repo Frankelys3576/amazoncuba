@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
-import { getProducts } from './services/api';
+import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
+import { getProducts, createProduct } from './services/api';
 import './SellerProducts.css';
 
 const SellerProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    stock: '',
+    category_id: 1, // Default category
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', // Default image
+    description: ''
+  });
+  const [addingProduct, setAddingProduct] = useState(false);
   
   useEffect(() => {
     const fetchStoreProducts = async () => {
@@ -37,11 +49,37 @@ const SellerProducts = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    setAddingProduct(true);
+    try {
+      const storeId = localStorage.getItem('seller_store_id');
+      const addedProduct = await createProduct({
+        ...newProduct,
+        store_id: storeId,
+        price: parseFloat(newProduct.price),
+        stock: parseInt(newProduct.stock, 10),
+        category_id: parseInt(newProduct.category_id, 10)
+      });
+      setProducts([addedProduct, ...products]);
+      setShowAddModal(false);
+      setNewProduct({
+        name: '', price: '', stock: '', category_id: 1, 
+        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', description: ''
+      });
+    } catch (error) {
+      alert('Error al agregar el producto');
+      console.error(error);
+    } finally {
+      setAddingProduct(false);
+    }
+  };
+
   return (
     <div className="seller-products">
       <div className="seller-page-header">
         <h1 className="seller-page-title">Mis Productos</h1>
-        <button className="btn-add-product">
+        <button className="btn-add-product" onClick={() => setShowAddModal(true)}>
           <Plus size={18} />
           <span>Nuevo Producto</span>
         </button>
@@ -119,6 +157,73 @@ const SellerProducts = () => {
           </div>
         )}
       </div>
+
+      {showAddModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Agregar Nuevo Producto</h2>
+              <button className="close-btn" onClick={() => setShowAddModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleAddProduct} className="add-product-form">
+              <div className="form-group">
+                <label>Nombre del Producto</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={newProduct.name}
+                  onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Precio ($)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    required 
+                    value={newProduct.price}
+                    onChange={e => setNewProduct({...newProduct, price: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Inventario (Stock)</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={newProduct.stock}
+                    onChange={e => setNewProduct({...newProduct, stock: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>URL de Imagen</label>
+                <input 
+                  type="url" 
+                  value={newProduct.image_url}
+                  onChange={e => setNewProduct({...newProduct, image_url: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Descripción</label>
+                <textarea 
+                  rows="3"
+                  value={newProduct.description}
+                  onChange={e => setNewProduct({...newProduct, description: e.target.value})}
+                ></textarea>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={addingProduct}>
+                  {addingProduct ? 'Agregando...' : 'Guardar Producto'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
