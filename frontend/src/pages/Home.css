@@ -107,3 +107,75 @@
   }
 }
 
+/* === Home Carousels (Amazon style) === */
+.home-carousel-section {
+  background-color: var(--white);
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 576px) {
+  .home-carousel-section {
+    padding: 20px;
+    margin-bottom: 25px;
+  }
+}
+
+.home-carousel-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: var(--text-main);
+}
+
+@media (min-width: 576px) {
+  .home-carousel-title {
+    font-size: 21px;
+    margin-bottom: 20px;
+  }
+}
+
+.home-carousel {
+  display: flex;
+  overflow-x: auto;
+  gap: 15px;
+  padding-bottom: 10px;
+  /* Hide scrollbar for a cleaner look */
+  scrollbar-width: none; /* Firefox */
+}
+
+.home-carousel::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* Ensure the ProductCard inside a carousel maintains a fixed width */
+.home-carousel .product-card {
+  min-width: 250px;
+  width: 250px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color); /* Need border in carousel to separate */
+  border-radius: var(--border-radius-md);
+  margin-bottom: 0;
+}
+
+@media (max-width: 576px) {
+  .home-carousel .product-card {
+    min-width: 180px;
+    width: 180px;
+    flex-direction: column; /* Vertical layout in carousel to save space */
+    height: 320px;
+    padding: 12px;
+  }
+  
+  .home-carousel .product-card .product-card-link {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .home-carousel .product-card .product-card-image-container {
+    width: 100%;
+    height: 120px;
+    margin-bottom: 8px;
+  }
+}
+

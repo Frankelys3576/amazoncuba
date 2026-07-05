@@ -30,6 +30,20 @@ const Home = () => {
       
       {/* Container that overlaps the hero banner */}
       <div className="home-content">
+        
+        {/* Carousel: Ofertas del día */}
+        {!loading && products.length > 0 && (
+          <div className="home-carousel-section">
+            <h2 className="home-carousel-title">Ofertas del día</h2>
+            <div className="home-carousel">
+              {products.slice(0, 6).map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* First Row of Categories */}
         <div className="home-row">
           <CategoryCard 
             title="Electrónica"
@@ -56,7 +70,20 @@ const Home = () => {
             linkUrl="/search?category=4"
           />
         </div>
+
+        {/* Carousel: Tendencias Internacionales */}
+        {!loading && products.length > 5 && (
+          <div className="home-carousel-section">
+            <h2 className="home-carousel-title">Tendencias Internacionales</h2>
+            <div className="home-carousel">
+              {products.slice(5, 12).map(product => (
+                <ProductCard key={`trend-${product.id}`} product={product} />
+              ))}
+            </div>
+          </div>
+        )}
         
+        {/* Second Row of Categories */}
         <div className="home-row">
           <CategoryCard 
             title="Juguetes y Juegos"
@@ -86,7 +113,7 @@ const Home = () => {
         
         {/* Dynamic Products Section */}
         <div className="home-section-title">
-          <h2>Recomendado para ti</h2>
+          <h2>Descubre más productos</h2>
         </div>
         
         {loading ? (
@@ -94,7 +121,7 @@ const Home = () => {
         ) : (
           <div className="home-products-grid">
             {products.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={`grid-${product.id}`} product={product} />
             ))}
           </div>
         )}
