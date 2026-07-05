@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation as useRouterLocation, Link } from 'react-router-dom';
 import { getProducts, getStores } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useLocation } from '../context/LocationContext';
 import './SearchResults.css';
 
 const useQuery = () => {
-  return new URLSearchParams(useLocation().search);
+  return new URLSearchParams(useRouterLocation().search);
 };
 
 const SearchResults = () => {
   const query = useQuery();
   const searchQuery = query.get('q');
   const categoryQuery = query.get('category');
+  const { location } = useLocation();
   
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,16 +30,22 @@ const SearchResults = () => {
       const params = {};
       if (searchQuery) params.q = searchQuery;
       if (categoryQuery) params.category = categoryQuery;
+      if (location.province) params.province = location.province;
+      if (location.municipality) params.municipality = location.municipality;
 
       const productsData = await getProducts(params);
       
       let storesData = [];
       if (searchQuery) {
         const allStores = await getStores();
-        storesData = allStores.filter(store => 
-          store.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-          (store.description && store.description.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+        // Filtrar tiendas por nombre y también por la ubicación seleccionada
+        storesData = allStores.filter(store => {
+          const matchesSearch = store.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (store.description && store.description.toLowerCase().includes(searchQuery.toLowerCase()));
+          const matchesProv = !location.province || store.province === location.province;
+          const matchesMun = !location.municipality || store.municipality === location.municipality;
+          return matchesSearch && matchesProv && matchesMun;
+        });
       }
 
       // Format items to distinguish types
@@ -49,7 +57,7 @@ const SearchResults = () => {
     };
 
     fetchResults();
-  }, [searchQuery, categoryQuery]);
+  }, [searchQuery, categoryQuery, location]);
 
   let title = "Todos los productos";
   if (searchQuery) {

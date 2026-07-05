@@ -48,10 +48,10 @@ const Cart = () => {
                     <div className="cart-item-actions">
                       <div className="quantity-control">
                         <select 
-                          value={item.quantity}
+                          value={item.quantity > item.stock ? item.stock : item.quantity}
                           onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
                         >
-                          {[...Array(Math.max(10, item.quantity)).keys()].map(n => (
+                          {[...Array(Math.min(item.stock, 10)).keys()].map(n => (
                             <option key={n+1} value={n+1}>Qty: {n+1}</option>
                           ))}
                         </select>

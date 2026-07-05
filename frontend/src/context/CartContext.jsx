@@ -11,11 +11,15 @@ export const CartProvider = ({ children }) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {
-        return prevCart.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        );
+        return prevCart.map(item => {
+          if (item.id === product.id) {
+            const newQuantity = item.quantity + quantity;
+            return { ...item, quantity: newQuantity > product.stock ? product.stock : newQuantity };
+          }
+          return item;
+        });
       }
-      return [...prevCart, { ...product, quantity }];
+      return [...prevCart, { ...product, quantity: quantity > product.stock ? product.stock : quantity }];
     });
   };
 
