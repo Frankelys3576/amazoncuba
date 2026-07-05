@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductById } from '../services/api';
+import { getProductById, getProducts } from '../services/api';
 import { useCart } from '../context/CartContext';
+import ProductCard from '../components/ProductCard';
 import './ProductDetails.css';
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -17,6 +19,11 @@ const ProductDetails = () => {
     const fetchProduct = async () => {
       const data = await getProductById(id);
       setProduct(data);
+      if (data && data.category_id) {
+        const related = await getProducts({ category: data.category_id });
+        // Filter out the current product and take up to 4
+        setRelatedProducts(related.filter(p => p.id !== data.id).slice(0, 4));
+      }
       setLoading(false);
     };
     fetchProduct();
@@ -103,6 +110,18 @@ const ProductDetails = () => {
         </div>
 
       </div>
+
+      {/* Related Products Section */}
+      {relatedProducts.length > 0 && (
+        <div className="related-products-section" style={{ marginTop: '50px', borderTop: '1px solid #ddd', paddingTop: '30px' }}>
+          <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#0F1111' }}>Productos que te podrían interesar</h2>
+          <div className="home-products-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+            {relatedProducts.map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {showContactModal && (
         <div className="contact-modal-overlay" onClick={closeContactModal} style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
