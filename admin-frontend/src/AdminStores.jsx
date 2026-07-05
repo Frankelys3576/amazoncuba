@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { CheckCircle, XCircle, Clock, ExternalLink, Filter } from 'lucide-react';
 import { getStores, updateStoreStatus } from './services/api';
 import './AdminStores.css';
 
 const AdminStores = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialFilter = searchParams.get('filter') || 'all';
+  
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState(initialFilter);
 
   useEffect(() => {
     fetchStores();
@@ -36,15 +41,37 @@ const AdminStores = () => {
 
   if (loading) return <div className="admin-loading">Cargando tiendas...</div>;
 
+  const filteredStores = stores.filter(store => {
+    if (filter === 'all') return true;
+    return store.status === filter;
+  });
+
   return (
     <div className="admin-stores">
       <div className="page-header">
         <h1>Gestión de Vendedores</h1>
         <p>Aprueba o rechaza solicitudes de nuevos vendedores en la plataforma.</p>
+        
+        <div className="filter-container">
+          <Filter size={18} />
+          <select 
+            value={filter} 
+            onChange={(e) => {
+              setFilter(e.target.value);
+              setSearchParams({ filter: e.target.value });
+            }}
+            className="store-filter"
+          >
+            <option value="all">Todos los negocios</option>
+            <option value="pending">Solicitudes Pendientes</option>
+            <option value="approved">Negocios Aprobados</option>
+            <option value="rejected">Negocios Rechazados</option>
+          </select>
+        </div>
       </div>
 
       <div className="stores-list">
-        {stores.map(store => (
+        {filteredStores.map(store => (
           <div key={store.id} className="store-card">
             <div className="store-card-header">
               <div className="store-identity">

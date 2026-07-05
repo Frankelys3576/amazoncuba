@@ -12,6 +12,36 @@
 
 .page-header p {
   color: var(--text-muted);
+  font-size: 16px;
+  max-width: 600px;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-card);
+  padding: 8px 16px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  width: fit-content;
+  margin-top: 16px;
+  color: var(--text-muted);
+}
+
+.store-filter {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.store-filter option {
+  background-color: var(--bg-sidebar);
+  color: var(--text-main);
 }
 
 .stores-list {

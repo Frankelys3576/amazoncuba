@@ -47,8 +47,10 @@ const AdminDashboard = () => {
   }, []);
 
   const handleCardClick = (type) => {
-    if (type === 'stores' || type === 'pending') {
+    if (type === 'stores') {
       navigate('/stores');
+    } else if (type === 'pending') {
+      navigate('/stores?filter=pending');
     } else if (type === 'sales') {
       setActiveModal('sales');
     } else if (type === 'products') {
