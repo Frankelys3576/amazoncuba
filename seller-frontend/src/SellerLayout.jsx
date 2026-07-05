@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Menu, X, ExternalLink } from 'lucide-react';
 import './SellerLayout.css';
 
 const SellerLayout = () => {
@@ -113,7 +113,9 @@ const SellerLayout = () => {
               target="_blank" 
               rel="noopener noreferrer"
             >
-              Ver tienda pública
+              <span className="desktop-text">Ver tienda pública</span>
+              <span className="mobile-text">Ver tienda</span>
+              <ExternalLink size={16} />
             </a>
           </div>
         </header>

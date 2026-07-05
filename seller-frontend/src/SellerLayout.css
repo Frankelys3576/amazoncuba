@@ -169,12 +169,20 @@
   font-weight: 500;
   background-color: rgba(255,255,255,0.2);
   padding: 8px 16px;
-  border-radius: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
 }
 
 .view-store-link:hover {
   background-color: rgba(255,255,255,0.3);
   text-decoration: none;
+}
+
+.mobile-text {
+  display: none;
 }
 
 .seller-page-container {
@@ -257,6 +265,18 @@
 
   .seller-topbar {
     padding: 0 16px;
+  }
+  
+  .view-store-link {
+    padding: 8px;
+  }
+
+  .desktop-text {
+    display: none;
+  }
+
+  .mobile-text {
+    display: inline;
   }
   
   .seller-page-container {
