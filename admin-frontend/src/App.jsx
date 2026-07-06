@@ -5,6 +5,7 @@ import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import AdminStores from './AdminStores';
 import AdminUsers from './AdminUsers';
+import AdminSettings from './AdminSettings';
 
 // Simple protection
 const PrivateRoute = ({ children }) => {
@@ -30,7 +31,7 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="stores" element={<AdminStores />} />
           <Route path="users" element={<AdminUsers />} />
-          <Route path="settings" element={<div style={{padding: 20}}>Configuración (Próximamente)</div>} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
     </Router>

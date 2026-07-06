@@ -17,13 +17,29 @@ const register = async (req, res) => {
 
     if (error) throw error;
 
+    // Verificar si está habilitada la aprobación automática
+    let isAutoApprove = false;
+    try {
+      const { data: settingsData } = await supabase
+        .from('platform_settings')
+        .select('*')
+        .eq('key', 'auto_approve_sellers')
+        .single();
+      
+      if (settingsData && settingsData.value === 'true') {
+        isAutoApprove = true;
+      }
+    } catch (err) {
+      console.error('Error reading auto_approve_sellers setting:', err);
+    }
+
     // Crear la tienda pendiente en la base de datos
     if (store_name) {
       const { error: storeError } = await supabase.from('stores').insert([
         { 
           name: store_name, 
           description: `Nueva tienda de ${full_name}`,
-          status: 'pending' 
+          status: isAutoApprove ? 'approved' : 'pending' 
         }
       ]);
       
