@@ -7,10 +7,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  background: white;
+  background: var(--bg-card);
   padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .directory-tabs {
@@ -23,29 +24,29 @@
   align-items: center;
   gap: 8px;
   padding: 10px 15px;
-  border: 1px solid #ddd;
-  background: #f9f9f9;
-  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-weight: 500;
-  color: #555;
+  color: var(--text-muted);
   transition: all 0.2s;
 }
 
 .tab-btn.active {
-  background: #007185;
-  color: white;
-  border-color: #007185;
+  background: rgba(59, 130, 246, 0.1); /* light blue bg */
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 
 .directory-search {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f1f5f9;
+  background: var(--bg-dark);
   padding: 8px 15px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
   width: 300px;
 }
 
@@ -54,16 +55,18 @@
   background: transparent;
   outline: none;
   width: 100%;
+  color: var(--text-main);
 }
 
 .directory-filters {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
-  background: white;
+  background: var(--bg-card);
   padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .filter-group {
@@ -74,31 +77,32 @@
 
 .filter-label {
   font-weight: 600;
-  color: #333;
+  color: var(--text-main);
   font-size: 14px;
 }
 
 .filter-btn {
   padding: 6px 12px;
-  border: 1px solid #ddd;
-  background: white;
+  border: 1px solid var(--border-color);
+  background: transparent;
   border-radius: 15px;
   font-size: 13px;
   cursor: pointer;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .filter-btn.active {
-  background: #007185;
-  color: white;
-  border-color: #007185;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 
 .directory-table-container {
-  background: white;
-  border-radius: 8px;
+  background: var(--bg-card);
+  border-radius: var(--border-radius-md);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .directory-table {
@@ -107,26 +111,27 @@
 }
 
 .directory-table th {
-  background: #f8fafc;
+  background: var(--bg-dark);
   padding: 12px 15px;
   text-align: left;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 600;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .directory-table td {
   padding: 15px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
   font-size: 14px;
   vertical-align: middle;
+  color: var(--text-main);
 }
 
 .empty-table {
   text-align: center;
   padding: 40px !important;
-  color: #888;
+  color: var(--text-muted) !important;
 }
 
 .type-badge {
