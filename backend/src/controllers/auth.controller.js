@@ -50,7 +50,11 @@ const register = async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: 'Usuario y tienda registrados exitosamente', user: data.user });
+    res.status(201).json({ 
+      message: 'Usuario y tienda registrados exitosamente', 
+      user: data.user,
+      autoApproved: isAutoApprove 
+    });
   } catch (error) {
     console.error('Registration error:', error.message);
     res.status(400).json({ error: error.message || 'Error al registrar el usuario' });

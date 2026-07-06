@@ -57,7 +57,7 @@ const SellerAuth = () => {
         }
 
         // Register using backend
-        await registerSeller({
+        const regResponse = await registerSeller({
           email: formattedEmail,
           password: formData.password,
           full_name: formData.fullName,
@@ -65,7 +65,11 @@ const SellerAuth = () => {
           store_type: formData.storeType
         });
         
-        alert('Solicitud enviada correctamente. Tu cuenta está pendiente de aprobación por el Administrador.');
+        if (regResponse.autoApproved) {
+          alert('¡Tu cuenta ha sido aprobada automáticamente! Ya puedes iniciar sesión.');
+        } else {
+          alert('Solicitud enviada correctamente. Tu cuenta está pendiente de aprobación por el Administrador.');
+        }
         setIsLogin(true); // Cambiar a pestaña de login
       }
     } catch (err) {
