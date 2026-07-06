@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getSettings, updateSetting } from './services/api';
 import './AdminSettings.css';
 
 const AdminSettings = () => {
@@ -13,13 +14,11 @@ const AdminSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/settings');
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data);
-      }
+      const data = await getSettings();
+      setSettings(data);
     } catch (err) {
       console.error('Error fetching settings:', err);
+      setMessage('Error al cargar configuraciones.');
     } finally {
       setLoading(false);
     }
@@ -33,21 +32,12 @@ const AdminSettings = () => {
     setMessage('');
     
     try {
-      const response = await fetch('http://localhost:5000/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value: newValue })
-      });
-      
-      if (response.ok) {
-        setMessage('Configuración guardada exitosamente.');
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        setMessage('Error al guardar.');
-      }
+      await updateSetting(key, newValue);
+      setMessage('Configuración guardada exitosamente.');
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error(err);
-      setMessage('Error de conexión.');
+      setMessage('Error de conexión o al guardar.');
     } finally {
       setSaving(false);
     }

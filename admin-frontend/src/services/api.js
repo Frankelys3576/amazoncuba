@@ -141,3 +141,31 @@ export const getUsers = async () => {
     return [];
   }
 };
+
+export const getSettings = async () => {
+  try {
+    const response = await fetch(`${API_URL}/settings`);
+    if (!response.ok) throw new Error('Error al obtener configuraciones');
+    return await response.json();
+  } catch (error) {
+    console.error('API getSettings error:', error);
+    throw error;
+  }
+};
+
+export const updateSetting = async (key, value) => {
+  try {
+    const response = await fetch(`${API_URL}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ key, value })
+    });
+    if (!response.ok) throw new Error('Error al actualizar configuración');
+    return await response.json();
+  } catch (error) {
+    console.error('API updateSetting error:', error);
+    throw error;
+  }
+};
