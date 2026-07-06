@@ -3,6 +3,14 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Menu, X, ExternalLink } from 'lucide-react';
 import './SellerLayout.css';
 
+const getClientStoreUrl = (id) => {
+  if (import.meta.env.PROD) return `https://frontend-topaz-ten-91.vercel.app/negocio/${id}`;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `http://${window.location.hostname}:5173/negocio/${id}`;
+  }
+  return `http://localhost:5173/negocio/${id}`;
+};
+
 const SellerLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -107,9 +115,7 @@ const SellerLayout = () => {
           </div>
           <div className="topbar-actions">
             <a 
-              href={import.meta.env.PROD 
-                ? `https://frontend-topaz-ten-91.vercel.app/negocio/${storeId}` 
-                : `http://localhost:5173/negocio/${storeId}`} 
+              href={getClientStoreUrl(storeId)}
               className="view-store-link" 
               target="_blank" 
               rel="noopener noreferrer"
