@@ -11,7 +11,8 @@ const SellerAuth = () => {
     confirmIdentifier: '',
     password: '',
     fullName: '',
-    storeName: ''
+    storeName: '',
+    storeType: 'individual'
   });
 
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,8 @@ const SellerAuth = () => {
           email: formattedEmail,
           password: formData.password,
           full_name: formData.fullName,
-          store_name: formData.storeName
+          store_name: formData.storeName,
+          store_type: formData.storeType
         });
         
         alert('Solicitud enviada correctamente. Tu cuenta está pendiente de aprobación por el Administrador.');
@@ -113,6 +115,33 @@ const SellerAuth = () => {
                     onChange={handleChange}
                     required
                   />
+                </div>
+                <div className="form-group">
+                  <label>Tipo de Vendedor</label>
+                  <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'normal', color: '#333' }}>
+                      <input 
+                        type="radio" 
+                        name="storeType" 
+                        value="individual" 
+                        checked={formData.storeType === 'individual'} 
+                        onChange={handleChange}
+                        style={{ width: 'auto', marginBottom: '0' }}
+                      />
+                      Vendedor Independiente
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'normal', color: '#333' }}>
+                      <input 
+                        type="radio" 
+                        name="storeType" 
+                        value="business" 
+                        checked={formData.storeType === 'business'} 
+                        onChange={handleChange}
+                        style={{ width: 'auto', marginBottom: '0' }}
+                      />
+                      Negocio con Local Físico
+                    </label>
+                  </div>
                 </div>
               </>
             )}

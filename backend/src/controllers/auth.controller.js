@@ -2,7 +2,7 @@ const supabase = require('../config/supabase');
 
 const register = async (req, res) => {
   try {
-    const { email, password, full_name, store_name } = req.body;
+    const { email, password, full_name, store_name, store_type } = req.body;
 
     // Usamos el API de Admin para crear al usuario saltándonos los límites de tasa 
     // y autoconfirmando el email (útil para números de teléfono falsos)
@@ -39,7 +39,8 @@ const register = async (req, res) => {
         { 
           name: store_name, 
           description: `Nueva tienda de ${full_name}`,
-          status: isAutoApprove ? 'approved' : 'pending' 
+          status: isAutoApprove ? 'approved' : 'pending',
+          store_type: store_type || 'business'
         }
       ]);
       
