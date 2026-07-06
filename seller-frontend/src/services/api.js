@@ -174,12 +174,5 @@ export const uploadImage = async (imageFile) => {
   }
 
   const data = await response.json();
-  
-  // Convert local path to full URL if it's running locally
-  if (data.url.startsWith('/images/')) {
-    const baseUrl = API_URL.replace('/api', '');
-    data.url = `${baseUrl}${data.url}`;
-  }
-  
   return data;
 };

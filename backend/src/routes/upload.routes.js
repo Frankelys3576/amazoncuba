@@ -2,27 +2,12 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const supabase = require('../config/supabase');
 
-// Ensure the directory exists
-const uploadDir = path.join(__dirname, '../../public/images');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Configure multer memory storage (required for Vercel/Serverless and Supabase)
+const storage = multer.memoryStorage();
 
-// Configure multer storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Generate a unique filename: store_id + timestamp + extension
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// File filter to accept only PNG (and maybe JPEG just in case, but user specified PNG)
+// File filter to accept only PNG and JPG
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') {
     cb(null, true);
@@ -40,15 +25,35 @@ const upload = multer({
 });
 
 // Upload endpoint for single image
-router.post('/', upload.single('image'), (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se subió ninguna imagen o formato inválido' });
     }
     
-    // Return the URL to access the image
-    const imageUrl = `/images/${req.file.filename}`;
-    res.json({ url: imageUrl, message: 'Imagen subida correctamente' });
+    // Generate a unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = uniqueSuffix + path.extname(req.file.originalname);
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('store-images')
+      .upload(filename, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({ error: 'Error al subir imagen al servidor cloud' });
+    }
+
+    // Get the public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('store-images')
+      .getPublicUrl(filename);
+
+    res.json({ url: publicUrl, message: 'Imagen subida correctamente' });
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ error: 'Error al procesar la imagen' });
