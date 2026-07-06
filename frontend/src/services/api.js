@@ -51,7 +51,7 @@ export const createOrder = async (orderData) => {
 
 export const getStores = async () => {
   try {
-    const response = await fetch(`${API_URL}/stores`);
+    const response = await fetch(`${API_URL}/stores?type=business`);
     if (!response.ok) throw new Error('Error al obtener tiendas');
     return await response.json();
   } catch (error) {

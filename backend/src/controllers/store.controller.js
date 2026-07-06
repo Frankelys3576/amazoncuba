@@ -3,10 +3,14 @@ const supabase = require('../config/supabase');
 // Obtener todas las tiendas
 const getStores = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('stores')
-      .select('*')
-      .eq('store_type', 'business');
+    let query = supabase.from('stores').select('*');
+    
+    // Si se pasa un type por query string, filtramos (ej. type=business)
+    if (req.query.type) {
+      query = query.eq('store_type', req.query.type);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
       console.error('Supabase error fetching stores:', error.message);

@@ -5,6 +5,7 @@ import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import AdminStores from './AdminStores';
 import AdminUsers from './AdminUsers';
+import AdminDirectory from './AdminDirectory';
 import AdminSettings from './AdminSettings';
 
 // Simple protection
@@ -31,6 +32,7 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="stores" element={<AdminStores />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="directory" element={<AdminDirectory />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>

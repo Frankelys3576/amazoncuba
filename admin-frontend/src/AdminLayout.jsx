@@ -14,8 +14,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Panel de Control', icon: <LayoutDashboard size={20} /> },
-    { path: '/stores', label: 'Gestión de Vendedores', icon: <Store size={20} /> },
-    { path: '/users', label: 'Usuarios Registrados', icon: <Users size={20} /> },
+    { path: '/directory', label: 'Usuarios y Negocios', icon: <Users size={20} /> },
     { path: '/settings', label: 'Configuración Global', icon: <Settings size={20} /> },
   ];
 
