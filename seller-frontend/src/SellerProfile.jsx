@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Store, Image, MessageSquare, Phone, AlignLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { getStoreById, updateStoreProfile } from './services/api';
+import { getStoreById, updateStoreProfile, uploadImage } from './services/api';
 import './SellerProfile.css';
 
 const SellerProfile = () => {
@@ -9,6 +9,7 @@ const SellerProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [uploading, setUploading] = useState({ logo: false, banner: false });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -47,6 +48,23 @@ const SellerProfile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(prev => ({ ...prev, [type]: true }));
+    try {
+      const result = await uploadImage(file);
+      setFormData(prev => ({ ...prev, [`${type}_url`]: result.url }));
+      setMessage({ text: `Imagen subida correctamente.`, type: 'success' });
+    } catch (error) {
+      console.error(error);
+      setMessage({ text: error.message || 'Error al subir la imagen.', type: 'error' });
+    } finally {
+      setUploading(prev => ({ ...prev, [type]: false }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -175,30 +193,34 @@ const SellerProfile = () => {
           </div>
 
           <div className="form-section">
-            <h3><Image size={18}/> Imágenes (Enlaces web)</h3>
+            <h3><Image size={18}/> Imágenes (Archivos PNG o JPG)</h3>
             <div className="form-group">
-              <label htmlFor="logo_url">Enlace del Logo (URL)</label>
+              <label htmlFor="logo_upload">Subir Logo</label>
               <input 
-                type="url" 
-                id="logo_url" 
-                name="logo_url" 
-                value={formData.logo_url} 
-                onChange={handleChange} 
-                placeholder="https://ejemplo.com/logo.jpg" 
+                type="file" 
+                id="logo_upload" 
+                accept="image/png, image/jpeg, image/jpg"
+                onChange={(e) => handleImageUpload(e, 'logo')}
+                disabled={uploading.logo}
               />
-              <small>Recomendado: Imagen cuadrada (1:1)</small>
+              <small>Recomendado: Imagen cuadrada (1:1). {uploading.logo && 'Subiendo...'}</small>
+              
+              {/* Mantener input oculto para los datos del formulario si se requiere */}
+              {formData.logo_url && <small style={{color: '#25d366'}}>✓ Logo cargado</small>}
             </div>
+            
             <div className="form-group">
-              <label htmlFor="banner_url">Enlace del Banner (URL)</label>
+              <label htmlFor="banner_upload">Subir Banner</label>
               <input 
-                type="url" 
-                id="banner_url" 
-                name="banner_url" 
-                value={formData.banner_url} 
-                onChange={handleChange} 
-                placeholder="https://ejemplo.com/banner.jpg" 
+                type="file" 
+                id="banner_upload" 
+                accept="image/png, image/jpeg, image/jpg"
+                onChange={(e) => handleImageUpload(e, 'banner')}
+                disabled={uploading.banner}
               />
-              <small>Recomendado: Imagen ancha (16:9 o 21:9)</small>
+              <small>Recomendado: Imagen ancha (16:9 o 21:9). {uploading.banner && 'Subiendo...'}</small>
+              
+              {formData.banner_url && <small style={{color: '#25d366'}}>✓ Banner cargado</small>}
             </div>
           </div>
 

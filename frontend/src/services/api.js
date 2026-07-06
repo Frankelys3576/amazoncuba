@@ -1,4 +1,14 @@
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://backend-lilac-xi-77.vercel.app/api' : 'http://localhost:5001/api');
+const getBaseApiUrl = () => {
+  if (import.meta.env.PROD) {
+    return 'https://backend-lilac-xi-77.vercel.app/api';
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `http://${window.location.hostname}:5001/api`;
+  }
+  return 'http://localhost:5001/api';
+};
+
+const API_URL = import.meta.env.VITE_API_URL || getBaseApiUrl();
 
 export const getProducts = async (params = {}) => {
   try {

@@ -19,6 +19,7 @@ const storeRoutes = require('./routes/store.routes');
 const userRoutes = require('./routes/user.routes');
 const categoryRoutes = require('./routes/category.routes');
 const settingsRoutes = require('./routes/settings.routes');
+const uploadRoutes = require('./routes/upload.routes');
 
 // Definir Rutas
 app.use('/api/products', productRoutes);
@@ -28,6 +29,7 @@ app.use('/api/stores', storeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Rutas de prueba
 app.get('/', (req, res) => {
