@@ -7,6 +7,7 @@ import SellerLayout from './SellerLayout';
 import SellerDashboard from './SellerDashboard';
 import SellerProducts from './SellerProducts';
 import SellerOrders from './SellerOrders';
+import SellerProfile from './SellerProfile';
 
 import './App.css';
 
@@ -21,6 +22,7 @@ function App() {
           <Route path="dashboard" element={<SellerDashboard />} />
           <Route path="products" element={<SellerProducts />} />
           <Route path="orders" element={<SellerOrders />} />
+          <Route path="profile" element={<SellerProfile />} />
           <Route path="settings" element={
             <div style={{padding: '40px', textAlign: 'center'}}>
               <h2>Configuración de la Tienda</h2>

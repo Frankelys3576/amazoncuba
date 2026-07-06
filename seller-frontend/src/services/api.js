@@ -130,3 +130,20 @@ export const registerSeller = async (userData) => {
   
   return await response.json();
 };
+
+export const updateStoreProfile = async (id, profileData) => {
+  const response = await fetch(`${API_URL}/stores/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(profileData)
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error actualizando el perfil');
+  }
+  
+  return await response.json();
+};

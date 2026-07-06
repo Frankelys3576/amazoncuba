@@ -28,13 +28,32 @@ const StoreDetails = () => {
 
   return (
     <div className="store-details-page">
-      <div className="store-banner" style={{ backgroundImage: `url(${store.banner_url})` }}>
+      <div 
+        className="store-banner" 
+        style={{ backgroundImage: `url(${store.banner_url || 'https://via.placeholder.com/1200x300?text=Bienvenido+a+nuestra+tienda'})` }}
+      >
         <div className="store-banner-overlay">
           <div className="container store-profile">
-            <img src={store.logo_url} alt={store.name} className="store-profile-logo" />
+            <img 
+              src={store.logo_url || 'https://via.placeholder.com/150'} 
+              alt={store.name} 
+              className="store-profile-logo" 
+            />
             <div className="store-profile-info">
               <h1>{store.name}</h1>
+              {store.slogan && <h3 className="store-slogan">{store.slogan}</h3>}
               <p>{store.description}</p>
+              
+              {store.phone && (
+                <a 
+                  href={`https://wa.me/${store.phone.replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(store.name)},%20vengo%20de%20CubaAmazon%20y%20tengo%20una%20consulta.`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="store-whatsapp-btn"
+                >
+                  Contactar por WhatsApp
+                </a>
+              )}
             </div>
           </div>
         </div>

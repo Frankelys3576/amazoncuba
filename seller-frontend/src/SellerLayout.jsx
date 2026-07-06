@@ -39,6 +39,7 @@ const SellerLayout = () => {
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Resumen' },
     { path: '/products', icon: <Package size={20} />, label: 'Mis Productos' },
     { path: '/orders', icon: <ShoppingBag size={20} />, label: 'Pedidos' },
+    { path: '/profile', icon: <Store size={20} />, label: 'Mi Tienda' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Configuración' },
   ];
 
