@@ -1,0 +1,172 @@
+.my-orders-container, .my-orders-empty {
+  padding: 40px 20px;
+}
+
+.my-orders-empty {
+  text-align: center;
+}
+
+.empty-state-box {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 40px 20px;
+  margin-top: 20px;
+}
+
+.empty-state-box p {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.order-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.order-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.order-date {
+  font-size: 13px;
+  color: #666;
+}
+
+.order-id {
+  font-weight: 600;
+  color: #333;
+}
+
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.order-body {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .order-body {
+    flex-direction: row;
+  }
+}
+
+.order-products {
+  flex: 1;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+@media (min-width: 768px) {
+  .order-products {
+    border-bottom: none;
+    border-right: 1px solid #eee;
+  }
+}
+
+.order-products h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #555;
+}
+
+.products-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.product-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.product-preview-item img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.product-preview-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+}
+
+.product-qty-price {
+  font-size: 13px;
+  color: #666;
+}
+
+.more-products {
+  font-size: 13px;
+  color: #007bff;
+  font-weight: 500;
+  margin-top: 5px;
+}
+
+.order-summary-mini {
+  padding: 20px;
+  width: 100%;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+@media (min-width: 768px) {
+  .order-summary-mini {
+    width: 250px;
+  }
+}
+
+.btn-download {
+  width: 100%;
+  margin-top: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.btn-download:hover {
+  background-color: #f0f0f0;
+}

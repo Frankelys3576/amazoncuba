@@ -35,12 +35,23 @@ const register = async (req, res) => {
 
     // Crear la tienda pendiente en la base de datos
     if (store_name) {
+      // Extraer el teléfono del email si es posible y normalizarlo (quitar '+' y espacios)
+      let phoneMatch = email.split('@')[0];
+      if (phoneMatch) {
+        phoneMatch = phoneMatch.replace(/\+/g, '').replace(/\s/g, '');
+      }
+      
+      // Generate a 6-digit random number
+      const store_number = Math.floor(100000 + Math.random() * 900000).toString();
+
       const { error: storeError } = await supabase.from('stores').insert([
         { 
           name: store_name, 
           description: `Nueva tienda de ${full_name}`,
           status: isAutoApprove ? 'approved' : 'pending',
-          store_type: store_type || 'business'
+          store_type: store_type || 'business',
+          phone: phoneMatch,
+          store_number: store_number
         }
       ]);
       
@@ -73,11 +84,31 @@ const login = async (req, res) => {
 
     if (error) throw error;
 
+    // Buscar la tienda asociada a este usuario (por teléfono, extraído del email, normalizado)
+    let phoneMatch = email.split('@')[0];
+    if (phoneMatch) {
+      phoneMatch = phoneMatch.replace(/\+/g, '').replace(/\s/g, '');
+    }
+    
+    let store = null;
+    try {
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('*')
+        .ilike('phone', `%${phoneMatch}%`)
+        .limit(1)
+        .single();
+      store = storeData;
+    } catch (err) {
+      console.error('No store found for user', phoneMatch);
+    }
+
     // Devolvemos el token de sesión y los datos del usuario al frontend
     res.json({
       message: 'Login exitoso',
       session: data.session,
-      user: data.user
+      user: data.user,
+      store: store
     });
   } catch (error) {
     console.error('Login error:', error.message);
@@ -85,7 +116,57 @@ const login = async (req, res) => {
   }
 };
 
+const deleteAccount = async (req, res) => {
+  try {
+    const { storeId } = req.body;
+
+    if (!storeId) {
+      return res.status(400).json({ error: 'Store ID is required' });
+    }
+
+    // 1. Obtener todos los productos de la tienda
+    const { data: products } = await supabase
+      .from('products')
+      .select('id')
+      .eq('store_id', storeId);
+
+    const productIds = products ? products.map(p => p.id) : [];
+
+    // 2. Eliminar order_items de esos productos (para no romper la BD)
+    if (productIds.length > 0) {
+      await supabase
+        .from('order_items')
+        .delete()
+        .in('product_id', productIds);
+        
+      // 3. Eliminar los productos
+      await supabase
+        .from('products')
+        .delete()
+        .in('id', productIds);
+    }
+
+    // 4. Eliminar la tienda
+    const { error: storeError } = await supabase
+      .from('stores')
+      .delete()
+      .eq('id', storeId);
+
+    if (storeError) throw storeError;
+
+    // Nota: El usuario de Auth (auth.users) quedará huérfano, 
+    // pero para este MVP borrar la tienda y sus productos es suficiente 
+    // para considerarlo "eliminado".
+
+    res.json({ message: 'Cuenta eliminada exitosamente' });
+  } catch (error) {
+    console.error('Delete account error:', error.message);
+    res.status(500).json({ error: 'Error al eliminar la cuenta' });
+  }
+};
+
 module.exports = {
   register,
-  login
+  login,
+  deleteAccount
 };

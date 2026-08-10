@@ -8,6 +8,7 @@ import SellerDashboard from './SellerDashboard';
 import SellerProducts from './SellerProducts';
 import SellerOrders from './SellerOrders';
 import SellerProfile from './SellerProfile';
+import SellerStoreCategories from './SellerStoreCategories';
 
 import './App.css';
 
@@ -21,6 +22,7 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<SellerDashboard />} />
           <Route path="products" element={<SellerProducts />} />
+          <Route path="categories" element={<SellerStoreCategories />} />
           <Route path="orders" element={<SellerOrders />} />
           <Route path="profile" element={<SellerProfile />} />
           <Route path="settings" element={

@@ -1,0 +1,8 @@
+-- Actualización de esquema para Hostales y Casas de Renta (CubaBnB)
+ALTER TABLE public.stores
+ADD COLUMN IF NOT EXISTS province TEXT,
+ADD COLUMN IF NOT EXISTS municipality TEXT,
+ADD COLUMN IF NOT EXISTS address TEXT,
+ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS price_per_night NUMERIC;

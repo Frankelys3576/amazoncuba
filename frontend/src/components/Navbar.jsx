@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, MapPin, Menu, X } from 'lucide-react';
+import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
+import { Search, ShoppingCart, MapPin, Menu, X, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useLocation } from '../context/LocationContext';
 import { cubaLocations } from '../utils/cubaLocations';
@@ -17,40 +17,42 @@ const Navbar = () => {
   const [tempMun, setTempMun] = useState(location.municipality || '');
 
   const navigate = useNavigate();
+  const routerLocation = useRouterLocation();
+
+  // Determinar si estamos en la vista de una tienda específica
+  const isStoreView = routerLocation.pathname.startsWith('/negocio/');
+  const storeIdMatch = routerLocation.pathname.match(/\/negocio\/([^/]+)/);
+  const currentStoreId = storeIdMatch ? storeIdMatch[1] : null;
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      if (isStoreView && currentStoreId) {
+        navigate(`/negocio/${currentStoreId}?q=${encodeURIComponent(searchQuery.trim())}`);
+      } else {
+        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }
     }
   };
   return (
     <header className="navbar-container">
       {/* Main Nav */}
-      <div className="navbar-main">
+      <div className={`navbar-main ${isStoreView ? 'store-mode' : ''}`}>
         {/* Logo */}
         <Link to="/" className="nav-logo-link nav-item">
           <div className="nav-logo">CubaAmazon</div>
         </Link>
 
-        {/* Location (Interactive) */}
-        <div className="nav-location nav-item hide-mobile" onClick={() => setShowLocationModal(true)}>
-          <MapPin size={18} />
-          <div className="location-text">
-            <span className="text-small">Buscar en</span>
-            <span className="text-bold">
-              {location.municipality && location.province 
-                ? `${location.municipality}, ${location.province}` 
-                : 'Todo Cuba'}
-            </span>
-          </div>
-        </div>
-
         {/* Search Bar */}
         <form className="nav-search" onSubmit={handleSearch}>
+          {isStoreView && (
+            <div className="store-search-badge" style={{display: 'flex', alignItems: 'center', background: '#f3f3f3', padding: '0 10px', borderRight: '1px solid #ddd', color: '#555', fontSize: '13px', fontWeight: 'bold'}}>
+              <Store size={14} style={{marginRight: '4px'}}/> Tienda
+            </div>
+          )}
           <input 
             type="text" 
-            placeholder="Buscar productos, marcas y más..." 
+            placeholder={isStoreView ? "Buscar en esta tienda..." : "Buscar productos, marcas y más..."} 
             className="search-input" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -59,6 +61,13 @@ const Navbar = () => {
             <Search size={20} color="#111" />
           </button>
         </form>
+
+        {/* Botón Hostales / CubaBnB */}
+        <Link to="/cubabnb" className="nav-cubabnb-link" style={{ textDecoration: 'none' }}>
+          <span className="text-bold" style={{ color: 'white', padding: '6px 12px', background: '#ff385c', borderRadius: '6px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+            🏡 Hostales
+          </span>
+        </Link>
 
         {/* Botón Negocios (Directorio) */}
         <Link to="/negocios" className="nav-stores-link hide-mobile">
@@ -72,15 +81,10 @@ const Navbar = () => {
         </div>
 
         {/* Returns & Orders */}
-        <div className="nav-orders nav-item hide-mobile">
-          <span className="text-small">Devoluciones</span>
+        <Link to="/mis-pedidos" className="nav-orders nav-item hide-mobile" style={{textDecoration: 'none'}}>
+          <span className="text-small">Cancelaciones</span>
           <span className="text-bold">y Pedidos</span>
-        </div>
-
-        {/* Botón Vender */}
-        <a href="https://seller-cuba-amazon.vercel.app" className="nav-sell-btn" target="_blank" rel="noopener noreferrer">
-          Vender un Producto
-        </a>
+        </Link>
 
         {/* Cart */}
         <Link to="/cart" className="nav-cart nav-item">
@@ -90,6 +94,13 @@ const Navbar = () => {
           </div>
           <span className="text-bold cart-label">Carrito</span>
         </Link>
+
+        {/* Botón Vender (Oculto en vista de tienda) - Extremo Derecho */}
+        {!isStoreView && (
+          <a href="https://seller-cuba-amazon.vercel.app" className="nav-sell-btn hide-mobile" target="_blank" rel="noopener noreferrer" style={{ marginLeft: '10px' }}>
+            Vender / Iniciar Sesión
+          </a>
+        )}
       </div>
 
       {/* Sub Nav */}
@@ -98,9 +109,38 @@ const Navbar = () => {
           <Menu size={20} />
           <span>Todo</span>
         </div>
-        <Link to="/negocios">Negocios</Link>
-        <Link to="/ofertas">Ofertas del Día</Link>
-        <Link to="/servicio-cliente">Servicio al Cliente</Link>
+        
+        {/* Location (Interactive) - Oculto en vista de tienda */}
+        {!isStoreView && (
+          <div className="nav-location nav-item" onClick={() => setShowLocationModal(true)} style={{ marginLeft: '10px' }}>
+            <MapPin size={16} />
+            <div className="location-text" style={{ padding: '0 4px', lineHeight: '1.2' }}>
+              <span className="text-bold location-name" style={{ fontSize: '13px' }}>
+                {location.municipality && location.province 
+                  ? `${location.municipality}, ${location.province}` 
+                  : 'Filtrar por Ubicación'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {isStoreView ? (
+          <>
+            <Link to={`/negocio/${currentStoreId}?filter=bestsellers`}>Lo más vendido</Link>
+            <Link to={`/negocio/${currentStoreId}?filter=deals`}>Oferta del día</Link>
+            <Link to={`/negocio/${currentStoreId}?filter=new`}>Nuevos</Link>
+          </>
+        ) : (
+          <>
+            <Link to="/cubabnb" style={{ fontWeight: 'bold', background: '#ff385c', color: 'white', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🏡 Hostales (CubaBnB)
+            </Link>
+            <Link to="/negocios">Negocios</Link>
+            <Link to="/ofertas">Ofertas del Día</Link>
+            <Link to="/servicio-cliente">Servicio al Cliente</Link>
+            <Link to="/mis-pedidos" style={{fontWeight: 'bold'}}>Mis Pedidos</Link>
+          </>
+        )}
       </div>
 
       {/* Location Modal */}

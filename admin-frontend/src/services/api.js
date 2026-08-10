@@ -79,6 +79,17 @@ export const getStoreById = async (id) => {
   }
 };
 
+export const getAdminStoreDetails = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${id}/admin-details`);
+    if (!response.ok) throw new Error('Error al obtener detalles de tienda');
+    return await response.json();
+  } catch (error) {
+    console.error('API getAdminStoreDetails error:', error);
+    return null;
+  }
+};
+
 export const loginSeller = async (email, password) => {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
@@ -130,6 +141,23 @@ export const updateStoreStatus = async (id, status) => {
   }
 };
 
+export const updateZelleConfig = async (id, zelleData) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${id}/zelle`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(zelleData)
+    });
+    if (!response.ok) throw new Error('Error al actualizar configuración de Zelle');
+    return await response.json();
+  } catch (error) {
+    console.error('API updateZelleConfig error:', error);
+    throw error;
+  }
+};
+
 export const getOrders = async () => {
   try {
     const response = await fetch(`${API_URL}/orders`);
@@ -149,6 +177,19 @@ export const getUsers = async () => {
   } catch (error) {
     console.error('API getUsers error:', error);
     return [];
+  }
+};
+
+export const deleteUser = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/users/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar usuario');
+    return await response.json();
+  } catch (error) {
+    console.error('API deleteUser error:', error);
+    throw error;
   }
 };
 
@@ -176,6 +217,30 @@ export const updateSetting = async (key, value) => {
     return await response.json();
   } catch (error) {
     console.error('API updateSetting error:', error);
+    throw error;
+  }
+};
+
+export const uploadImage = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const response = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.details 
+        ? `${errorData.error} - Detalles: ${JSON.stringify(errorData.details)}` 
+        : (errorData.error || 'Error al subir la imagen');
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('API uploadImage error:', error);
     throw error;
   }
 };

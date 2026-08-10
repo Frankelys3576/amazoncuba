@@ -26,6 +26,8 @@
 
 @media (min-width: 992px) {
   .product-image-section {
+    flex: 0 0 40%;
+    max-width: 40%;
     display: flex;
     gap: 20px;
     align-items: flex-start;
@@ -67,7 +69,7 @@
   max-width: 100%;
   height: auto;
   max-height: 500px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .product-info-section {

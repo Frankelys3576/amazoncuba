@@ -205,7 +205,7 @@
   background-color: var(--bg-card);
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-color);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .data-table {

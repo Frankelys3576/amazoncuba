@@ -1,0 +1,99 @@
+.hostal-map-wrapper {
+  width: 100%;
+  height: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 25px;
+  position: relative;
+  z-index: 1;
+}
+
+.hostal-leaflet-map {
+  width: 100%;
+  height: 100%;
+}
+
+.custom-hostal-marker .marker-pin {
+  background: #ff385c;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  white-space: nowrap;
+  border: 2px solid white;
+  transition: transform 0.2s ease;
+}
+
+.custom-hostal-marker:hover .marker-pin {
+  transform: scale(1.1);
+  background: #e00b41;
+}
+
+.leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: 220px !important;
+}
+
+.map-popup-card {
+  font-family: inherit;
+}
+
+.map-popup-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+
+.map-popup-body {
+  padding: 10px 12px 14px 12px;
+}
+
+.map-popup-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.map-popup-location {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.map-popup-price {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ff385c;
+  margin-bottom: 8px;
+}
+
+.map-popup-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: #ff385c;
+  color: white !important;
+  padding: 6px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.map-popup-btn:hover {
+  background: #e00b41;
+}

@@ -145,13 +145,13 @@
 
 .cart-count {
   position: absolute;
-  top: -12px;
-  left: 12px;
+  top: -14px;
+  left: 0;
+  width: 100%;
   color: var(--brand-accent);
   font-weight: 800;
-  font-size: 18px;
+  font-size: 16px;
   text-align: center;
-  width: 24px;
 }
 
 .cart-label {
@@ -214,12 +214,77 @@
   .navbar-main {
     flex-wrap: wrap;
     padding: 10px;
+    /* Reset from desktop if needed */
+    display: flex;
   }
-  .nav-search {
+  .navbar-main.store-mode {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    grid-template-areas: 
+      "logo space account cart"
+      "search search search search";
+    gap: 8px 10px;
+  }
+  .navbar-main.store-mode .nav-logo-link {
+    grid-area: logo;
+  }
+  .navbar-main.store-mode .nav-account {
+    grid-area: account;
+    padding: 0;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .navbar-main.store-mode .nav-account .text-bold {
+    display: none; 
+  }
+  .navbar-main.store-mode .nav-cart {
+    grid-area: cart;
+    margin: 0;
+    padding: 0;
+  }
+  .navbar-main.store-mode .nav-search {
+    grid-area: search;
+    width: 100%;
+    margin-top: 0;
+  }
+  .navbar-main.store-mode .nav-sell-btn {
+    display: none; /* Ocultar botón vender solo en tienda */
+  }
+  
+  /* Fallback/Original para global */
+  .navbar-main:not(.store-mode) {
+    justify-content: space-between;
+  }
+  .navbar-main:not(.store-mode) .nav-location {
+    padding: 4px;
+    margin-right: auto;
+  }
+  .navbar-main:not(.store-mode) .location-name {
+    font-size: 11px;
+    max-width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .navbar-main:not(.store-mode) .nav-search {
     order: 3;
     width: 100%;
     margin-top: 8px;
   }
+  .navbar-main:not(.store-mode) .nav-cart {
+    padding-right: 0;
+  }
+  .navbar-main:not(.store-mode) .nav-sell-btn {
+    order: 0;
+    width: auto;
+    margin-top: 0;
+    margin-left: 5px;
+    padding: 4px 8px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+  }
+  
   .navbar-sub {
     padding: 8px 5px;
     gap: 6px;
@@ -232,13 +297,12 @@
   .navbar-sub a, .sub-menu-btn {
     padding: 4px 6px;
   }
-  .nav-cart {
-    margin-left: auto;
-    padding-right: 0;
-  }
   .cart-count {
-    top: -18px;
-    left: 14px;
+    top: -14px;
+    left: 0;
+  }
+  .navbar-main.store-mode .cart-label {
+    display: none;
   }
 }
 

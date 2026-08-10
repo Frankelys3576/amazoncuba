@@ -1,22 +1,44 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { getStoreById } from '../services/api';
+import ZelleWarningModal from '../components/ZelleWarningModal';
 import './Cart.css';
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, cartTotal, cartCount } = useCart();
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isZelleModalOpen, setIsZelleModalOpen] = useState(false);
+  const [zelleStorePhone, setZelleStorePhone] = useState(null);
+  const [zelleStoreName, setZelleStoreName] = useState(null);
 
-  const openContactModal = (item) => {
-    setSelectedProduct(item);
-    setShowContactModal(true);
-  };
-
-  const closeContactModal = () => {
-    setShowContactModal(false);
-    setSelectedProduct(null);
-  };
+  React.useEffect(() => {
+    const checkZelleStores = async () => {
+      if (cart.length === 0) return;
+      
+      // Get unique store IDs from cart
+      const storeIds = [...new Set(cart.map(item => item.store_id).filter(Boolean))];
+      
+      for (const storeId of storeIds) {
+        try {
+          const storeData = await getStoreById(storeId);
+          if (storeData?.accepts_zelle === true) {
+            const hasSeenWarning = sessionStorage.getItem(`zelle_warning_${storeId}`);
+            if (!hasSeenWarning) {
+              setZelleStorePhone(storeData.phone);
+              setZelleStoreName(storeData.name);
+              setIsZelleModalOpen(true);
+              sessionStorage.setItem(`zelle_warning_${storeId}`, 'true');
+              break; // Show for the first Zelle store found
+            }
+          }
+        } catch (e) {
+          console.error("Error fetching store data", e);
+        }
+      }
+    };
+    
+    checkZelleStores();
+  }, [cart]);
 
   return (
     <div className="container cart-container">
@@ -58,10 +80,6 @@ const Cart = () => {
                       </div>
                       <span className="separator">|</span>
                       <button className="action-link" onClick={() => removeFromCart(item.id)}>Eliminar</button>
-                      <span className="separator">|</span>
-                      <button className="action-link" style={{color: '#25d366', fontWeight: 'bold'}} onClick={() => openContactModal(item)}>
-                        Contactar al Vendedor
-                      </button>
                     </div>
                   </div>
                   <div className="cart-item-price">
@@ -86,48 +104,20 @@ const Cart = () => {
                 Subtotal ({cartCount} productos): <br/>
                 <span className="bold-price">${cartTotal.toFixed(2)} {cart[0]?.currency || 'USD'}</span>
               </div>
-              <div style={{marginTop: '15px', fontSize: '13px', color: '#666', lineHeight: '1.4'}}>
-                Para concretar tu compra, contacta directamente al vendedor de cada producto usando el botón verde "Contactar al Vendedor" en la lista de artículos.
-              </div>
+              <Link to="/checkout" className="btn btn-primary" style={{display: 'block', textAlign: 'center', marginTop: '15px', padding: '12px', fontSize: '16px', fontWeight: 'bold'}}>
+                Hacer Orden
+              </Link>
             </div>
           </div>
         )}
       </div>
-      {showContactModal && selectedProduct && (
-        <div className="contact-modal-overlay" onClick={closeContactModal} style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-          <div className="contact-modal-content" onClick={(e) => e.stopPropagation()} style={{backgroundColor: 'white', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '90%', textAlign: 'center'}}>
-            <h2 style={{marginTop: 0, marginBottom: '20px', color: '#333'}}>Contactar Vendedor</h2>
-            <p style={{marginBottom: '30px', color: '#666'}}>¿Cómo prefieres comunicarte con la tienda para adquirir <strong>{selectedProduct.name}</strong>?</p>
-            
-            <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
-              <a 
-                href={`tel:+5350000000`} 
-                className="btn" 
-                style={{backgroundColor: '#007bff', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}
-              >
-                📞 Llamar por Teléfono
-              </a>
-              
-              <a 
-                href={`https://wa.me/5350000000?text=Hola,%20estoy%20interesado%20en%20comprar%20${selectedProduct.quantity}%20unidades%20de:%20${encodeURIComponent(selectedProduct.name)}`} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="btn" 
-                style={{backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}
-              >
-                💬 Escribir por WhatsApp
-              </a>
-            </div>
 
-            <button 
-              onClick={closeContactModal} 
-              style={{marginTop: '25px', background: 'none', border: 'none', color: '#999', cursor: 'pointer', textDecoration: 'underline'}}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <ZelleWarningModal 
+        isOpen={isZelleModalOpen} 
+        onClose={() => setIsZelleModalOpen(false)} 
+        storePhone={zelleStorePhone}
+        storeName={zelleStoreName}
+      />
     </div>
   );
 };

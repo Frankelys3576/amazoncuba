@@ -59,6 +59,34 @@ export const createOrder = async (orderData) => {
   }
 };
 
+export const getOrdersByIds = async (ids) => {
+  try {
+    const response = await fetch(`${API_URL}/orders?ids=${ids.join(',')}`);
+    if (!response.ok) throw new Error('Error al obtener los pedidos');
+    return await response.json();
+  } catch (error) {
+    console.error('API getOrdersByIds error:', error);
+    return [];
+  }
+};
+
+export const updateOrder = async (id, status) => {
+  try {
+    const response = await fetch(`${API_URL}/orders/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    });
+    if (!response.ok) throw new Error('Error al actualizar el pedido');
+    return await response.json();
+  } catch (error) {
+    console.error('API updateOrder error:', error);
+    throw error;
+  }
+};
+
 export const getStores = async () => {
   try {
     const response = await fetch(`${API_URL}/stores?type=business`);
@@ -78,5 +106,92 @@ export const getStoreById = async (id) => {
   } catch (error) {
     console.error('API getStoreById error:', error);
     return null;
+  }
+};
+
+export const registerProductView = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/products/${id}/view`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Error al registrar la vista del producto');
+    return await response.json();
+  } catch (error) {
+    // Es un error silencioso, no es necesario interrumpir la UX
+    console.error('API registerProductView error:', error);
+    return null;
+  }
+};
+
+export const getProductReviews = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/products/${id}/reviews`);
+    if (!response.ok) throw new Error('Error fetching reviews');
+    return await response.json();
+  } catch (error) {
+    console.error('API getProductReviews error:', error);
+    return [];
+  }
+};
+
+export const addProductReview = async (id, reviewData) => {
+  try {
+    const response = await fetch(`${API_URL}/products/${id}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reviewData)
+    });
+    if (!response.ok) throw new Error('Error submitting review');
+    return await response.json();
+  } catch (error) {
+    console.error('API addProductReview error:', error);
+    return null;
+  }
+};
+
+export const getStoreCategories = async (storeId) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${storeId}/categories`);
+    if (!response.ok) throw new Error('Error fetching store categories');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching store categories:', error);
+    return [];
+  }
+};
+export const getSettings = async () => {
+  try {
+    const response = await fetch(`${API_URL}/settings`);
+    if (!response.ok) throw new Error('Error al obtener configuraciones');
+    return await response.json();
+  } catch (error) {
+    console.error('API getSettings error:', error);
+    return {};
+  }
+};
+
+export const uploadImage = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const response = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.details 
+        ? `${errorData.error} - Detalles: ${JSON.stringify(errorData.details)}` 
+        : (errorData.error || 'Error al subir la imagen');
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('API uploadImage error:', error);
+    throw error;
   }
 };

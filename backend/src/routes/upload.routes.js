@@ -45,7 +45,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     if (error) {
       console.error('Supabase upload error:', error);
-      return res.status(500).json({ error: 'Error al subir imagen al servidor cloud' });
+      return res.status(500).json({ error: 'Error al subir imagen al servidor cloud', details: error.message || error });
     }
 
     // Get the public URL

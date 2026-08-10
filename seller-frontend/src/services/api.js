@@ -57,6 +57,36 @@ export const createProduct = async (productData) => {
   }
 };
 
+export const updateProduct = async (id, productData) => {
+  try {
+    const response = await fetch(`${API_URL}/products/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(productData)
+    });
+    if (!response.ok) throw new Error('Error al actualizar producto');
+    return await response.json();
+  } catch (error) {
+    console.error('API updateProduct error:', error);
+    throw error;
+  }
+};
+
+export const deleteProduct = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/products/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar producto');
+    return await response.json();
+  } catch (error) {
+    console.error('API deleteProduct error:', error);
+    throw error;
+  }
+};
+
 export const getProductById = async (id) => {
   try {
     const response = await fetch(`${API_URL}/products/${id}`);
@@ -81,6 +111,67 @@ export const createOrder = async (orderData) => {
     return await response.json();
   } catch (error) {
     console.error('API createOrder error:', error);
+    throw error;
+  }
+};
+
+export const getStoreOrders = async (storeId) => {
+  try {
+    const response = await fetch(`${API_URL}/orders?storeId=${storeId}&t=${Date.now()}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+    if (!response.ok) throw new Error('Error al obtener los pedidos');
+    return await response.json();
+  } catch (error) {
+    console.error('API getStoreOrders error:', error);
+    return [];
+  }
+};
+
+export const getStoreStats = async (storeId) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${storeId}/stats`);
+    if (!response.ok) throw new Error('Error al obtener estadísticas de la tienda');
+    return await response.json();
+  } catch (error) {
+    console.error('API getStoreStats error:', error);
+    return { viewsToday: 0, viewsThisMonth: 0, viewsTotal: 0 };
+  }
+};
+
+export const updateOrder = async (id, status) => {
+  try {
+    const response = await fetch(`${API_URL}/orders/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    });
+    if (!response.ok) throw new Error('Error al actualizar el pedido');
+    return await response.json();
+  } catch (error) {
+    console.error('API updateOrder error:', error);
+    throw error;
+  }
+};
+
+export const deleteAccount = async (storeId) => {
+  try {
+    const response = await fetch(`${API_URL}/auth/delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ storeId })
+    });
+    if (!response.ok) throw new Error('Error al eliminar la cuenta');
+    return await response.json();
+  } catch (error) {
+    console.error('API deleteAccount error:', error);
     throw error;
   }
 };
@@ -170,9 +261,67 @@ export const uploadImage = async (imageFile) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Error al subir la imagen');
+    const errorMessage = errorData.details 
+      ? `${errorData.error} - Detalles: ${JSON.stringify(errorData.details)}` 
+      : (errorData.error || 'Error al subir la imagen');
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
   return data;
+};
+
+// --- Store Categories ---
+export const getStoreCategories = async (storeId) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${storeId}/categories`);
+    if (!response.ok) throw new Error('Error fetching store categories');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching store categories:', error);
+    throw error;
+  }
+};
+
+export const createStoreCategory = async (storeId, categoryData) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${storeId}/categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(categoryData),
+    });
+    if (!response.ok) throw new Error('Error creating store category');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating store category:', error);
+    throw error;
+  }
+};
+
+export const updateStoreCategory = async (storeId, categoryId, categoryData) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(categoryData),
+    });
+    if (!response.ok) throw new Error('Error updating store category');
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating store category:', error);
+    throw error;
+  }
+};
+
+export const deleteStoreCategory = async (storeId, categoryId) => {
+  try {
+    const response = await fetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Error deleting store category');
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting store category:', error);
+    throw error;
+  }
 };

@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
-import { getProducts, createProduct, getCategories } from './services/api';
+import { Plus, Edit2, Trash2, Search, X, Heart } from 'lucide-react';
+import { getProducts, createProduct, getCategories, deleteProduct, updateProduct, uploadImage, getStoreCategories, getStoreById } from './services/api';
 import { cubaLocations } from './utils/cubaLocations';
 import './SellerProducts.css';
 
 const SellerProducts = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [storeCategories, setStoreCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingProductId, setEditingProductId] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
+    price_usd: '',
     currency: 'USD',
     stock: '',
     category_id: '',
+    store_category_id: '',
     image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80',
     image_url_2: '',
     image_url_3: '',
@@ -29,24 +34,25 @@ const SellerProducts = () => {
   const [addingProduct, setAddingProduct] = useState(false);
   const [tempProv, setTempProv] = useState('La Habana');
   const [tempMun, setTempMun] = useState('Plaza de la Revolución');
+  const [storeInfo, setStoreInfo] = useState(null);
   
   useEffect(() => {
     const fetchStoreProducts = async () => {
       try {
         const storeId = localStorage.getItem('seller_store_id');
-        // Para este MVP traemos los productos de esta tienda
-        // Si el endpoint no filtra por tienda, simulamos el filtrado aquí.
-        const allProducts = await getProducts();
-        const storeProducts = allProducts.filter(p => p.store_id == storeId);
-        
-        // Si la tienda no tiene productos, ponemos unos de prueba para que no se vea vacío
-        if (storeProducts.length === 0) {
-          setProducts(allProducts.slice(0, 5));
-        } else {
-          setProducts(storeProducts);
-        }
-
-        // Fetch categories
+      
+      if (storeId) {
+        const [allProducts, storeCats, storeData] = await Promise.all([
+          getProducts({ storeId }),
+          getStoreCategories(storeId),
+          getStoreById(storeId)
+        ]);
+        setProducts(allProducts);
+        if (storeCats) setStoreCategories(storeCats);
+        if (storeData) setStoreInfo(storeData);
+      }
+      
+      // Fetch categories
         const fetchedCategories = await getCategories();
         setCategories(fetchedCategories);
       } catch (error) {
@@ -63,6 +69,21 @@ const SellerProducts = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleImageUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setAddingProduct(true);
+      const data = await uploadImage(file);
+      setNewProduct(prev => ({ ...prev, [field]: data.url }));
+    } catch (error) {
+      alert(error.message || 'Error al subir la imagen');
+    } finally {
+      setAddingProduct(false);
+    }
+  };
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
     if (newProduct.delivery_locations.length === 0) {
@@ -73,31 +94,94 @@ const SellerProducts = () => {
     try {
       setAddingProduct(true);
       const storeId = localStorage.getItem('seller_store_id');
-      const addedProduct = await createProduct({
+      
+      const payload = {
         ...newProduct,
         store_id: storeId,
-        price: parseFloat(newProduct.price),
-        stock: parseInt(newProduct.stock, 10),
-        category_id: parseInt(newProduct.category_id, 10),
-        // Send the first location as primary just for backwards compatibility, if needed
+        price: parseFloat(newProduct.price) || 0,
+        price_usd: newProduct.price_usd ? parseFloat(newProduct.price_usd) : null,
+        stock: parseInt(newProduct.stock, 10) || 0,
+        currency: storeInfo?.accepts_zelle ? 'CUP' : newProduct.currency,
+        category_id: parseInt(newProduct.category_id, 10) || null,
+        store_category_id: newProduct.store_category_id ? parseInt(newProduct.store_category_id, 10) : null,
         province: newProduct.delivery_locations[0].split(':')[0],
         municipality: newProduct.delivery_locations[0].split(':')[1]
-      });
-      setProducts([addedProduct, ...products]);
-      setShowAddModal(false);
-      setNewProduct({
-        name: '', price: '', currency: 'USD', stock: '', category_id: '', 
-        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
-        image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
-        description: '', delivery_locations: []
-      });
-      setTempProv('La Habana');
-      setTempMun('Plaza de la Revolución');
+      };
+
+      if (isEditing) {
+        const updatedProduct = await updateProduct(editingProductId, payload);
+        setProducts(products.map(p => p.id === editingProductId ? updatedProduct : p));
+      } else {
+        const addedProduct = await createProduct(payload);
+        setProducts([addedProduct, ...products]);
+      }
+      
+      handleCloseModal();
     } catch (error) {
-      alert('Error al agregar el producto');
+      alert(`Error al ${isEditing ? 'actualizar' : 'agregar'} el producto`);
       console.error(error);
     } finally {
       setAddingProduct(false);
+    }
+  };
+
+  const handleEditProductClick = (product) => {
+    setIsEditing(true);
+    setEditingProductId(product.id);
+    setNewProduct({
+      name: product.name,
+      price: product.price,
+      price_usd: product.price_usd || '',
+      currency: product.currency || 'USD',
+      stock: product.stock,
+      category_id: product.category_id,
+      store_category_id: product.store_category_id || '',
+      image_url: product.image_url || '',
+      image_url_2: product.image_url_2 || '',
+      image_url_3: product.image_url_3 || '',
+      image_url_4: product.image_url_4 || '',
+      image_url_5: product.image_url_5 || '',
+      description: product.description || '',
+      delivery_locations: product.delivery_locations || []
+    });
+    setTempProv('La Habana');
+    setTempMun('Plaza de la Revolución');
+    setShowAddModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setIsEditing(false);
+    setEditingProductId(null);
+    setNewProduct({
+      name: '', price: '', price_usd: '', currency: 'USD', stock: '', category_id: '', store_category_id: '',
+      image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
+      image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
+      description: '', delivery_locations: []
+    });
+    setTempProv('La Habana');
+    setTempMun('Plaza de la Revolución');
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+      try {
+        await deleteProduct(id);
+        setProducts(products.filter(p => p.id !== id));
+      } catch (error) {
+        alert('Error al eliminar el producto');
+        console.error(error);
+      }
+    }
+  };
+
+  const handleToggleFeatured = async (product) => {
+    try {
+      const updatedProduct = await updateProduct(product.id, { is_featured: !product.is_featured });
+      setProducts(products.map(p => p.id === product.id ? updatedProduct : p));
+    } catch (error) {
+      alert('Error al actualizar el producto destacado');
+      console.error(error);
     }
   };
 
@@ -105,7 +189,10 @@ const SellerProducts = () => {
     <div className="seller-products">
       <div className="seller-page-header">
         <h1 className="seller-page-title">Mis Productos</h1>
-        <button className="btn-add-product" onClick={() => setShowAddModal(true)}>
+        <button className="btn-add-product" onClick={() => {
+          handleCloseModal();
+          setShowAddModal(true);
+        }}>
           <Plus size={18} />
           <span>Nuevo Producto</span>
         </button>
@@ -134,52 +221,67 @@ const SellerProducts = () => {
         {loading ? (
           <div className="loading-state">Cargando inventario...</div>
         ) : (
-          <div className="table-responsive">
-            <table className="seller-products-table">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Precio</th>
-                  <th>Inventario</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map(product => (
-                  <tr key={product.id}>
-                    <td data-label="Producto">
-                      <div className="product-cell">
-                        <img src={product.image_url} alt={product.name} />
-                        <span className="product-name">{product.name}</span>
+          <div className="products-grid">
+            {filteredProducts.map(product => (
+              <div key={product.id} className="product-card">
+                <div className="product-card-image">
+                  <img src={product.image_url} alt={product.name} />
+                  <div className="product-card-badges">
+                    {product.is_featured && <span className="badge featured">★ Destacado</span>}
+                    <span className="badge status active">Activo</span>
+                  </div>
+                </div>
+                
+                <div className="product-card-content">
+                  <h3 className="product-card-title" title={product.name}>{product.name}</h3>
+                  <div className="product-card-price">
+                    {Number(product.price).toFixed(2)} {product.currency || 'USD'}
+                    {product.price_usd && (
+                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                        ${Number(product.price_usd).toFixed(2)} USD (Zelle)
                       </div>
-                    </td>
-                    <td data-label="Precio"><span className="product-price">{Number(product.price).toFixed(2)} {product.currency || 'USD'}</span></td>
-                    <td data-label="Inventario">
-                      <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>
-                        {product.stock || Math.floor(Math.random() * 50) + 1} en stock
-                      </span>
-                    </td>
-                    <td data-label="Estado">
-                      <span className="status-badge active">Activo</span>
-                    </td>
-                    <td data-label="Acciones">
-                      <div className="action-buttons">
-                        <button className="btn-icon edit"><Edit2 size={16} /></button>
-                        <button className="btn-icon delete"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredProducts.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="empty-table-state">
-                      No se encontraron productos
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                    )}
+                  </div>
+                  
+                  <div className="product-card-details">
+                    <div className="stock-info">
+                      <span className={`stock-indicator ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}></span>
+                      <span className="stock-text">{product.stock || 0} en inventario</span>
+                    </div>
+                  </div>
+                  
+                  <div className="product-card-actions">
+                    <button 
+                      className="btn-card-action btn-feature" 
+                      style={{ color: product.is_featured ? '#e11d48' : '#64748b', backgroundColor: product.is_featured ? '#ffe4e6' : '#f1f5f9' }}
+                      onClick={() => handleToggleFeatured(product)}
+                      title={product.is_featured ? "Quitar destacado" : "Destacar producto"}
+                    >
+                      <Heart size={16} fill={product.is_featured ? "currentColor" : "none"} />
+                    </button>
+                    <button 
+                      className="btn-card-action btn-edit" 
+                      onClick={() => handleEditProductClick(product)}
+                      title="Editar producto"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      className="btn-card-action btn-delete" 
+                      onClick={() => handleDeleteProduct(product.id)}
+                      title="Eliminar producto"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {filteredProducts.length === 0 && (
+              <div className="empty-state">
+                No se encontraron productos.
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -188,8 +290,8 @@ const SellerProducts = () => {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>Agregar Nuevo Producto</h2>
-              <button className="close-btn" onClick={() => setShowAddModal(false)}>
+              <h2>{isEditing ? 'Editar Producto' : 'Agregar Nuevo Producto'}</h2>
+              <button type="button" className="close-btn" onClick={handleCloseModal}>
                 <X size={24} />
               </button>
             </div>
@@ -204,29 +306,54 @@ const SellerProducts = () => {
                 />
               </div>
               <div className="form-row">
-                <div className="form-group" style={{ flex: 2 }}>
-                  <label>Precio</label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      value={newProduct.price}
-                      onChange={e => setNewProduct({...newProduct, price: e.target.value})}
-                      required
-                      style={{ flex: 1 }}
-                    />
-                    <select 
-                      value={newProduct.currency}
-                      onChange={e => setNewProduct({...newProduct, currency: e.target.value})}
-                      style={{ width: '90px' }}
-                    >
-                      <option value="USD">USD</option>
-                      <option value="CUP">CUP</option>
-                    </select>
+                {storeInfo?.accepts_zelle ? (
+                  <>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Precio en CUP</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={newProduct.price}
+                        onChange={e => setNewProduct({...newProduct, price: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Precio en USD (Zelle)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={newProduct.price_usd}
+                        onChange={e => setNewProduct({...newProduct, price_usd: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="form-group" style={{ flex: 2 }}>
+                    <label>Precio</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={newProduct.price}
+                        onChange={e => setNewProduct({...newProduct, price: e.target.value})}
+                        required
+                        style={{ flex: 1 }}
+                      />
+                      <select 
+                        value={newProduct.currency}
+                        onChange={e => setNewProduct({...newProduct, currency: e.target.value})}
+                        style={{ width: '90px' }}
+                      >
+                        <option value="USD">USD</option>
+                        <option value="CUP">CUP</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>Stock</label>
+                  <label>Cantidad en inventario</label>
                   <input 
                     type="number" 
                     value={newProduct.stock}
@@ -237,7 +364,7 @@ const SellerProducts = () => {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Categoría</label>
+                  <label>Categoría Global</label>
                   <select 
                     required 
                     value={newProduct.category_id}
@@ -249,50 +376,79 @@ const SellerProducts = () => {
                     ))}
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>Sección de tu Tienda (Opcional)</label>
+                  <select 
+                    value={newProduct.store_category_id || ''}
+                    onChange={(e) => setNewProduct({...newProduct, store_category_id: e.target.value === '' ? null : Number(e.target.value)})}
+                  >
+                    <option value="">Ninguna</option>
+                    {storeCategories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="form-group">
-                <label>URL de Imagen Principal</label>
+                <label>Imagen Principal (JPG/PNG)</label>
                 <input 
-                  type="url" 
-                  value={newProduct.image_url}
-                  onChange={e => setNewProduct({...newProduct, image_url: e.target.value})}
-                  required
+                  type="file" 
+                  accept="image/jpeg, image/jpg, image/png"
+                  onChange={e => handleImageUpload(e, 'image_url')}
+                  required={!newProduct.image_url}
                 />
+                {newProduct.image_url && newProduct.image_url !== 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80' && (
+                  <div style={{marginTop: '10px'}}>
+                    <img src={newProduct.image_url} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} />
+                  </div>
+                )}
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>URL Imagen 2 (Opcional)</label>
+                  <label>Imagen 2 (Opcional)</label>
                   <input 
-                    type="url" 
-                    value={newProduct.image_url_2}
-                    onChange={e => setNewProduct({...newProduct, image_url_2: e.target.value})}
+                    type="file" 
+                    accept="image/jpeg, image/jpg, image/png"
+                    onChange={e => handleImageUpload(e, 'image_url_2')}
                   />
+                  {newProduct.image_url_2 && (
+                    <div style={{marginTop: '10px'}}><img src={newProduct.image_url_2} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
+                  )}
                 </div>
                 <div className="form-group">
-                  <label>URL Imagen 3 (Opcional)</label>
+                  <label>Imagen 3 (Opcional)</label>
                   <input 
-                    type="url" 
-                    value={newProduct.image_url_3}
-                    onChange={e => setNewProduct({...newProduct, image_url_3: e.target.value})}
+                    type="file" 
+                    accept="image/jpeg, image/jpg, image/png"
+                    onChange={e => handleImageUpload(e, 'image_url_3')}
                   />
+                  {newProduct.image_url_3 && (
+                    <div style={{marginTop: '10px'}}><img src={newProduct.image_url_3} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
+                  )}
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>URL Imagen 4 (Opcional)</label>
+                  <label>Imagen 4 (Opcional)</label>
                   <input 
-                    type="url" 
-                    value={newProduct.image_url_4}
-                    onChange={e => setNewProduct({...newProduct, image_url_4: e.target.value})}
+                    type="file" 
+                    accept="image/jpeg, image/jpg, image/png"
+                    onChange={e => handleImageUpload(e, 'image_url_4')}
                   />
+                  {newProduct.image_url_4 && (
+                    <div style={{marginTop: '10px'}}><img src={newProduct.image_url_4} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
+                  )}
                 </div>
                 <div className="form-group">
-                  <label>URL Imagen 5 (Opcional)</label>
+                  <label>Imagen 5 (Opcional)</label>
                   <input 
-                    type="url" 
-                    value={newProduct.image_url_5}
-                    onChange={e => setNewProduct({...newProduct, image_url_5: e.target.value})}
+                    type="file" 
+                    accept="image/jpeg, image/jpg, image/png"
+                    onChange={e => handleImageUpload(e, 'image_url_5')}
                   />
+                  {newProduct.image_url_5 && (
+                    <div style={{marginTop: '10px'}}><img src={newProduct.image_url_5} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
+                  )}
                 </div>
               </div>
               <div className="form-group" style={{gridColumn: '1 / -1'}}>
@@ -365,9 +521,9 @@ const SellerProducts = () => {
                 ></textarea>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancelar</button>
+                <button type="button" className="btn-cancel" onClick={handleCloseModal}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={addingProduct}>
-                  {addingProduct ? 'Agregando...' : 'Guardar Producto'}
+                  {addingProduct ? (isEditing ? 'Actualizando...' : 'Agregando...') : (isEditing ? 'Actualizar Producto' : 'Guardar Producto')}
                 </button>
               </div>
             </form>

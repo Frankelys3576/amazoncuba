@@ -31,6 +31,11 @@ const DealProductCard = ({ product }) => {
             <span className="deal-price-discount">-{discountPercentage}%</span>
             <span className="deal-price-current">${product.price.toFixed(2)} {product.currency || 'USD'}</span>
           </div>
+          {(product.store_accepts_zelle || product.stores?.accepts_zelle) && product.price_usd && (
+            <div style={{ fontSize: '12px', color: '#B12704', marginTop: '2px', marginBottom: '4px' }}>
+              Zelle: ${Number(product.price_usd).toFixed(2)} USD
+            </div>
+          )}
           <div className="deal-price-original">
             Precio típico: <span>${originalPrice.toFixed(2)} {product.currency || 'USD'}</span>
           </div>

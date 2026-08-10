@@ -33,14 +33,20 @@ const SellerAuth = () => {
       // y le agregamos un dominio ficticio para que Supabase Auth lo acepte como email.
       const formattedEmail = formData.identifier.includes('@') 
         ? formData.identifier.toLowerCase().trim()
-        : `${formData.identifier.trim()}@phone.cubaamazon.com`;
+        : `${formData.identifier.trim()}@cubaamazon.com`;
 
       if (isLogin) {
         // Log in using backend
         const response = await loginSeller(formattedEmail, formData.password);
         
-        // Simular negocio 1 para MVP
-        localStorage.setItem('seller_store_id', '1');
+        // Guardar el store ID devuelto por el backend
+        if (response.store && response.store.id) {
+          localStorage.setItem('seller_store_id', response.store.id.toString());
+        } else {
+          // Fallback por si la tienda no se encontró, aunque no debería pasar si está bien registrada
+          localStorage.setItem('seller_store_id', '1');
+        }
+        
         localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
         
         // Guardar nombre del vendedor para mostrarlo en el panel
@@ -84,7 +90,7 @@ const SellerAuth = () => {
       <div className="auth-container">
         
         <div className="auth-logo">
-          CubaAmazon <span>Seller Central</span>
+          CubaAmazon <span style={{ fontSize: '18px', display: 'block', marginTop: '5px' }}>Regístrate para vender productos</span>
         </div>
 
         <div className="auth-card">
@@ -121,8 +127,8 @@ const SellerAuth = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Tipo de Vendedor</label>
-                  <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                  <label>Tipo de Vendedor / Negocio</label>
+                  <div style={{ display: 'flex', gap: '15px', marginTop: '10px', flexWrap: 'wrap' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'normal', color: '#333' }}>
                       <input 
                         type="radio" 
@@ -143,7 +149,18 @@ const SellerAuth = () => {
                         onChange={handleChange}
                         style={{ width: 'auto', marginBottom: '0' }}
                       />
-                      Negocio con Local Físico
+                      Negocio / Local
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'bold', color: '#2563eb' }}>
+                      <input 
+                        type="radio" 
+                        name="storeType" 
+                        value="hostal" 
+                        checked={formData.storeType === 'hostal'} 
+                        onChange={handleChange}
+                        style={{ width: 'auto', marginBottom: '0' }}
+                      />
+                      Hostal / Casa de Renta 🏡
                     </label>
                   </div>
                 </div>

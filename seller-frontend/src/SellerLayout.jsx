@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Menu, X, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Menu, X, ExternalLink, FolderTree } from 'lucide-react';
+import { getStoreById } from './services/api';
 import './SellerLayout.css';
 
 const getClientStoreUrl = (id) => {
-  if (import.meta.env.PROD) return `https://frontend-topaz-ten-91.vercel.app/negocio/${id}`;
+  if (import.meta.env.PROD) return `https://tienda-cuba-amazon.vercel.app/negocio/${id}`;
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return `http://${window.location.hostname}:5173/negocio/${id}`;
   }
@@ -16,6 +17,7 @@ const SellerLayout = () => {
   const navigate = useNavigate();
   const [sellerName, setSellerName] = useState('Vendedor');
   const [storeId, setStoreId] = useState(null);
+  const [storeNumber, setStoreNumber] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   useEffect(() => {
@@ -28,6 +30,12 @@ const SellerLayout = () => {
     } else {
       setStoreId(id);
       if (name) setSellerName(name);
+      
+      getStoreById(id).then(storeData => {
+         if (storeData && storeData.store_number) {
+            setStoreNumber(storeData.store_number);
+         }
+      }).catch(err => console.error(err));
     }
   }, [navigate]);
 
@@ -46,6 +54,7 @@ const SellerLayout = () => {
   const navItems = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Resumen' },
     { path: '/products', icon: <Package size={20} />, label: 'Mis Productos' },
+    { path: '/categories', icon: <FolderTree size={20} />, label: 'Secciones' },
     { path: '/orders', icon: <ShoppingBag size={20} />, label: 'Pedidos' },
     { path: '/profile', icon: <Store size={20} />, label: 'Mi Tienda' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Configuración' },
@@ -105,13 +114,15 @@ const SellerLayout = () => {
       {/* Main Content Area */}
       <main className="seller-main-content">
         <header className="seller-topbar">
-          <div className="topbar-mobile-left">
+          <div className="topbar-mobile-left" style={{ display: 'flex', alignItems: 'center' }}>
             <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
               <Menu size={24} />
             </button>
-            <div className="topbar-search">
-              {/* Opcional: Buscador interno del dashboard */}
-            </div>
+            {storeNumber && (
+              <div style={{ marginLeft: '12px', background: '#e0e7ff', color: '#4f46e5', padding: '4px 12px', borderRadius: '16px', fontSize: '13px', fontWeight: 'bold', border: '1px solid #c7d2fe', whiteSpace: 'nowrap' }}>
+                Vendedor: {storeNumber}
+              </div>
+            )}
           </div>
           <div className="topbar-actions">
             <a 

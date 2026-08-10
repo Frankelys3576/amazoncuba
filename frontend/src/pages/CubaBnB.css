@@ -1,0 +1,373 @@
+.cubabnb-container {
+  min-height: 80vh;
+  background-color: #f8fafc;
+  padding-bottom: 50px;
+}
+
+.cubabnb-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #ff385c 100%);
+  color: white;
+  padding: 45px 20px;
+  text-align: center;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.cubabnb-hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(255, 56, 92, 0.25);
+  border: 1px solid rgba(255, 56, 92, 0.5);
+  color: #ff859b;
+  padding: 6px 16px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.cubabnb-hero h1 {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.cubabnb-hero p {
+  font-size: 16px;
+  color: #cbd5e1;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.cubabnb-filter-card {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 25px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-group {
+  flex: 2 1 250px;
+}
+
+.filter-group label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cubabnb-input,
+.cubabnb-select {
+  padding: 11px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+.cubabnb-input:focus,
+.cubabnb-select:focus {
+  border-color: #ff385c;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(255, 56, 92, 0.15);
+}
+
+.btn-toggle-map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 44px;
+}
+
+.btn-toggle-map.active {
+  background: #ff385c;
+  color: white;
+  border-color: #ff385c;
+}
+
+.btn-toggle-map:hover {
+  opacity: 0.9;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-title-row h2,
+.section-title-row h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.map-subtext {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.location-pill {
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cubabnb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.hostal-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostal-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+}
+
+.hostal-image-container {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.hostal-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.hostal-card:hover .hostal-image {
+  transform: scale(1.05);
+}
+
+.hostal-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hostal-price-badge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: #ff385c;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.hostal-price-badge span {
+  font-size: 11px;
+  font-weight: normal;
+  opacity: 0.9;
+}
+
+.hostal-card-content {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.hostal-location-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff385c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.hostal-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.hostal-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rating-score {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.hostal-description {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hostal-address {
+  font-size: 12px;
+  color: #475569;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  border-left: 3px solid #cbd5e1;
+}
+
+.hostal-card-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-whatsapp-hostal {
+  background: #25d366;
+  color: white !important;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-whatsapp-hostal:hover {
+  background: #1eb956;
+}
+
+.btn-primary-hostal {
+  flex: 1;
+  background: #ff385c;
+  color: white !important;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.btn-primary-hostal:hover {
+  background: #e00b41;
+}
+
+.cubabnb-empty {
+  text-align: center;
+  padding: 50px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border-radius: 16px;
+}
+
+.cubabnb-empty h3 {
+  margin: 0;
+  color: #1e293b;
+}
+
+.cubabnb-empty p {
+  color: #64748b;
+  max-width: 400px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.cubabnb-loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 16px;
+  color: #64748b;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .cubabnb-hero h1 {
+    font-size: 24px;
+  }
+  .filter-row {
+    flex-direction: column;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .btn-toggle-map {
+    width: 100%;
+  }
+}

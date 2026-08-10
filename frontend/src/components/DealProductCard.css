@@ -29,14 +29,15 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  background-color: #f8fafc;
+  background-color: transparent;
   border-radius: var(--border-radius-sm);
-  padding: 12px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .deal-image {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   mix-blend-mode: multiply;
 }
@@ -54,11 +55,15 @@
 .deal-badge {
   background-color: #cc0c39; /* Amazon red for deals */
   color: white;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 2px;
   text-transform: uppercase;
+  display: inline-block;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.2;
 }
 
 .deal-price-row {
@@ -66,6 +71,7 @@
   align-items: baseline;
   gap: 8px;
   margin-bottom: 4px;
+  flex-wrap: wrap; /* Prevents overflow */
 }
 
 .deal-price-discount {
@@ -77,6 +83,16 @@
 .deal-price-current {
   font-size: 24px;
   font-weight: 600;
+}
+
+/* Fix for mobile screens */
+@media (max-width: 768px) {
+  .deal-price-discount {
+    font-size: 16px;
+  }
+  .deal-price-current {
+    font-size: 16px;
+  }
 }
 
 .deal-price-original {

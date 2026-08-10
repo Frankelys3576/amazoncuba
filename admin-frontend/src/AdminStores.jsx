@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, Clock, Store, AlertCircle } from 'lucide-react';
-import { getStores, updateStoreStatus } from './services/api';
+import { CheckCircle, XCircle, Clock, Store, AlertCircle, Info } from 'lucide-react';
+import { getStores, updateStoreStatus, getAdminStoreDetails, updateZelleConfig } from './services/api';
 import './AdminStores.css';
 
 const AdminStores = () => {
@@ -11,6 +11,20 @@ const AdminStores = () => {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(initialFilter);
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customDates, setCustomDates] = useState({ start: '', end: '' });
+
+  const [selectedStoreId, setSelectedStoreId] = useState(null);
+  const [storeDetails, setStoreDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const [zelleConfig, setZelleConfig] = useState({
+    accepts_zelle: false,
+    name: '',
+    email_phone: '',
+    description: ''
+  });
+  const [savingZelle, setSavingZelle] = useState(false);
 
   useEffect(() => {
     fetchStores();
@@ -38,6 +52,62 @@ const AdminStores = () => {
     }
   };
 
+  const handleViewDetails = async (storeId) => {
+    setSelectedStoreId(storeId);
+    setDetailsLoading(true);
+    try {
+      const details = await getAdminStoreDetails(storeId);
+      setStoreDetails(details);
+      setZelleConfig({
+        accepts_zelle: details.store.accepts_zelle || false,
+        name: details.store.zelle_info?.name || '',
+        email_phone: details.store.zelle_info?.email_phone || '',
+        description: details.store.zelle_info?.description || ''
+      });
+    } catch (err) {
+      alert("Error al cargar detalles");
+      setSelectedStoreId(null);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const closeDetails = () => {
+    setSelectedStoreId(null);
+    setStoreDetails(null);
+  };
+
+  const handleSaveZelle = async () => {
+    setSavingZelle(true);
+    try {
+      await updateZelleConfig(selectedStoreId, {
+        accepts_zelle: zelleConfig.accepts_zelle,
+        zelle_info: {
+          name: zelleConfig.name,
+          email_phone: zelleConfig.email_phone,
+          description: zelleConfig.description
+        }
+      });
+      alert('Configuración de Zelle guardada con éxito.');
+      setStoreDetails(prev => ({
+        ...prev,
+        store: {
+          ...prev.store,
+          accepts_zelle: zelleConfig.accepts_zelle,
+          zelle_info: {
+            name: zelleConfig.name,
+            email_phone: zelleConfig.email_phone,
+            description: zelleConfig.description
+          }
+        }
+      }));
+    } catch (err) {
+      alert('Error al guardar configuración de Zelle.');
+    } finally {
+      setSavingZelle(false);
+    }
+  };
+
   if (loading) return <div className="admin-loading">Cargando tiendas...</div>;
 
   const counts = {
@@ -48,8 +118,29 @@ const AdminStores = () => {
   };
 
   const filteredStores = stores.filter(store => {
-    if (filter === 'all') return true;
-    return store.status === filter;
+    if (filter !== 'all' && store.status !== filter) return false;
+    
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const createdDate = new Date(store.created_at);
+      
+      if (dateFilter === 'day') {
+        const today = new Date(now.setHours(0, 0, 0, 0));
+        return createdDate >= today;
+      } else if (dateFilter === 'week') {
+        const lastWeek = new Date(now.setDate(now.getDate() - 7));
+        return createdDate >= lastWeek;
+      } else if (dateFilter === 'month') {
+        const lastMonth = new Date(now.setMonth(now.getMonth() - 1));
+        return createdDate >= lastMonth;
+      } else if (dateFilter === 'custom' && customDates.start && customDates.end) {
+        const start = new Date(customDates.start);
+        const end = new Date(customDates.end);
+        end.setHours(23, 59, 59, 999);
+        return createdDate >= start && createdDate <= end;
+      }
+    }
+    return true;
   });
 
   const tabs = [
@@ -67,8 +158,41 @@ const AdminStores = () => {
   return (
     <div className="admin-stores">
       <div className="page-header">
-        <h1>Gestión de Vendedores</h1>
-        <p>Aprueba o rechaza solicitudes de nuevos vendedores en la plataforma.</p>
+        <div>
+          <h1>Gestión de Vendedores</h1>
+          <p>Aprueba o rechaza solicitudes de nuevos vendedores en la plataforma.</p>
+        </div>
+        <div style={{display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', background: '#fff', padding: '10px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginTop: '15px'}}>
+          <select 
+            value={dateFilter} 
+            onChange={(e) => setDateFilter(e.target.value)}
+            style={{padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', outline: 'none'}}
+          >
+            <option value="all">Historico Total</option>
+            <option value="day">Hoy</option>
+            <option value="week">Últimos 7 días</option>
+            <option value="month">Últimos 30 días</option>
+            <option value="custom">Fecha Personalizada</option>
+          </select>
+
+          {dateFilter === 'custom' && (
+            <div style={{display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
+              <input 
+                type="date" 
+                value={customDates.start}
+                onChange={(e) => setCustomDates({...customDates, start: e.target.value})}
+                style={{padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0'}}
+              />
+              <span>-</span>
+              <input 
+                type="date" 
+                value={customDates.end}
+                onChange={(e) => setCustomDates({...customDates, end: e.target.value})}
+                style={{padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0'}}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -124,12 +248,23 @@ const AdminStores = () => {
               <div className="store-card-body">
                 <p>{store.description}</p>
                 <div className="store-details">
-                  <span><strong>ID:</strong> #{store.id}</span>
-                  <span><strong>Fecha de registro:</strong> {new Date(store.created_at).toLocaleDateString()}</span>
+                  <span><strong>ID Sistema:</strong> #{store.id}</span>
+                  <span style={{ marginLeft: '10px' }}><strong>Nº Único:</strong> {store.store_number || 'N/A'}</span>
+                  <span style={{ marginLeft: '10px' }}><strong>Fecha de registro:</strong> {new Date(store.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
 
               <div className="store-card-actions">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => handleViewDetails(store.id)}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                >
+                  <Info size={16} /> Ver Detalles
+                </button>
+              </div>
+
+              <div className="store-card-actions" style={{ borderTop: 'none', paddingTop: 0 }}>
                 {store.status === 'pending' ? (
                   <>
                     <button 
@@ -158,6 +293,133 @@ const AdminStores = () => {
           ))
         )}
       </div>
+
+      {selectedStoreId && (
+        <div className="modal-overlay" onClick={closeDetails}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>
+            <div className="modal-header">
+              <h2>Detalles del Negocio</h2>
+              <button className="close-btn" onClick={closeDetails}><XCircle size={24} /></button>
+            </div>
+            
+            {detailsLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}>Cargando información...</div>
+            ) : storeDetails ? (
+              <div className="store-details-view">
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <img src={storeDetails.store.logo_url || 'https://via.placeholder.com/100'} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                  <div>
+                    <h3 style={{ margin: '0 0 5px 0', fontSize: '1.4rem', color: 'var(--text-main)' }}>{storeDetails.store.name}</h3>
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>{storeDetails.store.slogan || 'Sin eslogan'}</p>
+                    <span style={{ display: 'inline-block', marginTop: '8px', padding: '4px 10px', background: 'var(--bg-body)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Nº Único: {storeDetails.store.store_number || 'N/A'} | ID Sistema: #{storeDetails.store.id} | Tipo: {storeDetails.store.store_type === 'business' ? 'Negocio' : 'Particular'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-body)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Estadísticas Clave</h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-main)' }}>{storeDetails.activeProductsCount}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Productos Activos</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981' }}>{storeDetails.totalSalesCount}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Artículos Vendidos</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px', color: 'var(--text-main)' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Información de Contacto</h4>
+                  <p style={{ margin: '5px 0' }}><strong>Teléfono / WhatsApp:</strong> <a href={`tel:${storeDetails.store.phone}`} style={{ color: '#3b82f6' }}>{storeDetails.store.phone || 'No registrado'}</a></p>
+                  <p style={{ margin: '5px 0' }}><strong>Estado:</strong> {storeDetails.store.status === 'approved' ? 'Aprobado' : storeDetails.store.status === 'pending' ? 'Pendiente' : 'Rechazado'}</p>
+                  <p style={{ margin: '5px 0' }}><strong>Fecha de Registro:</strong> {new Date(storeDetails.store.created_at).toLocaleDateString()} a las {new Date(storeDetails.store.created_at).toLocaleTimeString()}</p>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Descripción</h4>
+                  <p style={{ margin: 0, lineHeight: '1.5', color: 'var(--text-main)', background: 'var(--bg-body)', padding: '10px', borderRadius: '6px' }}>
+                    {storeDetails.store.description || 'Sin descripción'}
+                  </p>
+                </div>
+                
+                {storeDetails.store.banner_url && (
+                  <div>
+                    <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Banner de la Tienda</h4>
+                    <img src={storeDetails.store.banner_url} alt="Banner" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
+                  </div>
+                )}
+
+                <div style={{ marginTop: '30px', padding: '15px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                  <h4 style={{ margin: '0 0 15px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>Configuración de Pagos por Zelle</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="acceptsZelle"
+                      checked={zelleConfig.accepts_zelle}
+                      onChange={(e) => setZelleConfig({...zelleConfig, accepts_zelle: e.target.checked})}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <label htmlFor="acceptsZelle" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>Habilitar pagos por Zelle para esta tienda</label>
+                  </div>
+                  
+                  {zelleConfig.accepts_zelle && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Nombre del Titular (Zelle)</label>
+                        <input 
+                          type="text" 
+                          value={zelleConfig.name}
+                          onChange={(e) => setZelleConfig({...zelleConfig, name: e.target.value})}
+                          placeholder="Ej. Juan Perez"
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-body)', color: 'var(--text-main)' }}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Correo / Teléfono registrado en Zelle</label>
+                        <input 
+                          type="text" 
+                          value={zelleConfig.email_phone}
+                          onChange={(e) => setZelleConfig({...zelleConfig, email_phone: e.target.value})}
+                          placeholder="Ej. juan@zelle.com o +123456789"
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-body)', color: 'var(--text-main)' }}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Descripción / Instrucciones adicionales</label>
+                        <textarea 
+                          rows="2"
+                          value={zelleConfig.description}
+                          onChange={(e) => setZelleConfig({...zelleConfig, description: e.target.value})}
+                          placeholder="Instrucciones que verá el cliente al pagar por Zelle..."
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-body)', color: 'var(--text-main)', resize: 'vertical' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={handleSaveZelle}
+                    disabled={savingZelle}
+                    className="btn btn-primary"
+                    style={{ marginTop: '15px', width: '100%', padding: '10px' }}
+                  >
+                    {savingZelle ? 'Guardando...' : 'Guardar Configuración Zelle'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: '40px', textAlign: 'center' }}>No se pudo cargar la información.</div>
+            )}
+            
+            <div className="modal-actions" style={{ marginTop: '20px' }}>
+              <button type="button" className="btn-cancel" onClick={closeDetails} style={{ width: '100%', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', borderColor: 'var(--border-color)' }}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -22,6 +22,21 @@ const getUsers = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    
+    if (error) throw error;
+    
+    res.json({ message: 'Usuario eliminado correctamente' });
+  } catch (error) {
+    console.error('Error deleting user:', error.message);
+    res.status(500).json({ error: 'Error al eliminar usuario.' });
+  }
+};
+
 module.exports = {
-  getUsers
+  getUsers,
+  deleteUser
 };

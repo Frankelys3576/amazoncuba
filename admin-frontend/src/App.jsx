@@ -7,6 +7,7 @@ import AdminStores from './AdminStores';
 import AdminUsers from './AdminUsers';
 import AdminDirectory from './AdminDirectory';
 import AdminSettings from './AdminSettings';
+import AdminMarketing from './AdminMarketing';
 
 // Simple protection
 const PrivateRoute = ({ children }) => {
@@ -34,6 +35,7 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="directory" element={<AdminDirectory />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="marketing" element={<AdminMarketing />} />
         </Route>
       </Routes>
     </Router>

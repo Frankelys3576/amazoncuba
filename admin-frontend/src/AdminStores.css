@@ -24,6 +24,8 @@
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
   padding: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .store-tab {
@@ -133,8 +135,14 @@
 /* ============ Store Cards ============ */
 .stores-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
+}
+
+@media (max-width: 480px) {
+  .stores-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .store-card {
@@ -243,6 +251,7 @@
 
 .store-card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: auto;
   padding-top: 16px;

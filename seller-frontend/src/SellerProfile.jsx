@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Image, MessageSquare, Phone, AlignLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { getStoreById, updateStoreProfile, uploadImage } from './services/api';
+import { useNavigate } from 'react-router-dom';
+import { Store, Image, MessageSquare, Phone, AlignLeft, Save, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { getStoreById, updateStoreProfile, uploadImage, deleteAccount } from './services/api';
+import { cubaLocations } from './utils/cubaLocations';
 import './SellerProfile.css';
 
 const SellerProfile = () => {
+  const navigate = useNavigate();
   const storeId = localStorage.getItem('seller_store_id');
   
   const [loading, setLoading] = useState(true);
@@ -17,22 +20,44 @@ const SellerProfile = () => {
     description: '',
     phone: '',
     logo_url: '',
-    banner_url: ''
+    banner_url: '',
+    is_open: true,
+    has_delivery: false,
+    opening_time: '09:00',
+    closing_time: '18:00',
+    store_type: 'business',
+    province: 'La Habana',
+    municipality: 'La Habana Vieja',
+    address: '',
+    lat: '23.1367',
+    lng: '-82.3584',
+    price_per_night: ''
   });
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         if (!storeId) return;
-        const store = await getStoreById(storeId);
-        if (store) {
+        const data = await getStoreById(storeId);
+        if (data) {
           setFormData({
-            name: store.name || '',
-            slogan: store.slogan || '',
-            description: store.description || '',
-            phone: store.phone || '',
-            logo_url: store.logo_url || '',
-            banner_url: store.banner_url || ''
+            name: data.name || '',
+            slogan: data.slogan || '',
+            description: data.description || '',
+            phone: data.phone || '',
+            logo_url: data.logo_url || '',
+            banner_url: data.banner_url || '',
+            is_open: data.is_open !== false, // defaults true
+            has_delivery: data.has_delivery || false,
+            opening_time: data.opening_time || '09:00',
+            closing_time: data.closing_time || '18:00',
+            store_type: data.store_type || 'business',
+            province: data.province || 'La Habana',
+            municipality: data.municipality || 'La Habana Vieja',
+            address: data.address || '',
+            lat: data.lat !== null && data.lat !== undefined ? String(data.lat) : '23.1367',
+            lng: data.lng !== null && data.lng !== undefined ? String(data.lng) : '-82.3584',
+            price_per_night: data.price_per_night || ''
           });
         }
       } catch (err) {
@@ -46,8 +71,11 @@ const SellerProfile = () => {
   }, [storeId]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleImageUpload = async (e, type) => {
@@ -84,6 +112,26 @@ const SellerProfile = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmMessage = "⚠️ ADVERTENCIA CRÍTICA ⚠️\n\n¿Estás absolutamente seguro de que deseas ELIMINAR PARA SIEMPRE tu cuenta de vendedor, tu tienda y TODOS tus productos?\n\nEsta acción NO se puede deshacer.";
+    
+    if (window.confirm(confirmMessage)) {
+      try {
+        setSaving(true);
+        await deleteAccount(storeId);
+        alert('Tu cuenta y tu tienda han sido eliminadas exitosamente.');
+        localStorage.removeItem('seller_store_id');
+        localStorage.removeItem('seller_token');
+        localStorage.removeItem('seller_name');
+        navigate('/login');
+      } catch (error) {
+        console.error(error);
+        alert('Hubo un error al intentar eliminar la cuenta. Por favor, contacta al soporte.');
+        setSaving(false);
+      }
+    }
+  };
+
   if (loading) {
     return <div className="seller-loading">Cargando perfil...</div>;
   }
@@ -103,6 +151,7 @@ const SellerProfile = () => {
       )}
 
       <div className="profile-container">
+
         {/* Vista previa en tiempo real */}
         <div className="profile-preview-card">
           <h3>Vista Previa</h3>
@@ -133,6 +182,83 @@ const SellerProfile = () => {
         {/* Formulario de edición */}
         <form className="profile-form card" onSubmit={handleSubmit}>
           
+          <div className="profile-header" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '20px'}}>
+            <div className="profile-header-text" style={{width: '100%'}}>
+              <h2>Información de la Tienda</h2>
+              <p>Actualiza los datos públicos de tu negocio</p>
+            </div>
+            
+            <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', width: '100%'}}>
+              <div className="store-status-toggle" style={{flex: '1 1 200px'}}>
+                <label className="toggle-label" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '8px'}}>
+                  <span className={`status-indicator ${formData.is_open ? 'open' : 'closed'}`}>
+                    {formData.is_open ? 'Tienda Activa' : 'Ventas Pausadas'}
+                  </span>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px', width: '100%', justifyContent: 'space-between'}}>
+                    <span style={{fontSize: '14px', color: '#666'}}>{formData.is_open ? 'Pausar temporalmente' : 'Reactivar tienda'}</span>
+                    <div className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        name="is_open"
+                        checked={formData.is_open} 
+                        onChange={handleChange} 
+                      />
+                      <span className="slider round"></span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="store-status-toggle" style={{flex: '1 1 200px'}}>
+                <label className="toggle-label" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '8px'}}>
+                  <span className={`status-indicator ${formData.has_delivery ? 'open' : ''}`}>
+                    {formData.has_delivery ? '🚚 Con Envío' : 'Sin Envío'}
+                  </span>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px', width: '100%', justifyContent: 'space-between'}}>
+                    <span style={{fontSize: '14px', color: '#666'}}>{formData.has_delivery ? 'Desactivar domicilio' : 'Activar domicilio'}</span>
+                    <div className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        name="has_delivery"
+                        checked={formData.has_delivery} 
+                        onChange={handleChange} 
+                      />
+                      <span className="slider round"></span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="profile-header-actions" style={{marginTop: '10px', width: '100%'}}>
+              <h3 style={{fontSize: '16px', marginBottom: '10px', color: '#333'}}>Horario de Atención</h3>
+              <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap'}}>
+                <div className="form-group" style={{flex: '1 1 150px'}}>
+                  <label htmlFor="opening_time">Abre a las</label>
+                  <input 
+                    type="time" 
+                    id="opening_time" 
+                    name="opening_time" 
+                    value={formData.opening_time} 
+                    onChange={handleChange} 
+                    required 
+                  />
+                </div>
+                <div className="form-group" style={{flex: '1 1 150px'}}>
+                  <label htmlFor="closing_time">Cierra a las</label>
+                  <input 
+                    type="time" 
+                    id="closing_time" 
+                    name="closing_time" 
+                    value={formData.closing_time} 
+                    onChange={handleChange} 
+                    required 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="form-section">
             <h3><Store size={18}/> Información General</h3>
             <div className="form-group">
@@ -174,22 +300,112 @@ const SellerProfile = () => {
           </div>
 
           <div className="form-section">
-            <h3><MessageSquare size={18}/> Contacto</h3>
+            <h3>🏡 Ubicación y Configuración CubaBnB (Hostal)</h3>
             <div className="form-group">
-              <label htmlFor="phone">Teléfono / WhatsApp</label>
-              <div className="input-with-icon">
-                <Phone size={18} className="input-icon" />
-                <input 
-                  type="text" 
-                  id="phone" 
-                  name="phone" 
-                  value={formData.phone} 
-                  onChange={handleChange} 
-                  placeholder="Ej: 5351234567" 
-                />
-              </div>
-              <small>Incluye el código de país para que el botón de WhatsApp funcione bien.</small>
+              <label htmlFor="store_type">Tipo de Negocio</label>
+              <select
+                id="store_type"
+                name="store_type"
+                value={formData.store_type}
+                onChange={handleChange}
+                style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', width: '100%', fontWeight: 'bold' }}
+              >
+                <option value="business">Negocio / Tienda / Servicio</option>
+                <option value="individual">Vendedor Independiente</option>
+                <option value="hostal">🏡 Hostal / Casa de Renta (CubaBnB)</option>
+              </select>
+              <small>Los negocios marcados como Hostal aparecerán en la sección **CubaBnB** con mapa interactivo.</small>
             </div>
+
+            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px' }}>
+              <div className="form-group" style={{ flex: '1 1 200px' }}>
+                <label htmlFor="province">Provincia</label>
+                <select
+                  id="province"
+                  name="province"
+                  value={formData.province}
+                  onChange={(e) => {
+                    const newProv = e.target.value;
+                    const defaultMun = cubaLocations[newProv]?.[0] || '';
+                    setFormData(prev => ({ ...prev, province: newProv, municipality: defaultMun }));
+                  }}
+                  style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', width: '100%' }}
+                >
+                  {Object.keys(cubaLocations).map(prov => (
+                    <option key={prov} value={prov}>{prov}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ flex: '1 1 200px' }}>
+                <label htmlFor="municipality">Municipio</label>
+                <select
+                  id="municipality"
+                  name="municipality"
+                  value={formData.municipality}
+                  onChange={handleChange}
+                  style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', width: '100%' }}
+                >
+                  {(cubaLocations[formData.province] || []).map(mun => (
+                    <option key={mun} value={mun}>{mun}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '15px' }}>
+              <label htmlFor="address">Dirección Exacta</label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Ej: Calle Obispo #254 e/ Habana y Compostela"
+              />
+            </div>
+
+            {formData.store_type === 'hostal' && (
+              <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#166534' }}>Detalles de Renta del Hostal</h4>
+                <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                  <div className="form-group" style={{ flex: '1 1 150px' }}>
+                    <label htmlFor="price_per_night">Precio por Noche (USD/CUP)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="price_per_night"
+                      name="price_per_night"
+                      value={formData.price_per_night}
+                      onChange={handleChange}
+                      placeholder="Ej: 35"
+                    />
+                  </div>
+                  <div className="form-group" style={{ flex: '1 1 150px' }}>
+                    <label htmlFor="lat">Latitud Mapa</label>
+                    <input
+                      type="text"
+                      id="lat"
+                      name="lat"
+                      value={formData.lat}
+                      onChange={handleChange}
+                      placeholder="23.1367"
+                    />
+                  </div>
+                  <div className="form-group" style={{ flex: '1 1 150px' }}>
+                    <label htmlFor="lng">Longitud Mapa</label>
+                    <input
+                      type="text"
+                      id="lng"
+                      name="lng"
+                      value={formData.lng}
+                      onChange={handleChange}
+                      placeholder="-82.3584"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-section">
@@ -227,6 +443,19 @@ const SellerProfile = () => {
           <div className="form-actions">
             <button type="submit" className="btn btn-primary save-btn" disabled={saving}>
               {saving ? 'Guardando...' : <><Save size={18}/> Guardar Cambios</>}
+            </button>
+          </div>
+          
+          <div className="danger-zone">
+            <h3><AlertCircle size={18} color="#ef4444" /> Zona de Peligro</h3>
+            <p>Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate bien.</p>
+            <button 
+              type="button" 
+              className="btn btn-danger delete-account-btn" 
+              onClick={handleDeleteAccount}
+              disabled={saving}
+            >
+              <Trash2 size={18}/> Eliminar cuenta para siempre
             </button>
           </div>
         </form>

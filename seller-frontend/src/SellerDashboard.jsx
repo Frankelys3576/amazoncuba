@@ -1,21 +1,141 @@
-import React, { useState } from 'react';
-import { DollarSign, ShoppingCart, PackageOpen, TrendingUp, X, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { DollarSign, ShoppingCart, PackageOpen, Eye, X, ChevronRight, CheckCircle2, Clock, User } from 'lucide-react';
+import { getStoreOrders, getProducts, getStoreStats, getStoreById } from './services/api';
 import './SellerDashboard.css';
 
 const SellerDashboard = () => {
-  // Datos simulados para el MVP
-  const stats = [
-    { label: 'Ventas Totales', value: '$4,250.00', icon: <DollarSign size={28} />, gradient: 'grad-green' },
-    { label: 'Pedidos Pendientes', value: '12', icon: <ShoppingCart size={28} />, gradient: 'grad-orange' },
-    { label: 'Productos Activos', value: '45', icon: <PackageOpen size={28} />, gradient: 'grad-blue' },
-    { label: 'Crecimiento', value: '+14%', icon: <TrendingUp size={28} />, gradient: 'grad-purple' },
-  ];
+  const navigate = useNavigate();
+  const storeId = localStorage.getItem('seller_store_id');
+  const [statsData, setStatsData] = useState({
+    totalSales: 0,
+    pendingOrdersCount: 0,
+    activeProductsCount: 0,
+    recentOrdersList: [],
+    salesDetails: [],
+    pendingDetails: [],
+    productsDetails: [],
+    viewsToday: 0,
+    viewsThisMonth: 0,
+    viewsTotal: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [storeInfo, setStoreInfo] = useState(null);
+  
+  // States para el filtrado
+  const [allOrders, setAllOrders] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
+  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'day', 'week', 'month', 'custom'
+  const [customDates, setCustomDates] = useState({ start: '', end: '' });
+  const [rawStats, setRawStats] = useState({});
 
-  const recentOrders = [
-    { id: 'ORD-001', customer: 'Carlos M.', date: 'Hoy, 10:42 AM', amount: '$45.00', status: 'Pendiente' },
-    { id: 'ORD-002', customer: 'Ana G.', date: 'Hoy, 09:15 AM', amount: '$120.50', status: 'Enviado' },
-    { id: 'ORD-003', customer: 'Roberto F.', date: 'Ayer, 16:30 PM', amount: '$32.00', status: 'Entregado' },
-    { id: 'ORD-004', customer: 'Elena S.', date: 'Ayer, 14:20 PM', amount: '$89.99', status: 'Pendiente' },
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        if (!storeId) return;
+
+        const [orders, allProducts, statsDataRes, storeDataRes] = await Promise.all([
+          getStoreOrders(storeId),
+          getProducts({ storeId }),
+          getStoreStats(storeId),
+          getStoreById(storeId)
+        ]);
+
+        const storeProducts = allProducts.filter(p => p.store_id == storeId);
+        
+        setAllOrders(orders);
+        setAllProducts(storeProducts);
+        setRawStats(statsDataRes);
+        setStoreInfo(storeDataRes);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [storeId]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    let filteredOrders = [...allOrders];
+    const now = new Date();
+
+    if (dateFilter === 'day') {
+      const today = new Date(now.setHours(0, 0, 0, 0));
+      filteredOrders = allOrders.filter(o => new Date(o.created_at) >= today);
+    } else if (dateFilter === 'week') {
+      const lastWeek = new Date(now.setDate(now.getDate() - 7));
+      filteredOrders = allOrders.filter(o => new Date(o.created_at) >= lastWeek);
+    } else if (dateFilter === 'month') {
+      const lastMonth = new Date(now.setMonth(now.getMonth() - 1));
+      filteredOrders = allOrders.filter(o => new Date(o.created_at) >= lastMonth);
+    } else if (dateFilter === 'custom' && customDates.start && customDates.end) {
+      const start = new Date(customDates.start);
+      const end = new Date(customDates.end);
+      end.setHours(23, 59, 59, 999);
+      filteredOrders = allOrders.filter(o => {
+        const d = new Date(o.created_at);
+        return d >= start && d <= end;
+      });
+    }
+
+    let total = 0;
+    let pending = 0;
+    let salesList = [];
+    let pendingList = [];
+
+    filteredOrders.forEach(order => {
+      if (order.status !== 'Cancelado') {
+        total += Number(order.total);
+        salesList.push({
+          title: `Pedido #${order.id}`,
+          value: `+$${Number(order.total).toFixed(2)}`,
+          desc: new Date(order.created_at).toLocaleString()
+        });
+      }
+      if (order.status === 'pending' || order.status === 'Pendiente') {
+        pending += 1;
+        pendingList.push({
+          title: `Pedido #${order.id}`,
+          value: order.customer_name,
+          desc: 'Esperando envío'
+        });
+      }
+    });
+
+    const productsList = allProducts.map(p => ({
+      title: p.name,
+      value: `${p.stock} un.`,
+      desc: p.stock > 0 ? 'Disponible' : 'Agotado'
+    }));
+
+    // Determinar vistas a mostrar dependiendo del filtro
+    let viewsToShow = rawStats.viewsTotal || 0;
+    if (dateFilter === 'day') viewsToShow = rawStats.viewsToday || 0;
+    if (dateFilter === 'month') viewsToShow = rawStats.viewsThisMonth || 0;
+
+    setStatsData({
+      totalSales: total,
+      pendingOrdersCount: pending,
+      activeProductsCount: allProducts.length,
+      recentOrdersList: filteredOrders.slice(0, 5),
+      salesDetails: salesList.slice(0, 10),
+      pendingDetails: pendingList,
+      productsDetails: productsList.slice(0, 10),
+      viewsToday: rawStats.viewsToday || 0,
+      viewsThisMonth: rawStats.viewsThisMonth || 0,
+      viewsTotal: viewsToShow
+    });
+  }, [allOrders, allProducts, dateFilter, customDates, rawStats, loading]);
+
+  const stats = [
+    { label: 'Ventas Totales', value: `$${statsData.totalSales.toFixed(2)}`, icon: <DollarSign size={24} />, colorClass: 'text-emerald' },
+    { label: 'Pedidos Pendientes', value: statsData.pendingOrdersCount.toString(), icon: <ShoppingCart size={24} />, colorClass: 'text-amber' },
+    { label: 'Productos Activos', value: statsData.activeProductsCount.toString(), icon: <PackageOpen size={24} />, colorClass: 'text-blue' },
+    { label: 'Vistas Totales', value: statsData.viewsTotal.toString(), icon: <Eye size={24} />, colorClass: 'text-indigo' },
   ];
 
   const [selectedStat, setSelectedStat] = useState(null);
@@ -23,100 +143,128 @@ const SellerDashboard = () => {
   const handleStatClick = (stat) => {
     let details = [];
     if (stat.label === 'Ventas Totales') {
-      details = [
-        { title: 'Venta de Pedido #ORD-001', value: '+$45.00', desc: 'Hoy, 10:42 AM' },
-        { title: 'Venta de Pedido #ORD-002', value: '+$120.50', desc: 'Hoy, 09:15 AM' },
-        { title: 'Venta de Pedido #ORD-003', value: '+$32.00', desc: 'Ayer, 16:30 PM' },
-      ];
+      details = statsData.salesDetails;
+      if (details.length === 0) details = [{ title: 'Sin ventas aún', value: '$0.00', desc: 'Sigue promocionando tu tienda' }];
     } else if (stat.label === 'Pedidos Pendientes') {
-      details = [
-        { title: 'Pedido #ORD-001', value: 'Carlos M.', desc: 'Esperando envío' },
-        { title: 'Pedido #ORD-004', value: 'Elena S.', desc: 'Esperando envío' },
-      ];
+      details = statsData.pendingDetails;
+      if (details.length === 0) details = [{ title: 'No hay pedidos pendientes', value: '-', desc: '¡Todo al día!' }];
     } else if (stat.label === 'Productos Activos') {
-      details = [
-        { title: 'Café Cubita 250g', value: '25 un.', desc: 'En stock' },
-        { title: 'Ventilador Recargable', value: '5 un.', desc: 'En stock' },
-        { title: 'Arrocera 1.5L', value: '12 un.', desc: 'En stock' }
-      ];
+      details = statsData.productsDetails;
+      if (details.length === 0) details = [{ title: 'No hay productos', value: '0 un.', desc: 'Agrega tu primer producto' }];
     } else {
       details = [
-        { title: 'Conversión de Visitas', value: '+5.2%', desc: 'Crecimiento semanal' },
-        { title: 'Retención de Clientes', value: '+8.8%', desc: 'Crecimiento mensual' },
+        { title: 'Hoy', value: statsData.viewsToday, desc: 'Vistas de productos hoy' },
+        { title: 'Este Mes', value: statsData.viewsThisMonth, desc: 'Vistas acumuladas en el mes' },
+        { title: 'Histórico', value: statsData.viewsTotal, desc: 'Vistas desde la creación de la tienda' }
       ];
     }
     setSelectedStat({ ...stat, details });
   };
 
   return (
-    <div className="seller-dashboard">
-      <div className="dashboard-welcome-banner">
-        <div>
-          <h1 className="seller-page-title" style={{color: 'white', margin: 0}}>Resumen de tu Negocio</h1>
-          <p className="welcome-subtitle">Aquí tienes un vistazo rápido al rendimiento de tu tienda de hoy.</p>
+    <div className="seller-dashboard-clean">
+      <div className="dashboard-header-clean">
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '15px'}}>
+          <div>
+            <h1 className="seller-page-title">Resumen del Negocio</h1>
+            <p className="welcome-subtitle">Vista general de tu rendimiento de ventas y operaciones.</p>
+            {storeInfo && storeInfo.store_number && (
+              <div style={{display: 'inline-block', marginTop: '8px', padding: '4px 12px', background: '#e0e7ff', color: '#4f46e5', borderRadius: '16px', fontSize: '13px', fontWeight: 'bold', border: '1px solid #c7d2fe'}}>
+                ID Vendedor: {storeInfo.store_number}
+              </div>
+            )}
+          </div>
+          
+          <div className="dashboard-filters" style={{display: 'flex', gap: '10px', alignItems: 'center', background: '#fff', padding: '10px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
+            <select 
+              value={dateFilter} 
+              onChange={(e) => setDateFilter(e.target.value)}
+              style={{padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', outline: 'none', background: '#f8fafc', color: '#334155'}}
+            >
+              <option value="all">Historico Total</option>
+              <option value="day">Hoy</option>
+              <option value="week">Últimos 7 días</option>
+              <option value="month">Últimos 30 días</option>
+              <option value="custom">Fecha Personalizada</option>
+            </select>
+
+            {dateFilter === 'custom' && (
+              <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                <input 
+                  type="date" 
+                  value={customDates.start}
+                  onChange={(e) => setCustomDates({...customDates, start: e.target.value})}
+                  style={{padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0'}}
+                />
+                <span style={{color: '#64748b'}}>-</span>
+                <input 
+                  type="date" 
+                  value={customDates.end}
+                  onChange={(e) => setCustomDates({...customDates, end: e.target.value})}
+                  style={{padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0'}}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
-      <div className="dashboard-stats-grid">
+      <div className="stats-grid-clean">
         {stats.map((stat, index) => (
           <div 
             key={index} 
-            className={`stat-card premium-card ${stat.gradient}`} 
+            className="stat-card-clean"
             onClick={() => handleStatClick(stat)}
-            style={{cursor: 'pointer'}}
-            title="Toca para ver detalles"
+            title="Ver detalles"
           >
-            <div className="stat-icon-wrapper-premium">
-              {stat.icon}
+            <div className={`stat-icon-clean ${stat.colorClass}-bg`}>
+              {React.cloneElement(stat.icon, { className: stat.colorClass })}
             </div>
-            <div className="stat-details">
-              <span className="stat-label">{stat.label}</span>
-              <span className="stat-value">{stat.value}</span>
+            <div className="stat-info-clean">
+              <span className="stat-label-clean">{stat.label === 'Vistas Totales' ? 'Personas que han visto tus productos' : stat.label}</span>
+              <span className="stat-value-clean">{stat.value}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="dashboard-content-grid">
-        <div className="dashboard-chart-card premium-panel">
-          <div className="card-header">
-            <h3>Visión General de Ventas</h3>
-          </div>
-          <div className="chart-placeholder">
-            {/* Gráfico estático simulado con CSS puro para impacto visual */}
-            <div className="fake-chart">
-              <div className="bar" style={{height: '40%'}}><span>Lun</span></div>
-              <div className="bar" style={{height: '60%'}}><span>Mar</span></div>
-              <div className="bar" style={{height: '35%'}}><span>Mié</span></div>
-              <div className="bar" style={{height: '80%'}}><span>Jue</span></div>
-              <div className="bar" style={{height: '50%'}}><span>Vie</span></div>
-              <div className="bar" style={{height: '90%'}}><span>Sáb</span></div>
-              <div className="bar" style={{height: '75%'}}><span>Dom</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-recent-card premium-panel">
-          <div className="card-header">
+      <div className="dashboard-content-clean">
+        <div className="recent-orders-card-clean">
+          <div className="card-header-clean">
             <h3>Pedidos Recientes</h3>
-            <button className="btn-link premium-link">Ver todos</button>
           </div>
-          <div className="recent-orders-list">
-            {recentOrders.map((order) => (
-              <div key={order.id} className="recent-order-item">
-                <div className="order-info">
-                  <span className="order-id">{order.id}</span>
-                  <span className="order-customer">{order.customer}</span>
+          <div className="recent-orders-list-clean">
+            {statsData.recentOrdersList.map((order) => (
+              <div 
+                key={order.id} 
+                className="recent-order-row-clean"
+                onClick={() => navigate('/orders')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 2 }}>
+                  <div className="order-customer-avatar">
+                    {order.customer_name ? order.customer_name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="order-main-info-clean">
+                    <span className="order-customer-clean">{order.customer_name || 'Cliente sin nombre'}</span>
+                    <span className="order-id-clean">Pedido #{order.id}</span>
+                  </div>
                 </div>
-                <div className="order-meta">
-                  <span className="order-date">{order.date}</span>
-                  <span className="order-amount">{order.amount}</span>
+                <div className="order-amount-date-clean" style={{ flex: 1.5 }}>
+                  <span className="order-amount-clean">${Number(order.total).toFixed(2)}</span>
+                  <span className="order-date-clean">{new Date(order.created_at).toLocaleDateString()}</span>
                 </div>
-                <div className={`order-status badge-${order.status.toLowerCase()}`}>
-                  {order.status}
+                <div className="order-status-wrapper-clean" style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
+                  <span className={`status-pill-clean ${order.status === 'delivered' ? 'pill-delivered' : 'pill-pending'}`}>
+                    {order.status === 'delivered' ? <CheckCircle2 size={14} style={{marginRight: '4px'}}/> : <Clock size={14} style={{marginRight: '4px'}}/>}
+                    {order.status === 'delivered' ? 'Entregada' : 'Pendiente'}
+                  </span>
+                  <ChevronRight size={18} color="#9ca3af" />
                 </div>
               </div>
             ))}
+            {statsData.recentOrdersList.length === 0 && (
+              <div className="empty-state-clean">No tienes pedidos recientes.</div>
+            )}
           </div>
         </div>
       </div>
@@ -127,20 +275,20 @@ const SellerDashboard = () => {
           <div className="modal-content" style={{maxWidth: '500px'}} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                <div className={`stat-icon-wrapper-premium ${selectedStat.gradient}`} style={{width: '40px', height: '40px'}}>
-                  {selectedStat.icon}
+                <div className={`stat-icon-clean ${selectedStat.colorClass}-bg`} style={{width: '40px', height: '40px', borderRadius: '10px'}}>
+                  {React.cloneElement(selectedStat.icon, { className: selectedStat.colorClass, size: 20 })}
                 </div>
-                <h2>Detalles: {selectedStat.label}</h2>
+                <h2 style={{margin: 0, fontSize: '18px', color: '#111827'}}>Detalles: {selectedStat.label}</h2>
               </div>
               <button className="close-btn" onClick={() => setSelectedStat(null)}>
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
             
             <div className="order-details-body" style={{padding: '0'}}>
-              <div style={{padding: '24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
-                <span style={{fontSize: '14px', color: '#64748b', fontWeight: '500'}}>Total General</span>
-                <div style={{fontSize: '36px', fontWeight: '800', color: '#0f172a', marginTop: '4px'}}>
+              <div style={{padding: '32px 24px', background: '#fafafa', borderBottom: '1px solid #e5e7eb', textAlign: 'center'}}>
+                <span style={{fontSize: '13px', color: '#6b7280', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Total General</span>
+                <div style={{fontSize: '42px', fontWeight: '700', color: '#111827', marginTop: '8px'}}>
                   {selectedStat.value}
                 </div>
               </div>

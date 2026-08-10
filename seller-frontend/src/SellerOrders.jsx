@@ -1,45 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Eye, CheckCircle, X, Package, MapPin, Phone, Mail } from 'lucide-react';
-// import './SellerProducts.css'; // Usamos estilos similares a products y dashboard
+import { getStoreOrders, updateOrder } from './services/api';
+import './SellerProducts.css';
 import './SellerOrders.css';
 
 const SellerOrders = () => {
+  const storeId = localStorage.getItem('seller_store_id');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   
-  // Datos simulados para pedidos con más detalles
-  const [orders, setOrders] = useState([
-    { 
-      id: 'ORD-001', customer: 'Carlos Martínez', date: '2026-07-05 10:42 AM', total: 45.00, items: 2, status: 'Pendiente',
-      email: 'carlos@example.com', phone: '+53 51234567', address: 'Calle 23 #123, Vedado, La Habana',
-      products: [{ name: 'Café Cubita 250g', qty: 2, price: 22.50 }]
-    },
-    { 
-      id: 'ORD-002', customer: 'Ana González', date: '2026-07-05 09:15 AM', total: 120.50, items: 1, status: 'Enviado',
-      email: 'ana@example.com', phone: '+53 59876543', address: 'Ave. 41 #4102, Playa, La Habana',
-      products: [{ name: 'Ventilador Recargable', qty: 1, price: 120.50 }]
-    },
-    { 
-      id: 'ORD-003', customer: 'Roberto Fernández', date: '2026-07-04 16:30 PM', total: 32.00, items: 4, status: 'Entregado',
-      email: 'roberto@example.com', phone: '+53 54443322', address: 'Calle San Rafael #45, Centro Habana',
-      products: [{ name: 'Jabón de baño', qty: 4, price: 8.00 }]
-    },
-    { 
-      id: 'ORD-004', customer: 'Elena Sánchez', date: '2026-07-04 14:20 PM', total: 89.99, items: 1, status: 'Pendiente',
-      email: 'elena@example.com', phone: '+53 52221100', address: 'Calle 100 #200, Marianao',
-      products: [{ name: 'Licuadora Oster', qty: 1, price: 89.99 }]
-    },
-    { 
-      id: 'ORD-005', customer: 'Miguel Díaz', date: '2026-07-03 11:10 AM', total: 210.00, items: 3, status: 'Entregado',
-      email: 'miguel@example.com', phone: '+53 55556677', address: 'Calle Línea #98, Vedado, La Habana',
-      products: [{ name: 'Arrocera 1.5L', qty: 1, price: 150.00 }, { name: 'Frijoles Negros 1kg', qty: 2, price: 30.00 }]
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        if (!storeId) return;
+        const data = await getStoreOrders(storeId);
+        // Format the orders for the UI
+        const formattedOrders = data.map(o => {
+          let itemsCount = 0;
+          let productsList = [];
+          
+          if (o.order_items) {
+            o.order_items.forEach(item => {
+              itemsCount += item.quantity;
+              productsList.push({
+                name: item.products ? item.products.name : `Producto ${item.product_id}`,
+                qty: item.quantity,
+                price: Number(item.price_at_purchase)
+              });
+            });
+          }
+
+          return {
+            id: o.id,
+            customer: o.customer_name,
+            date: new Date(o.created_at).toLocaleString(),
+            total: Number(o.total),
+            items: itemsCount,
+            status: o.status === 'pending' ? 'Pendiente' : (o.status === 'shipped' ? 'Enviado' : o.status),
+            email: o.customer_email,
+            phone: o.customer_phone || 'N/A',
+            address: o.customer_address,
+            products: productsList,
+            payment_method: o.payment_method,
+            payment_proof_url: o.payment_proof_url,
+            rawStatus: o.status
+          };
+        });
+        
+        setOrders(formattedOrders);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchOrders();
+  }, [storeId]);
 
   const filteredOrders = orders.filter(o => {
-    const matchesSearch = o.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          o.customer.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const idStr = o.id.toString();
+    const matchesSearch = idStr.includes(searchLower) || o.customer.toLowerCase().includes(searchLower);
                           
     let matchesStatus = true;
     if (statusFilter === 'pending') matchesStatus = o.status === 'Pendiente';
@@ -49,8 +75,19 @@ const SellerOrders = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const markAsShipped = (id) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status: 'Enviado' } : o));
+  const markAsDelivered = async (id) => {
+    if (window.confirm('¿Estás seguro de marcar este pedido como entregado?')) {
+      try {
+        await updateOrder(id, 'delivered');
+        setOrders(orders.map(o => o.id === id ? { ...o, status: 'Entregada', rawStatus: 'delivered' } : o));
+        if (selectedOrder && selectedOrder.id === id) {
+          setSelectedOrder({...selectedOrder, status: 'Entregada', rawStatus: 'delivered'});
+        }
+      } catch (err) {
+        alert('Error al actualizar el pedido');
+        console.error(err);
+      }
+    }
   };
 
   return (
@@ -71,21 +108,11 @@ const SellerOrders = () => {
             />
           </div>
           <div className="toolbar-actions">
-            <select 
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendientes</option>
-              <option value="shipped">Enviados</option>
-              <option value="delivered">Entregados</option>
-            </select>
           </div>
         </div>
 
         <div className="table-responsive">
-          <table className="seller-products-table">
+          <table className="seller-orders-table">
             <thead>
               <tr>
                 <th>ID Pedido</th>
@@ -106,8 +133,8 @@ const SellerOrders = () => {
                   <td data-label="Artículos">{order.items} art.</td>
                   <td data-label="Total"><span className="product-price">${order.total.toFixed(2)}</span></td>
                   <td data-label="Estado">
-                    <span className={`status-badge badge-${order.status.toLowerCase()}`}>
-                      {order.status}
+                    <span className={`status-badge badge-${order.status === 'Entregada' || order.status === 'delivered' ? 'entregado' : 'pendiente'}`}>
+                      {order.status === 'delivered' ? 'Entregada' : (order.status === 'pending' ? 'Pendiente' : order.status)}
                     </span>
                   </td>
                   <td data-label="Acciones">
@@ -119,18 +146,6 @@ const SellerOrders = () => {
                       >
                         <Eye size={16} />
                       </button>
-                      {order.status === 'Pendiente' && (
-                        <button 
-                          className="btn-icon check" 
-                          title="Marcar como Enviado"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsShipped(order.id);
-                          }}
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                      )}
                     </div>
                   </td>
                 </tr>
@@ -159,21 +174,19 @@ const SellerOrders = () => {
             </div>
             
             <div className="order-details-body">
-              <div className="order-status-banner">
-                <span className="status-label">Estado actual:</span>
-                <span className={`status-badge badge-${selectedOrder.status.toLowerCase()}`}>
-                  {selectedOrder.status}
-                </span>
-                {selectedOrder.status === 'Pendiente' && (
+              <div className="order-status-banner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span className="status-label">Estado actual:</span>
+                  <span className={`status-badge badge-${selectedOrder.status === 'Entregada' || selectedOrder.status === 'delivered' ? 'entregado' : 'pendiente'}`}>
+                    {selectedOrder.status === 'delivered' ? 'Entregada' : (selectedOrder.status === 'pending' ? 'Pendiente' : selectedOrder.status)}
+                  </span>
+                </div>
+                {selectedOrder.status !== 'Entregada' && selectedOrder.status !== 'delivered' && (
                   <button 
-                    className="btn-primary" 
-                    style={{marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px'}}
-                    onClick={() => {
-                      markAsShipped(selectedOrder.id);
-                      setSelectedOrder({...selectedOrder, status: 'Enviado'});
-                    }}
+                    className="btn btn-primary"
+                    onClick={() => markAsDelivered(selectedOrder.id)}
                   >
-                    <CheckCircle size={16} /> Marcar como Enviado
+                    <CheckCircle size={16} style={{marginRight: '6px'}}/> Marcar como Entregado
                   </button>
                 )}
               </div>
@@ -182,7 +195,29 @@ const SellerOrders = () => {
                 <div className="info-card">
                   <h3><MapPin size={18} /> Información del Cliente</h3>
                   <p><strong>{selectedOrder.customer}</strong></p>
-                  <p><Phone size={14} style={{marginRight: '8px'}} /> {selectedOrder.phone}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0' }}>
+                    <p style={{ margin: 0 }}><Phone size={14} style={{marginRight: '8px'}} /> {selectedOrder.phone}</p>
+                    {selectedOrder.phone && selectedOrder.phone !== 'N/A' && (
+                      <a 
+                        href={`https://wa.me/53${selectedOrder.phone.replace(/\D/g, '')}?text=Hola%20${encodeURIComponent(selectedOrder.customer)},%20te%20escribimos%20sobre%20tu%20pedido%20%23${selectedOrder.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          backgroundColor: '#25D366',
+                          color: 'white',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        💬 Contactar
+                      </a>
+                    )}
+                  </div>
                   <p><Mail size={14} style={{marginRight: '8px'}} /> {selectedOrder.email}</p>
                   <p style={{marginTop: '8px', color: '#4b5563'}}>{selectedOrder.address}</p>
                 </div>
@@ -194,12 +229,34 @@ const SellerOrders = () => {
                   <h2 style={{color: 'var(--brand-primary)', marginTop: '16px'}}>
                     Total: ${selectedOrder.total.toFixed(2)}
                   </h2>
+                  <div style={{ marginTop: '15px', background: 'var(--bg-body)', padding: '10px', borderRadius: '6px' }}>
+                    <p style={{ margin: '0 0 5px 0' }}><strong>Método de Pago:</strong></p>
+                    {selectedOrder.payment_method === 'zelle' ? (
+                      <span style={{ display: 'inline-block', background: '#7445c6', color: 'white', padding: '4px 10px', borderRadius: '15px', fontSize: '12px', fontWeight: 'bold' }}>Zelle</span>
+                    ) : (
+                      <span style={{ display: 'inline-block', background: '#f59e0b', color: 'white', padding: '4px 10px', borderRadius: '15px', fontSize: '12px', fontWeight: 'bold' }}>Efectivo (Cash)</span>
+                    )}
+                  </div>
                 </div>
               </div>
+              
+              {selectedOrder.payment_method === 'zelle' && selectedOrder.payment_proof_url && (
+                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '15px', marginBottom: '15px' }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#7445c6' }}>Comprobante de Zelle</h3>
+                  <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '10px' }}>Verifica visualmente el comprobante de pago subido por el cliente antes de procesar el pedido.</p>
+                  <a href={selectedOrder.payment_proof_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                    <img 
+                      src={selectedOrder.payment_proof_url} 
+                      alt="Comprobante de Zelle" 
+                      style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
+                    />
+                  </a>
+                </div>
+              )}
 
               <div className="order-products-list">
                 <h3>Productos Comprados</h3>
-                <table className="seller-products-table" style={{marginTop: '12px'}}>
+                <table className="seller-orders-table" style={{marginTop: '12px'}}>
                   <thead>
                     <tr>
                       <th>Producto</th>

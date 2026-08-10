@@ -1,11 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Star, ShoppingCart } from 'lucide-react';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/product/${product.id}`);
+  };
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -13,13 +18,12 @@ const ProductCard = ({ product }) => {
     addToCart(product);
   };
 
-  // Generate a fake rating between 3.5 and 5.0
-  const rating = (3.5 + (product.id % 15) * 0.1).toFixed(1);
-  const reviewCount = 50 + (product.id * 7) % 500;
+  const rating = product.rating_avg || 0;
+  const reviewCount = product.review_count || 0;
 
   return (
-    <div className="product-card">
-      <Link to={`/product/${product.id}`} className="product-card-link">
+    <div className="product-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
+      <div className="product-card-link">
         <div className="product-card-image-container">
           <img src={product.image_url} alt={product.name} className="product-card-image" />
         </div>
@@ -42,6 +46,11 @@ const ProductCard = ({ product }) => {
             <span className="price-whole">{Math.floor(product.price)}</span>
             <span className="price-fraction">{((product.price % 1) * 100).toFixed(0).padStart(2, '0')}</span>
             <span style={{ fontSize: '12px', color: '#565959', marginLeft: '4px', verticalAlign: 'top' }}>{product.currency || 'USD'}</span>
+            {(product.store_accepts_zelle || product.stores?.accepts_zelle) && product.price_usd && (
+              <span style={{ fontSize: '14px', color: '#B12704', marginLeft: '8px' }}>
+                / ${Number(product.price_usd).toFixed(2)} USD
+              </span>
+            )}
           </p>
           <p className="product-card-delivery">Envío GRATIS a Cuba</p>
           <button onClick={handleAddToCart} className="add-to-cart-btn-mobile">
@@ -49,7 +58,7 @@ const ProductCard = ({ product }) => {
             Agregar
           </button>
         </div>
-      </Link>
+      </div>
     </div>
   );
 };

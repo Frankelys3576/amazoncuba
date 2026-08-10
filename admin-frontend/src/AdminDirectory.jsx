@@ -138,16 +138,16 @@ const AdminDirectory = () => {
               filteredStores.length > 0 ? (
                 filteredStores.map(store => (
                   <tr key={store.id}>
-                    <td>#{store.id}</td>
-                    <td><strong>{store.name}</strong></td>
-                    <td>
+                    <td data-label="ID">#{store.id}</td>
+                    <td data-label="Nombre"><strong>{store.name}</strong></td>
+                    <td data-label="Tipo">
                       {store.store_type === 'business' ? (
                         <span className="type-badge business"><Building2 size={14}/> Negocio Físico</span>
                       ) : (
                         <span className="type-badge individual"><UserCircle size={14}/> Independiente</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Estado">
                       <span className={`status-badge ${store.status}`}>
                         {store.status === 'pending' && <Clock size={14}/>}
                         {store.status === 'approved' && <CheckCircle size={14}/>}
@@ -155,7 +155,7 @@ const AdminDirectory = () => {
                         {store.status === 'pending' ? 'Pendiente' : store.status === 'approved' ? 'Aprobado' : 'Rechazado'}
                       </span>
                     </td>
-                    <td>{new Date(store.created_at).toLocaleDateString()}</td>
+                    <td data-label="Fecha de Registro">{new Date(store.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))
               ) : (
@@ -165,10 +165,10 @@ const AdminDirectory = () => {
               filteredUsers.length > 0 ? (
                 filteredUsers.map(user => (
                   <tr key={user.id}>
-                    <td>{user.email}</td>
-                    <td>{user.full_name || 'Sin nombre'}</td>
-                    <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                    <td><span className="status-badge approved">Activo</span></td>
+                    <td data-label="ID (Email)">{user.email}</td>
+                    <td data-label="Nombre">{user.full_name || 'Sin nombre'}</td>
+                    <td data-label="Fecha de Registro">{new Date(user.created_at).toLocaleDateString()}</td>
+                    <td data-label="Estado (Auth)"><span className="status-badge approved">Activo</span></td>
                   </tr>
                 ))
               ) : (
