@@ -266,7 +266,7 @@ const getAdminStoreDetails = async (req, res) => {
     }
 
     res.json({
-      store,
+      store: formatStore(store),
       activeProductsCount: productsCount || 0,
       totalSalesCount: totalSales || 0
     });

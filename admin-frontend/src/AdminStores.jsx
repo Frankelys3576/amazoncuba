@@ -247,10 +247,12 @@ const AdminStores = () => {
               
               <div className="store-card-body">
                 <p>{store.description}</p>
-                <div className="store-details">
+                <div className="store-details" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  <span><strong>Teléfono:</strong> <a href={`tel:${store.phone}`} style={{ color: '#3b82f6' }}>{store.phone || 'No registrado'}</a></span>
+                  <span><strong>Tipo:</strong> {store.store_type === 'hostal' ? '🏡 Hostal (CubaBnB)' : store.store_type === 'business' ? '🏪 Negocio' : '👤 Particular'}</span>
                   <span><strong>ID Sistema:</strong> #{store.id}</span>
-                  <span style={{ marginLeft: '10px' }}><strong>Nº Único:</strong> {store.store_number || 'N/A'}</span>
-                  <span style={{ marginLeft: '10px' }}><strong>Fecha de registro:</strong> {new Date(store.created_at).toLocaleDateString()}</span>
+                  <span><strong>Nº Único:</strong> {store.store_number || 'N/A'}</span>
+                  <span><strong>Fecha:</strong> {new Date(store.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -260,7 +262,7 @@ const AdminStores = () => {
                   onClick={() => handleViewDetails(store.id)}
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                 >
-                  <Info size={16} /> Ver Detalles
+                  <Info size={16} /> Ver Detalles Completos
                 </button>
               </div>
 
@@ -296,9 +298,9 @@ const AdminStores = () => {
 
       {selectedStoreId && (
         <div className="modal-overlay" onClick={closeDetails}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>
             <div className="modal-header">
-              <h2>Detalles del Negocio</h2>
+              <h2>Detalles Completos del Negocio</h2>
               <button className="close-btn" onClick={closeDetails}><XCircle size={24} /></button>
             </div>
             
@@ -311,9 +313,17 @@ const AdminStores = () => {
                   <div>
                     <h3 style={{ margin: '0 0 5px 0', fontSize: '1.4rem', color: 'var(--text-main)' }}>{storeDetails.store.name}</h3>
                     <p style={{ margin: 0, color: 'var(--text-muted)' }}>{storeDetails.store.slogan || 'Sin eslogan'}</p>
-                    <span style={{ display: 'inline-block', marginTop: '8px', padding: '4px 10px', background: 'var(--bg-body)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
-                      Nº Único: {storeDetails.store.store_number || 'N/A'} | ID Sistema: #{storeDetails.store.id} | Tipo: {storeDetails.store.store_type === 'business' ? 'Negocio' : 'Particular'}
-                    </span>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      <span style={{ padding: '4px 10px', background: 'var(--bg-body)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+                        Nº Único: {storeDetails.store.store_number || 'N/A'}
+                      </span>
+                      <span style={{ padding: '4px 10px', background: 'var(--bg-body)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+                        ID Sistema: #{storeDetails.store.id}
+                      </span>
+                      <span style={{ padding: '4px 10px', background: '#3b82f6', color: 'white', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+                        Tipo: {storeDetails.store.store_type === 'hostal' ? '🏡 Hostal (CubaBnB)' : storeDetails.store.store_type === 'business' ? '🏪 Negocio con Local' : '👤 Vendedor Independiente'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -331,12 +341,41 @@ const AdminStores = () => {
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '20px', color: 'var(--text-main)' }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Información de Contacto</h4>
-                  <p style={{ margin: '5px 0' }}><strong>Teléfono / WhatsApp:</strong> <a href={`tel:${storeDetails.store.phone}`} style={{ color: '#3b82f6' }}>{storeDetails.store.phone || 'No registrado'}</a></p>
-                  <p style={{ margin: '5px 0' }}><strong>Estado:</strong> {storeDetails.store.status === 'approved' ? 'Aprobado' : storeDetails.store.status === 'pending' ? 'Pendiente' : 'Rechazado'}</p>
-                  <p style={{ margin: '5px 0' }}><strong>Fecha de Registro:</strong> {new Date(storeDetails.store.created_at).toLocaleDateString()} a las {new Date(storeDetails.store.created_at).toLocaleTimeString()}</p>
+                <div style={{ marginBottom: '20px', color: 'var(--text-main)', background: 'var(--bg-body)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-main)' }}>📞 Datos de Contacto y Cuenta</h4>
+                  <p style={{ margin: '6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong>Teléfono / WhatsApp:</strong> 
+                    <a href={`tel:${storeDetails.store.phone}`} style={{ color: '#3b82f6', fontWeight: 'bold' }}>{storeDetails.store.phone || 'No registrado'}</a>
+                    {storeDetails.store.phone && (
+                      <a 
+                        href={`https://wa.me/${storeDetails.store.phone.replace(/[^0-9]/g, '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ background: '#25d366', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', textDecoration: 'none', fontWeight: 'bold' }}
+                      >
+                        💬 Abrir WhatsApp
+                      </a>
+                    )}
+                  </p>
+                  <p style={{ margin: '6px 0' }}><strong>Estado de la Tienda:</strong> {storeDetails.store.status === 'approved' ? '✅ Aprobado' : storeDetails.store.status === 'pending' ? '⏳ Pendiente' : '❌ Rechazado'}</p>
+                  <p style={{ margin: '6px 0' }}><strong>Horario:</strong> {storeDetails.store.opening_time || '09:00'} - {storeDetails.store.closing_time || '18:00'} ({storeDetails.store.is_open ? 'Abierto' : 'Pausado'})</p>
+                  <p style={{ margin: '6px 0' }}><strong>Fecha de Registro:</strong> {new Date(storeDetails.store.created_at).toLocaleDateString()} a las {new Date(storeDetails.store.created_at).toLocaleTimeString()}</p>
                 </div>
+
+                {(storeDetails.store.province || storeDetails.store.municipality || storeDetails.store.address || storeDetails.store.store_type === 'hostal') && (
+                  <div style={{ marginBottom: '20px', color: 'var(--text-main)', background: 'var(--bg-body)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-main)' }}>📍 Ubicación y CubaBnB</h4>
+                    <p style={{ margin: '6px 0' }}><strong>Provincia:</strong> {storeDetails.store.province || 'No especificada'}</p>
+                    <p style={{ margin: '6px 0' }}><strong>Municipio:</strong> {storeDetails.store.municipality || 'No especificado'}</p>
+                    <p style={{ margin: '6px 0' }}><strong>Dirección Exacta:</strong> {storeDetails.store.address || 'No registrada'}</p>
+                    {storeDetails.store.lat && storeDetails.store.lng && (
+                      <p style={{ margin: '6px 0' }}><strong>Coordenadas GPS:</strong> Lat {storeDetails.store.lat}, Lng {storeDetails.store.lng}</p>
+                    )}
+                    {storeDetails.store.price_per_night && (
+                      <p style={{ margin: '6px 0', color: '#ff385c', fontWeight: 'bold' }}><strong>Precio por Noche:</strong> ${storeDetails.store.price_per_night} USD/CUP</p>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Descripción</h4>
