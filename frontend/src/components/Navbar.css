@@ -274,6 +274,10 @@
   .navbar-main:not(.store-mode) .nav-cart {
     padding-right: 0;
   }
+  .navbar-main:not(.store-mode) .nav-cubabnb-link {
+    order: 0;
+    margin-left: 5px;
+  }
   .navbar-main:not(.store-mode) .nav-sell-btn {
     order: 0;
     width: auto;

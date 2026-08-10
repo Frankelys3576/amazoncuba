@@ -28,6 +28,47 @@ const Home = () => {
   }, [location.province, location.municipality]);
   return (
     <div className="home-page">
+      {/* Barra de acceso rápido desde el inicio */}
+      <div className="home-quick-bar" style={{
+        background: '#ffffff',
+        borderBottom: '1px solid #e2e8f0',
+        padding: '10px 15px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+      }}>
+        <Link to="/cubabnb" style={{
+          background: '#ff385c',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '20px',
+          fontWeight: '800',
+          fontSize: '14px',
+          textDecoration: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          boxShadow: '0 2px 8px rgba(255, 56, 92, 0.35)'
+        }}>
+          🏡 CubaBnB Hostales
+        </Link>
+        <Link to="/negocios" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px', textDecoration: 'none' }}>
+          🏪 Negocios
+        </Link>
+        <Link to="/ofertas" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px', textDecoration: 'none' }}>
+          🔥 Ofertas del Día
+        </Link>
+        <Link to="/search?category=1" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: '500', fontSize: '13px', textDecoration: 'none' }}>
+          📱 Electrónica
+        </Link>
+        <Link to="/search?category=2" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: '500', fontSize: '13px', textDecoration: 'none' }}>
+          🏠 Hogar
+        </Link>
+      </div>
+
       <Hero />
       <div className="home-content">
         {/* Carousel: Lo más vendido hoy */}
