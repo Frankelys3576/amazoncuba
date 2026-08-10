@@ -132,9 +132,6 @@ const Navbar = () => {
           </>
         ) : (
           <>
-            <Link to="/cubabnb" style={{ fontWeight: 'bold', background: '#ff385c', color: 'white', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              🏡 Hostales (CubaBnB)
-            </Link>
             <Link to="/negocios">Negocios</Link>
             <Link to="/ofertas">Ofertas del Día</Link>
             <Link to="/servicio-cliente">Servicio al Cliente</Link>
