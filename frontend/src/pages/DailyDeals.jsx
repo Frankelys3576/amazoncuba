@@ -52,7 +52,7 @@ const DailyDeals = () => {
     <div className="daily-deals-container">
       <div className="deals-header">
         <h1>Ofertas del Día</h1>
-        <p>Ahorra a lo grande con ofertas nuevas cada día en CubaAmazon</p>
+        <p>Ahorra a lo grande con ofertas nuevas cada día en AmasonCubano</p>
       </div>
       
       <div className="deals-filters">

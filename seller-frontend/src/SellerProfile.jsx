@@ -140,7 +140,7 @@ const SellerProfile = () => {
     <div className="seller-profile">
       <div className="page-header">
         <h1>Mi Tienda</h1>
-        <p>Personaliza cómo ven tu tienda los clientes en CubaAmazon.</p>
+        <p>Personaliza cómo ven tu tienda los clientes en AmasonCubano.</p>
       </div>
 
       {message.text && (

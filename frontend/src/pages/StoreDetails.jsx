@@ -144,7 +144,7 @@ const StoreDetails = () => {
               
               {store.phone && (
                 <a 
-                  href={`https://wa.me/${store.phone.replace(/[^0-9]/g, '').startsWith('53') && store.phone.replace(/[^0-9]/g, '').length > 8 ? store.phone.replace(/[^0-9]/g, '') : `53${store.phone.replace(/[^0-9]/g, '')}`}?text=Hola%20${encodeURIComponent(store.name)},%20vengo%20de%20CubaAmazon%20y%20me%20interesan%20algunos%20de%20sus%20productos.`}
+                  href={`https://wa.me/${store.phone.replace(/[^0-9]/g, '').startsWith('53') && store.phone.replace(/[^0-9]/g, '').length > 8 ? store.phone.replace(/[^0-9]/g, '') : `53${store.phone.replace(/[^0-9]/g, '')}`}?text=Hola%20${encodeURIComponent(store.name)},%20vengo%20de%20AmasonCubano%20y%20me%20interesan%20algunos%20de%20sus%20productos.`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="store-whatsapp-btn"

@@ -33,7 +33,7 @@ const SellerAuth = () => {
       // y le agregamos un dominio ficticio para que Supabase Auth lo acepte como email.
       const formattedEmail = formData.identifier.includes('@') 
         ? formData.identifier.toLowerCase().trim()
-        : `${formData.identifier.trim()}@cubaamazon.com`;
+        : `${formData.identifier.trim()}@amasoncubano.com`;
 
       if (isLogin) {
         // Log in using backend
@@ -90,7 +90,7 @@ const SellerAuth = () => {
       <div className="auth-container">
         
         <div className="auth-logo">
-          CubaAmazon <span style={{ fontSize: '18px', display: 'block', marginTop: '5px' }}>Regístrate para vender productos</span>
+          AmasonCubano <span style={{ fontSize: '18px', display: 'block', marginTop: '5px' }}>Regístrate para vender productos</span>
         </div>
 
         <div className="auth-card">
@@ -211,7 +211,7 @@ const SellerAuth = () => {
           </form>
 
           <div className="auth-terms">
-            Al {isLogin ? 'iniciar sesión' : 'solicitar una cuenta'}, aceptas las Condiciones de Uso y el Aviso de Privacidad de CubaAmazon para Vendedores.
+            Al {isLogin ? 'iniciar sesión' : 'solicitar una cuenta'}, aceptas las Condiciones de Uso y el Aviso de Privacidad de AmasonCubano para Vendedores.
           </div>
         </div>
 
@@ -219,7 +219,7 @@ const SellerAuth = () => {
           <div className="divider-container">
             <div className="divider-line"></div>
             <div className="divider-text">
-              {isLogin ? '¿Eres nuevo en CubaAmazon?' : '¿Ya tienes una cuenta?'}
+              {isLogin ? '¿Eres nuevo en AmasonCubano?' : '¿Ya tienes una cuenta?'}
             </div>
             <div className="divider-line"></div>
           </div>

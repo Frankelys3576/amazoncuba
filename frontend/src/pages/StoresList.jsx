@@ -22,7 +22,7 @@ const StoresList = () => {
     <div className="stores-list-page">
       <div className="stores-header">
         <h1>Directorio de Negocios</h1>
-        <p>Descubre las mejores tiendas y vendedores en CubaAmazon</p>
+        <p>Descubre las mejores tiendas y vendedores en AmasonCubano</p>
       </div>
 
       <div className="container stores-grid">

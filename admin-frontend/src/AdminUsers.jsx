@@ -73,7 +73,7 @@ const AdminUsers = () => {
         <div className="page-header-top">
           <div>
             <h1>Usuarios Registrados</h1>
-            <p>Todos los usuarios registrados en la plataforma TiendaCubaAmazon.</p>
+            <p>Todos los usuarios registrados en la plataforma AmasonCubano.</p>
           </div>
           <div className="users-count-badge">
             <Users size={20} />

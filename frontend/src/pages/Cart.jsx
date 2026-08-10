@@ -51,7 +51,7 @@ const Cart = () => {
           
           {cart.length === 0 ? (
             <div className="empty-cart">
-              <p>Tu carrito de CubaAmazon está vacío.</p>
+              <p>Tu carrito de AmasonCubano está vacío.</p>
               <Link to="/" className="btn btn-primary" style={{marginTop: '15px'}}>Continuar comprando</Link>
             </div>
           ) : (

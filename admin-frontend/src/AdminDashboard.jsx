@@ -69,7 +69,7 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="dashboard-header">
         <h1>Panel de Control</h1>
-        <p>Resumen global de la plataforma TiendaCubaAmazon</p>
+        <p>Resumen global de la plataforma AmasonCubano</p>
       </div>
 
       <div className="stats-grid">

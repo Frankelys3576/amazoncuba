@@ -29,7 +29,7 @@ const AdminLayout = () => {
       <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="admin-sidebar-header">
           <ShieldAlert className="brand-icon" size={24} />
-          <h2>CubaAmazon <span>Master</span></h2>
+          <h2>AmasonCubano <span>Master</span></h2>
         </div>
         
         <nav className="admin-nav">

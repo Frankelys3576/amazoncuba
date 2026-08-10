@@ -7,7 +7,7 @@ const Footer = () => {
     <footer className="main-footer">
       <div className="footer-container">
         <div className="footer-section">
-          <h3>CubaAmazon</h3>
+          <h3>AmasonCubano</h3>
           <p>Conectando negocios locales con clientes en toda Cuba. Compra rápido, seguro y cerca de ti.</p>
         </div>
         <div className="footer-section">
@@ -28,7 +28,7 @@ const Footer = () => {
         </div>
       </div>
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} CubaAmazon. Todos los derechos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} AmasonCubano. Todos los derechos reservados.</p>
       </div>
     </footer>
   );

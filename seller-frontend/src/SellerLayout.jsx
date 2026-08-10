@@ -71,7 +71,7 @@ const SellerLayout = () => {
       <aside className={`seller-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="seller-sidebar-header">
           <Store className="brand-icon" size={28} />
-          <h2>CubaAmazon <span>Seller</span></h2>
+          <h2>AmasonCubano <span>Seller</span></h2>
           <button className="mobile-close-btn" onClick={() => setIsSidebarOpen(false)}>
             <X size={24} />
           </button>

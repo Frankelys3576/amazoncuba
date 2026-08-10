@@ -36,7 +36,7 @@ const AdminAuth = () => {
         
         <div className="admin-auth-logo">
           <ShieldAlert size={48} className="brand-icon" />
-          <h1>CubaAmazon <span>Master</span></h1>
+          <h1>AmasonCubano <span>Master</span></h1>
           <p>Panel de Administración Global</p>
         </div>
 
