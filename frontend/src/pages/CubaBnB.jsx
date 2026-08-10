@@ -108,7 +108,6 @@ const CubaBnB = () => {
 
             {/* Botón Ocultar / Mostrar Mapa */}
             <div className="filter-group toggle-map-group">
-              <label>&nbsp;</label>
               <button 
                 type="button" 
                 className={`btn btn-toggle-map ${showMap ? 'active' : ''}`}
