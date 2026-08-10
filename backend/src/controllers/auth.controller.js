@@ -2,7 +2,10 @@ const supabase = require('../config/supabase');
 
 const register = async (req, res) => {
   try {
-    const { email, password, full_name, store_name, store_type } = req.body;
+    const { 
+      email, password, full_name, store_name, store_type,
+      province, municipality, address, lat, lng, price_per_night, description
+    } = req.body;
 
     // Usamos el API de Admin para crear al usuario saltándonos los límites de tasa 
     // y autoconfirmando el email (útil para números de teléfono falsos)
@@ -44,14 +47,24 @@ const register = async (req, res) => {
       // Generate a 6-digit random number
       const store_number = Math.floor(100000 + Math.random() * 900000).toString();
 
+      const zelle_info = {
+        province: province || null,
+        municipality: municipality || null,
+        address: address || null,
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null,
+        price_per_night: price_per_night ? parseFloat(price_per_night) : null
+      };
+
       const { error: storeError } = await supabase.from('stores').insert([
         { 
           name: store_name, 
-          description: `Nueva tienda de ${full_name}`,
+          description: description || (store_type === 'hostal' ? `Hostal de ${full_name}` : `Nueva tienda de ${full_name}`),
           status: isAutoApprove ? 'approved' : 'pending',
           store_type: store_type || 'business',
           phone: phoneMatch,
-          store_number: store_number
+          store_number: store_number,
+          zelle_info
         }
       ]);
       

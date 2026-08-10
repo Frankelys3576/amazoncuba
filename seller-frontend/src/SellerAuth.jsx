@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginSeller, registerSeller } from './services/api';
+import { cubaLocations, defaultCoordinates } from './utils/cubaLocations';
 import './SellerAuth.css';
 
 const SellerAuth = () => {
@@ -12,7 +13,14 @@ const SellerAuth = () => {
     password: '',
     fullName: '',
     storeName: '',
-    storeType: 'individual'
+    storeType: 'individual',
+    province: '',
+    municipality: '',
+    address: '',
+    price_per_night: '',
+    lat: '',
+    lng: '',
+    description: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -21,6 +29,30 @@ const SellerAuth = () => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError(null);
+  };
+
+  const handleProvinceChange = (e) => {
+    const prov = e.target.value;
+    const defaultMuni = cubaLocations[prov]?.[0] || '';
+    const coords = defaultCoordinates[defaultMuni] || defaultCoordinates[prov] || { lat: '', lng: '' };
+    setFormData(prev => ({
+      ...prev,
+      province: prov,
+      municipality: defaultMuni,
+      lat: coords.lat ? coords.lat.toString() : prev.lat,
+      lng: coords.lng ? coords.lng.toString() : prev.lng
+    }));
+  };
+
+  const handleMunicipalityChange = (e) => {
+    const muni = e.target.value;
+    const coords = defaultCoordinates[muni] || defaultCoordinates[formData.province] || { lat: '', lng: '' };
+    setFormData(prev => ({
+      ...prev,
+      municipality: muni,
+      lat: coords.lat ? coords.lat.toString() : prev.lat,
+      lng: coords.lng ? coords.lng.toString() : prev.lng
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -68,7 +100,14 @@ const SellerAuth = () => {
           password: formData.password,
           full_name: formData.fullName,
           store_name: formData.storeName,
-          store_type: formData.storeType
+          store_type: formData.storeType,
+          province: formData.province,
+          municipality: formData.municipality,
+          address: formData.address,
+          price_per_night: formData.price_per_night,
+          lat: formData.lat,
+          lng: formData.lng,
+          description: formData.description
         });
         
         if (regResponse.autoApproved) {
@@ -116,7 +155,7 @@ const SellerAuth = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="storeName">Nombre de tu Tienda</label>
+                  <label htmlFor="storeName">Nombre de tu Tienda / Hostal</label>
                   <input 
                     type="text" 
                     id="storeName" 
@@ -164,6 +203,118 @@ const SellerAuth = () => {
                     </label>
                   </div>
                 </div>
+
+                {formData.storeType === 'hostal' && (
+                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '15px', marginBottom: '15px' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px', fontWeight: 'bold' }}>🏡 Ubicación Exacta y Datos de Cuba Rbnb</h4>
+                    
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label htmlFor="province">Provincia en Cuba *</label>
+                      <select
+                        id="province"
+                        name="province"
+                        value={formData.province}
+                        onChange={handleProvinceChange}
+                        required={formData.storeType === 'hostal'}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc', width: '100%', background: 'white' }}
+                      >
+                        <option value="">-- Seleccionar Provincia --</option>
+                        {Object.keys(cubaLocations).map(prov => (
+                          <option key={prov} value={prov}>{prov}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {formData.province && (
+                      <div className="form-group" style={{ marginBottom: '10px' }}>
+                        <label htmlFor="municipality">Municipio *</label>
+                        <select
+                          id="municipality"
+                          name="municipality"
+                          value={formData.municipality}
+                          onChange={handleMunicipalityChange}
+                          required={formData.storeType === 'hostal'}
+                          style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc', width: '100%', background: 'white' }}
+                        >
+                          <option value="">-- Seleccionar Municipio --</option>
+                          {(cubaLocations[formData.province] || []).map(muni => (
+                            <option key={muni} value={muni}>{muni}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label htmlFor="address">Dirección Exacta (Calle, entrecalles, número) *</label>
+                      <input
+                        type="text"
+                        id="address"
+                        name="address"
+                        placeholder="Ej: Calle Martí #120 e/ Castillo y Libertad"
+                        value={formData.address}
+                        onChange={handleChange}
+                        required={formData.storeType === 'hostal'}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label htmlFor="price_per_night">Tarifa por Noche ($ USD/CUP) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        id="price_per_night"
+                        name="price_per_night"
+                        placeholder="Ej: 35.00"
+                        value={formData.price_per_night}
+                        onChange={handleChange}
+                        required={formData.storeType === 'hostal'}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <div className="form-group" style={{ flex: 1, marginBottom: '10px' }}>
+                        <label htmlFor="lat">Latitud GPS (Mapa)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          id="lat"
+                          name="lat"
+                          placeholder="Ej: 23.1381"
+                          value={formData.lat}
+                          onChange={handleChange}
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: 1, marginBottom: '10px' }}>
+                        <label htmlFor="lng">Longitud GPS (Mapa)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          id="lng"
+                          name="lng"
+                          placeholder="Ej: -82.3532"
+                          value={formData.lng}
+                          onChange={handleChange}
+                        />
+                      </div>
+                    </div>
+                    <small style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '10px' }}>
+                      📍 Las coordenadas se autocalculan al elegir municipio. Puedes ajustarlas para que tu pin quede exacto en la calle de Cuba Rbnb.
+                    </small>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label htmlFor="description">Descripción del Hostal y Servicios</label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        rows="2"
+                        placeholder="Habitaciones privadas, Wifi, climatización, desayunos..."
+                        value={formData.description}
+                        onChange={handleChange}
+                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc', background: 'white' }}
+                      />
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

@@ -16,3 +16,33 @@ export const cubaLocations = {
   "Guantánamo": ["Guantánamo", "Baracoa", "El Salvador", "Manuel Tames", "Yateras", "San Antonio del Sur", "Imías", "Maisí", "Caimanera", "Niceto Pérez"],
   "Isla de la Juventud": ["Nueva Gerona", "La Fe", "La Demajagua"]
 };
+
+export const defaultCoordinates = {
+  "La Habana": { lat: 23.1136, lng: -82.3666 },
+  "Habana Vieja": { lat: 23.1381, lng: -82.3532 },
+  "Plaza de la Revolución": { lat: 23.1250, lng: -82.3860 },
+  "Centro Habana": { lat: 23.1360, lng: -82.3680 },
+  "Playa": { lat: 23.0900, lng: -82.4400 },
+  "La Habana del Este": { lat: 23.1706, lng: -82.1286 },
+  "Pinar del Río": { lat: 22.4167, lng: -83.7000 },
+  "Viñales": { lat: 22.6186, lng: -83.7058 },
+  "Matanzas": { lat: 23.0411, lng: -81.5775 },
+  "Varadero": { lat: 23.1512, lng: -81.2584 },
+  "Cárdenas": { lat: 23.0361, lng: -81.2053 },
+  "Cienfuegos": { lat: 22.1458, lng: -80.4411 },
+  "Sancti Spíritus": { lat: 21.9300, lng: -79.4400 },
+  "Trinidad": { lat: 21.8052, lng: -79.9822 },
+  "Ciego de Ávila": { lat: 21.8400, lng: -78.7600 },
+  "Morón": { lat: 22.1086, lng: -78.6269 },
+  "Camagüey": { lat: 21.3833, lng: -77.9167 },
+  "Holguín": { lat: 20.8872, lng: -76.2631 },
+  "Santiago de Cuba": { lat: 20.0208, lng: -75.8294 },
+  "Guantánamo": { lat: 20.1444, lng: -75.2092 },
+  "Baracoa": { lat: 20.3475, lng: -74.4961 },
+  "Santa Clara": { lat: 22.4067, lng: -79.9647 },
+  "Bayamo": { lat: 20.3817, lng: -76.6433 },
+  "Las Tunas": { lat: 20.9600, lng: -76.9500 },
+  "Artemisa": { lat: 22.8133, lng: -82.7633 },
+  "San José de las Lajas": { lat: 22.9614, lng: -82.1511 },
+  "Nueva Gerona": { lat: 21.8800, lng: -82.8000 }
+};
