@@ -249,7 +249,7 @@ const AdminStores = () => {
                 <p>{store.description}</p>
                 <div className="store-details" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '8px' }}>
                   <span><strong>Teléfono:</strong> <a href={`tel:${store.phone}`} style={{ color: '#3b82f6' }}>{store.phone || 'No registrado'}</a></span>
-                  <span><strong>Tipo:</strong> {store.store_type === 'hostal' ? '🏡 Hostal (CubaBnB)' : store.store_type === 'business' ? '🏪 Negocio' : '👤 Particular'}</span>
+                  <span><strong>Tipo:</strong> {store.store_type === 'hostal' ? '🏡 Hostal (Cuba Rbnb)' : store.store_type === 'business' ? '🏪 Negocio' : '👤 Particular'}</span>
                   <span><strong>ID Sistema:</strong> #{store.id}</span>
                   <span><strong>Nº Único:</strong> {store.store_number || 'N/A'}</span>
                   <span><strong>Fecha:</strong> {new Date(store.created_at).toLocaleDateString()}</span>
@@ -321,7 +321,7 @@ const AdminStores = () => {
                         ID Sistema: #{storeDetails.store.id}
                       </span>
                       <span style={{ padding: '4px 10px', background: '#3b82f6', color: 'white', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
-                        Tipo: {storeDetails.store.store_type === 'hostal' ? '🏡 Hostal (CubaBnB)' : storeDetails.store.store_type === 'business' ? '🏪 Negocio con Local' : '👤 Vendedor Independiente'}
+                        Tipo: {storeDetails.store.store_type === 'hostal' ? '🏡 Hostal (Cuba Rbnb)' : storeDetails.store.store_type === 'business' ? '🏪 Negocio con Local' : '👤 Vendedor Independiente'}
                       </span>
                     </div>
                   </div>
@@ -364,7 +364,7 @@ const AdminStores = () => {
 
                 {(storeDetails.store.province || storeDetails.store.municipality || storeDetails.store.address || storeDetails.store.store_type === 'hostal') && (
                   <div style={{ marginBottom: '20px', color: 'var(--text-main)', background: 'var(--bg-body)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-main)' }}>📍 Ubicación y CubaBnB</h4>
+                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-main)' }}>📍 Ubicación y Cuba Rbnb</h4>
                     <p style={{ margin: '6px 0' }}><strong>Provincia:</strong> {storeDetails.store.province || 'No especificada'}</p>
                     <p style={{ margin: '6px 0' }}><strong>Municipio:</strong> {storeDetails.store.municipality || 'No especificado'}</p>
                     <p style={{ margin: '6px 0' }}><strong>Dirección Exacta:</strong> {storeDetails.store.address || 'No registrada'}</p>

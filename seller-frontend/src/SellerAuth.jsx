@@ -160,7 +160,7 @@ const SellerAuth = () => {
                         onChange={handleChange}
                         style={{ width: 'auto', marginBottom: '0' }}
                       />
-                      Hostal / Casa de Renta 🏡
+                      Hostal / Casa de Renta (Cuba Rbnb) 🏡
                     </label>
                   </div>
                 </div>

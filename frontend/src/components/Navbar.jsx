@@ -62,10 +62,10 @@ const Navbar = () => {
           </button>
         </form>
 
-        {/* Botón Hostales / CubaBnB */}
+        {/* Botón Hostales / Cuba Rbnb */}
         <Link to="/cubabnb" className="nav-cubabnb-link" style={{ textDecoration: 'none' }}>
           <span className="text-bold" style={{ color: 'white', padding: '6px 12px', background: '#ff385c', borderRadius: '6px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-            🏡 Hostales
+            🏡 Cuba Rbnb
           </span>
         </Link>
 

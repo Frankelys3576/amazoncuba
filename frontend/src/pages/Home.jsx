@@ -53,7 +53,7 @@ const Home = () => {
           gap: '4px',
           boxShadow: '0 2px 6px rgba(255, 56, 92, 0.3)'
         }}>
-          🏡 CubaBnB Hostales
+          🏡 Cuba Rbnb
         </Link>
         <Link to="/negocios" style={{ background: '#f1f5f9', color: '#1e293b', padding: '6px 10px', borderRadius: '16px', fontWeight: 'bold', fontSize: '12px', textDecoration: 'none' }}>
           🏪 Negocios
@@ -99,13 +99,13 @@ const Home = () => {
         }}>
           <div>
             <span style={{ background: '#ff385c', color: 'white', fontSize: '12px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              Novedad CubaBnB
+              Novedad Cuba Rbnb
             </span>
-            <h2 style={{ margin: '8px 0 4px 0', fontSize: '24px', fontWeight: 'bold' }}>🏡 Alquiler de Casas y Hostales en Cuba</h2>
+            <h2 style={{ margin: '8px 0 4px 0', fontSize: '24px', fontWeight: 'bold' }}>🏡 Alquiler de Casas y Hostales (Cuba Rbnb)</h2>
             <p style={{ margin: 0, color: '#cbd5e1', fontSize: '14px' }}>Renta hospedajes únicos con mapa interactivo y búsqueda por provincias.</p>
           </div>
           <Link to="/cubabnb" className="btn" style={{ background: '#ff385c', color: 'white', fontWeight: 'bold', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-            Explorar CubaBnB ➔
+            Explorar Cuba Rbnb ➔
           </Link>
         </div>
 
