@@ -32,30 +32,30 @@ const Home = () => {
       <div className="home-quick-bar" style={{
         background: '#ffffff',
         borderBottom: '1px solid #e2e8f0',
-        padding: '10px 15px',
+        padding: '6px 12px',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '8px',
         overflowX: 'auto',
         whiteSpace: 'nowrap',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+        boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
       }}>
         <Link to="/cubabnb" style={{
           background: '#ff385c',
           color: 'white',
-          padding: '8px 16px',
-          borderRadius: '20px',
+          padding: '6px 12px',
+          borderRadius: '16px',
           fontWeight: '800',
-          fontSize: '14px',
+          fontSize: '12px',
           textDecoration: 'none',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '6px',
-          boxShadow: '0 2px 8px rgba(255, 56, 92, 0.35)'
+          gap: '4px',
+          boxShadow: '0 2px 6px rgba(255, 56, 92, 0.3)'
         }}>
           🏡 CubaBnB Hostales
         </Link>
-        <Link to="/negocios" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px', textDecoration: 'none' }}>
+        <Link to="/negocios" style={{ background: '#f1f5f9', color: '#1e293b', padding: '6px 10px', borderRadius: '16px', fontWeight: 'bold', fontSize: '12px', textDecoration: 'none' }}>
           🏪 Negocios
         </Link>
         <Link to="/ofertas" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px', textDecoration: 'none' }}>

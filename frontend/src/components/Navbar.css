@@ -213,17 +213,40 @@
   }
   .navbar-main {
     flex-wrap: wrap;
-    padding: 10px;
-    /* Reset from desktop if needed */
-    display: flex;
+    padding: 6px 10px;
+    gap: 4px 8px;
   }
+  .nav-logo {
+    font-size: 20px;
+  }
+  .nav-item {
+    padding: 2px 4px;
+  }
+  .nav-account .text-small {
+    display: none;
+  }
+  .nav-account .text-bold {
+    font-size: 12px;
+  }
+  .cart-label {
+    display: none;
+  }
+  .cart-icon-wrapper svg {
+    width: 24px;
+    height: 24px;
+  }
+  .cart-count {
+    top: -10px;
+    font-size: 13px;
+  }
+  
   .navbar-main.store-mode {
     display: grid;
     grid-template-columns: auto 1fr auto auto;
     grid-template-areas: 
       "logo space account cart"
       "search search search search";
-    gap: 8px 10px;
+    gap: 4px 8px;
   }
   .navbar-main.store-mode .nav-logo-link {
     grid-area: logo;
@@ -254,9 +277,10 @@
   /* Fallback/Original para global */
   .navbar-main:not(.store-mode) {
     justify-content: space-between;
+    align-items: center;
   }
   .navbar-main:not(.store-mode) .nav-location {
-    padding: 4px;
+    padding: 2px 4px;
     margin-right: auto;
   }
   .navbar-main:not(.store-mode) .location-name {
@@ -269,14 +293,30 @@
   .navbar-main:not(.store-mode) .nav-search {
     order: 3;
     width: 100%;
-    margin-top: 8px;
+    height: 36px;
+    margin-top: 4px;
+  }
+  .navbar-main:not(.store-mode) .nav-search .search-input {
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  .navbar-main:not(.store-mode) .nav-search .search-btn {
+    width: 38px;
+  }
+  .navbar-main:not(.store-mode) .nav-search .search-btn svg {
+    width: 16px;
+    height: 16px;
   }
   .navbar-main:not(.store-mode) .nav-cart {
     padding-right: 0;
   }
   .navbar-main:not(.store-mode) .nav-cubabnb-link {
     order: 0;
-    margin-left: 5px;
+    margin-left: 2px;
+  }
+  .navbar-main:not(.store-mode) .nav-cubabnb-link span {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
   }
   .navbar-main:not(.store-mode) .nav-sell-btn {
     order: 0;
@@ -290,23 +330,17 @@
   }
   
   .navbar-sub {
-    padding: 8px 5px;
-    gap: 6px;
+    padding: 4px 10px;
+    gap: 10px;
     font-size: 12px;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    white-space: normal;
-    overflow-x: hidden;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .navbar-sub a, .sub-menu-btn {
-    padding: 4px 6px;
-  }
-  .cart-count {
-    top: -14px;
-    left: 0;
-  }
-  .navbar-main.store-mode .cart-label {
-    display: none;
+    padding: 3px 8px;
   }
 }
 
