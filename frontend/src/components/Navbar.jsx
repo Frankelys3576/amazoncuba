@@ -21,7 +21,7 @@ const Navbar = () => {
 
   // Determinar si estamos en la vista de una tienda específica
   const pathFirstSegment = routerLocation.pathname.split('/')[1] || '';
-  const knownMainRoutes = ['', 'cubabnb', 'product', 'cart', 'checkout', 'mis-pedidos', 'negocios', 'search', 'ofertas', 'servicio-cliente'];
+  const knownMainRoutes = ['', 'cubabnb', 'product', 'cart', 'checkout', 'mis-pedidos', 'negocios', 'search', 'ofertas', 'servicio-cliente', 'vendedor'];
   
   const isStoreView = routerLocation.pathname.startsWith('/negocio/') || (pathFirstSegment && !knownMainRoutes.includes(pathFirstSegment));
   const currentStoreId = routerLocation.pathname.startsWith('/negocio/') 

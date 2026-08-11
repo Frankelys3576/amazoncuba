@@ -13,6 +13,7 @@ import DailyDeals from './pages/DailyDeals';
 import CustomerService from './pages/CustomerService';
 import MyOrders from './pages/MyOrders';
 import CubaBnB from './pages/CubaBnB';
+import SellerRegistration from './pages/SellerRegistration';
 
 function App() {
   return (
@@ -30,6 +31,9 @@ function App() {
             <Route path="/negocios" element={<StoresList />} />
             <Route path="/negocio/:id" element={<StoreDetails />} />
             <Route path="/tienda/:id" element={<StoreDetails />} />
+            <Route path="/vendedor" element={<SellerRegistration initialRegister={true} />} />
+            <Route path="/vendedor/registro" element={<SellerRegistration initialRegister={true} />} />
+            <Route path="/vendedor/register" element={<SellerRegistration initialRegister={true} />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/ofertas" element={<DailyDeals />} />
             <Route path="/servicio-cliente" element={<CustomerService />} />
