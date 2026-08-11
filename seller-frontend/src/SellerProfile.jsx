@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Store, Image, Phone, AlignLeft, Save, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import { getStoreById, updateStoreProfile, uploadImage, deleteAccount } from './services/api';
 import { cubaLocations } from './utils/cubaLocations';
+import LocationPinPicker from './components/LocationPinPicker';
 import './SellerProfile.css';
 
 const SellerProfile = () => {
@@ -370,7 +371,16 @@ const SellerProfile = () => {
 
             {formData.store_type === 'hostal' && (
               <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#166534' }}>Detalles de Renta del Hostal</h4>
+                <h4 style={{ margin: '0 0 10px 0', color: '#166534' }}>🏡 Ubicación Exacta y Detalles del Hostal</h4>
+                
+                <LocationPinPicker
+                  lat={formData.lat}
+                  lng={formData.lng}
+                  province={formData.province}
+                  municipality={formData.municipality}
+                  onLocationChange={({ lat, lng }) => setFormData(prev => ({ ...prev, lat, lng }))}
+                />
+
                 <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                   <div className="form-group" style={{ flex: '1 1 150px' }}>
                     <label htmlFor="price_per_night">Precio por Noche (USD/CUP)</label>
@@ -385,7 +395,7 @@ const SellerProfile = () => {
                     />
                   </div>
                   <div className="form-group" style={{ flex: '1 1 150px' }}>
-                    <label htmlFor="lat">Latitud Mapa</label>
+                    <label htmlFor="lat">Latitud GPS</label>
                     <input
                       type="text"
                       id="lat"
@@ -396,7 +406,7 @@ const SellerProfile = () => {
                     />
                   </div>
                   <div className="form-group" style={{ flex: '1 1 150px' }}>
-                    <label htmlFor="lng">Longitud Mapa</label>
+                    <label htmlFor="lng">Longitud GPS</label>
                     <input
                       type="text"
                       id="lng"

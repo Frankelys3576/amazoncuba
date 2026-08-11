@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginSeller, registerSeller } from './services/api';
 import { cubaLocations, defaultCoordinates } from './utils/cubaLocations';
+import LocationPinPicker from './components/LocationPinPicker';
 import './SellerAuth.css';
 
 const SellerAuth = () => {
@@ -256,6 +257,14 @@ const SellerAuth = () => {
                         required={formData.storeType === 'hostal'}
                       />
                     </div>
+
+                    <LocationPinPicker
+                      lat={formData.lat}
+                      lng={formData.lng}
+                      province={formData.province}
+                      municipality={formData.municipality}
+                      onLocationChange={({ lat, lng }) => setFormData(prev => ({ ...prev, lat, lng }))}
+                    />
 
                     <div className="form-group" style={{ marginBottom: '10px' }}>
                       <label htmlFor="price_per_night">Tarifa por Noche ($ USD/CUP) *</label>

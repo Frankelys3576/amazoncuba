@@ -16,6 +16,7 @@ const SellerProducts = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
   const [newProduct, setNewProduct] = useState({
+    item_type: 'product',
     name: '',
     price: '',
     price_usd: '',
@@ -86,7 +87,7 @@ const SellerProducts = () => {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    if (newProduct.delivery_locations.length === 0) {
+    if (!newProduct.delivery_locations || newProduct.delivery_locations.length === 0) {
       alert("Debes agregar al menos una ubicación de entrega.");
       return;
     }
@@ -95,8 +96,12 @@ const SellerProducts = () => {
       setAddingProduct(true);
       const storeId = localStorage.getItem('seller_store_id');
       
+      const cleanDesc = (newProduct.description || '').replace(/^\[RESERVACIÓN\]\s*/i, '');
+      const finalDescription = newProduct.item_type === 'reservation' ? `[RESERVACIÓN] ${cleanDesc}` : cleanDesc;
+
       const payload = {
         ...newProduct,
+        description: finalDescription,
         store_id: storeId,
         price: parseFloat(newProduct.price) || 0,
         price_usd: newProduct.price_usd ? parseFloat(newProduct.price_usd) : null,
@@ -118,7 +123,7 @@ const SellerProducts = () => {
       
       handleCloseModal();
     } catch (error) {
-      alert(`Error al ${isEditing ? 'actualizar' : 'agregar'} el producto`);
+      alert(`Error al ${isEditing ? 'actualizar' : 'agregar'} la publicación`);
       console.error(error);
     } finally {
       setAddingProduct(false);
@@ -128,7 +133,9 @@ const SellerProducts = () => {
   const handleEditProductClick = (product) => {
     setIsEditing(true);
     setEditingProductId(product.id);
+    const isRes = product.description?.startsWith('[RESERVACIÓN]') || false;
     setNewProduct({
+      item_type: isRes ? 'reservation' : 'product',
       name: product.name,
       price: product.price,
       price_usd: product.price_usd || '',
@@ -141,7 +148,7 @@ const SellerProducts = () => {
       image_url_3: product.image_url_3 || '',
       image_url_4: product.image_url_4 || '',
       image_url_5: product.image_url_5 || '',
-      description: product.description || '',
+      description: isRes ? product.description.replace(/^\[RESERVACIÓN\]\s*/i, '') : product.description || '',
       delivery_locations: product.delivery_locations || []
     });
     setTempProv('La Habana');
@@ -154,6 +161,7 @@ const SellerProducts = () => {
     setIsEditing(false);
     setEditingProductId(null);
     setNewProduct({
+      item_type: 'product',
       name: '', price: '', price_usd: '', currency: 'USD', stock: '', category_id: '', store_category_id: '',
       image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
       image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
@@ -227,6 +235,11 @@ const SellerProducts = () => {
                 <div className="product-card-image">
                   <img src={product.image_url} alt={product.name} />
                   <div className="product-card-badges">
+                    {product.description?.startsWith('[RESERVACIÓN]') ? (
+                      <span className="badge featured" style={{ background: '#e11d48', color: 'white' }}>🏡 Reservación</span>
+                    ) : (
+                      <span className="badge featured" style={{ background: '#0284c7', color: 'white' }}>📦 Producto</span>
+                    )}
                     {product.is_featured && <span className="badge featured">★ Destacado</span>}
                     <span className="badge status active">Activo</span>
                   </div>
@@ -296,11 +309,54 @@ const SellerProducts = () => {
               </button>
             </div>
             <form onSubmit={handleAddProduct} className="add-product-form">
+              <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px', fontSize: '13px', color: '#1e293b' }}>
+                  ¿Qué deseas publicar en la plataforma?
+                </label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setNewProduct(prev => ({ ...prev, item_type: 'product' }))}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '6px',
+                      border: newProduct.item_type === 'product' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                      backgroundColor: newProduct.item_type === 'product' ? '#eff6ff' : '#ffffff',
+                      color: newProduct.item_type === 'product' ? '#1d4ed8' : '#475569',
+                      fontWeight: 'bold',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📦 Producto / Menú de Comida / Paquete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewProduct(prev => ({ ...prev, item_type: 'reservation' }))}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '6px',
+                      border: newProduct.item_type === 'reservation' ? '2px solid #ff385c' : '1px solid #cbd5e1',
+                      backgroundColor: newProduct.item_type === 'reservation' ? '#fff1f2' : '#ffffff',
+                      color: newProduct.item_type === 'reservation' ? '#e11d48' : '#475569',
+                      fontWeight: 'bold',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🏡 Reservación / Habitación / Estancia
+                  </button>
+                </div>
+              </div>
+
               <div className="form-group">
-                <label>Nombre del Producto</label>
+                <label>{newProduct.item_type === 'reservation' ? 'Nombre de la Reservación / Estancia' : 'Nombre del Producto'}</label>
                 <input 
                   type="text" 
                   required 
+                  placeholder={newProduct.item_type === 'reservation' ? 'Ej: Habitación Matrimonial Vista al Mar + Cena Especial' : 'Ej: Menú de Comida Criolla / Paquete Sorpresa'}
                   value={newProduct.name}
                   onChange={e => setNewProduct({...newProduct, name: e.target.value})}
                 />

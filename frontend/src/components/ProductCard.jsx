@@ -30,7 +30,12 @@ const ProductCard = ({ product }) => {
           <img src={imgSrc} onError={handleImageError} alt={product.name} className="product-card-image" />
         </div>
         <div className="product-card-info">
-          <h3 className="product-card-title">{product.name}</h3>
+          {product.description?.startsWith('[RESERVACIÓN]') && (
+            <span style={{ fontSize: '11px', fontWeight: 'bold', background: '#ffe4e6', color: '#e11d48', padding: '2px 6px', borderRadius: '10px', display: 'inline-block', marginBottom: '4px' }}>
+              🏡 Estancia / Reservación
+            </span>
+          )}
+          <h3 className="product-card-title">{product.description?.startsWith('[RESERVACIÓN]') ? product.name.replace(/^\[RESERVACIÓN\]\s*/i, '') : product.name}</h3>
           <div className="product-card-rating">
             <div className="stars">
               {[1,2,3,4,5].map(i => (
@@ -54,10 +59,12 @@ const ProductCard = ({ product }) => {
               </span>
             )}
           </p>
-          <p className="product-card-delivery">Envío GRATIS a Cuba</p>
-          <button onClick={handleAddToCart} className="add-to-cart-btn-mobile">
+          <p className="product-card-delivery">
+            {product.description?.startsWith('[RESERVACIÓN]') ? '🏡 Disponibilidad inmediata en Cuba' : 'Envío GRATIS a Cuba'}
+          </p>
+          <button onClick={handleAddToCart} className="add-to-cart-btn-mobile" style={{ backgroundColor: product.description?.startsWith('[RESERVACIÓN]') ? '#ff385c' : undefined, color: product.description?.startsWith('[RESERVACIÓN]') ? 'white' : undefined }}>
             <ShoppingCart size={16} />
-            Agregar
+            {product.description?.startsWith('[RESERVACIÓN]') ? 'Reservar' : 'Agregar'}
           </button>
         </div>
       </div>

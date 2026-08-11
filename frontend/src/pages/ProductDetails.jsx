@@ -182,6 +182,13 @@ const ProductDetails = () => {
 
         {/* Columna Central: Información */}
         <div className="product-info-section">
+          {product.description?.startsWith('[RESERVACIÓN]') && (
+            <div style={{ marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', background: '#ffe4e6', color: '#e11d48', padding: '4px 10px', borderRadius: '15px' }}>
+                🏡 Reservación / Estancia en CubaAirbnb
+              </span>
+            </div>
+          )}
           <h1 className="product-title">{product.name}</h1>
           <div className="product-card-rating" style={{marginBottom: '15px', cursor: 'pointer'}} onClick={() => document.getElementById('reviews-section').scrollIntoView({behavior: 'smooth'})}>
             <div className="stars">
@@ -230,7 +237,7 @@ const ProductDetails = () => {
                 )}
               </div>
             </div>
-            <p>{product.description}</p>
+            <p>{(product.description || '').replace(/^\[RESERVACIÓN\]\s*/i, '')}</p>
           </div>
         </div>
 
