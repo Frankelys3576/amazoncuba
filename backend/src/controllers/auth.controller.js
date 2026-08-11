@@ -66,18 +66,28 @@ const register = async (req, res) => {
         price_per_night: price_per_night ? parseFloat(price_per_night) : null
       };
 
-      const { error: storeError } = await supabase.from('stores').insert([
-        { 
-          name: store_name, 
-          slug: slug,
-          description: description || (store_type === 'hostal' ? `Hostal de ${full_name}` : `Nueva tienda de ${full_name}`),
-          status: isAutoApprove ? 'approved' : 'pending',
-          store_type: store_type || 'business',
-          phone: finalPhone,
-          store_number: store_number,
-          zelle_info
-        }
-      ]);
+      const storeData = { 
+        name: store_name, 
+        slug: slug,
+        description: description || (store_type === 'hostal' ? `Hostal de ${full_name}` : `Nueva tienda de ${full_name}`),
+        status: isAutoApprove ? 'approved' : 'pending',
+        store_type: store_type || 'business',
+        phone: finalPhone,
+        store_number: store_number,
+        zelle_info
+      };
+
+      // Also save hostal fields into direct columns for map/listing compatibility
+      if (store_type === 'hostal') {
+        storeData.province = province || null;
+        storeData.municipality = municipality || null;
+        storeData.address = address || null;
+        storeData.lat = lat ? parseFloat(lat) : null;
+        storeData.lng = lng ? parseFloat(lng) : null;
+        storeData.price_per_night = price_per_night ? parseFloat(price_per_night) : null;
+      }
+
+      const { error: storeError } = await supabase.from('stores').insert([storeData]);
       
       if (storeError) {
         console.error('Error creating store:', storeError);
