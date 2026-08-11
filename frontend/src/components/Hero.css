@@ -1,13 +1,13 @@
 .hero-container {
   width: 100%;
-  height: 300px;
-  background-color: #e3e6e6;
+  height: 320px;
+  background-color: #0f172a;
   position: relative;
   overflow: hidden;
 }
 
 .dynamic-hero {
-  height: 350px;
+  height: 340px;
 }
 
 .hero-slider {
@@ -20,7 +20,7 @@
   min-width: 100%;
   height: 100%;
   position: relative;
-  background-color: #111;
+  background-color: #0f172a;
   overflow: hidden;
 }
 
@@ -29,14 +29,14 @@
   top: -20px; left: -20px; right: -20px; bottom: -20px;
   background-size: cover;
   background-position: center;
-  filter: blur(20px) brightness(0.6);
+  filter: blur(25px) brightness(0.4);
   z-index: 0;
 }
 
 .hero-slide-bg {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   position: relative;
   z-index: 1;
@@ -45,73 +45,79 @@
 .hero-slide-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 100%);
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.3) 60%, rgba(0,0,0,0) 100%);
+  z-index: 1;
 }
 
 .hero-slide-content {
   position: absolute;
-  bottom: 45px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 40px;
+  left: 6%;
+  transform: none;
   color: white;
-  width: 90%;
-  max-width: 600px;
-  text-align: center;
+  width: 85%;
+  max-width: 550px;
+  text-align: left;
   z-index: 2;
 }
 
 .hero-slide-content h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
 
 .hero-slide-content p {
-  font-size: 1.2rem;
-  margin-bottom: 1.5rem;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   line-height: 1.4;
+  opacity: 0.95;
 }
 
 .hero-btn {
   display: inline-block;
   background-color: #ff9900;
   color: #111;
-  padding: 10px 24px;
-  border-radius: 4px;
+  padding: 10px 22px;
+  border-radius: 6px;
   text-decoration: none;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: background-color 0.2s;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
 .hero-btn:hover {
-  background-color: #e68a00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
 
 .hero-indicators {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 16px;
+  right: 20px;
   display: flex;
   gap: 8px;
   z-index: 10;
 }
 
 .indicator {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.4);
   border: none;
   cursor: pointer;
   padding: 0;
+  transition: all 0.2s;
 }
 
 .indicator.active {
   background-color: white;
-  transform: scale(1.2);
+  transform: scale(1.3);
 }
 
 .hero-images {
@@ -120,36 +126,50 @@
 
 .hero-image {
   width: 100%;
+  height: 100%;
   object-fit: cover;
-  object-position: top center;
+  object-position: center;
 }
 
 @media (min-width: 1000px) {
-  .hero-images {
-    height: 400px;
+  .hero-container,
+  .dynamic-hero {
+    height: 380px;
   }
 }
 
 @media (max-width: 768px) {
-  .hero-container {
-    height: 250px;
-  }
+  .hero-container,
   .dynamic-hero {
-    height: 250px;
+    height: 200px;
   }
   .hero-slide-content {
-    bottom: 35px;
-    width: 95%;
+    bottom: 20px;
+    left: 4%;
+    width: 92%;
   }
   .hero-slide-content h1 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.35rem;
   }
   .hero-slide-content p {
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
+    font-size: 0.82rem;
+    margin-bottom: 0.6rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hero-btn {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    border-radius: 4px;
   }
   .hero-slide-overlay {
-    background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%);
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.3) 60%, rgba(0,0,0,0) 100%);
+  }
+  .hero-indicators {
+    bottom: 10px;
+    right: 12px;
   }
 }

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Star, ShoppingCart } from 'lucide-react';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
@@ -20,12 +21,13 @@ const ProductCard = ({ product }) => {
 
   const rating = product.rating_avg || 0;
   const reviewCount = product.review_count || 0;
+  const imgSrc = getValidImageUrl(product.image_url);
 
   return (
     <div className="product-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
       <div className="product-card-link">
         <div className="product-card-image-container">
-          <img src={product.image_url} alt={product.name} className="product-card-image" />
+          <img src={imgSrc} onError={handleImageError} alt={product.name} className="product-card-image" />
         </div>
         <div className="product-card-info">
           <h3 className="product-card-title">{product.name}</h3>

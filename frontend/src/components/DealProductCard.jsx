@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './DealProductCard.css';
 
 const DealProductCard = ({ product }) => {
@@ -17,11 +18,13 @@ const DealProductCard = ({ product }) => {
     addToCart(product);
   };
 
+  const imgSrc = getValidImageUrl(product.image_url);
+
   return (
     <div className="deal-card">
       <Link to={`/product/${product.id}`} className="deal-card-link">
         <div className="deal-image-container">
-          <img src={product.image_url} alt={product.name} className="deal-image" />
+          <img src={imgSrc} onError={handleImageError} alt={product.name} className="deal-image" />
         </div>
         <div className="deal-info">
           <div className="deal-badge-row">

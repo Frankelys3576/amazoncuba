@@ -4,6 +4,7 @@ import { getProductById, getProducts, getStoreById, registerProductView, getProd
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 import { Star } from 'lucide-react';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import ZelleWarningModal from '../components/ZelleWarningModal';
 import './ProductDetails.css';
 
@@ -159,7 +160,8 @@ const ProductDetails = () => {
               {productImages.map((img, index) => (
                 <img 
                   key={index} 
-                  src={img} 
+                  src={getValidImageUrl(img)} 
+                  onError={handleImageError}
                   alt={`${product.name} - foto ${index + 1}`} 
                   className={`thumbnail ${activeImage === img ? 'active' : ''}`}
                   onMouseEnter={() => setActiveImage(img)}
@@ -169,7 +171,12 @@ const ProductDetails = () => {
             </div>
           )}
           <div className="product-main-image-container">
-            <img src={activeImage || product.image_url} alt={product.name} className="product-main-image" />
+            <img 
+              src={getValidImageUrl(activeImage || product.image_url)} 
+              onError={handleImageError}
+              alt={product.name} 
+              className="product-main-image" 
+            />
           </div>
         </div>
 

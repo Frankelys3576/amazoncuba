@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation } from '../context/LocationContext';
 import { getSettings } from '../services/api';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './Hero.css';
+
+const DEFAULT_HERO_BANNER = 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1600&auto=format&fit=crop&q=80';
 
 const Hero = () => {
   const [banners, setBanners] = useState([]);
@@ -64,7 +67,8 @@ const Hero = () => {
         <div className="hero-images">
           <img 
             className="hero-image" 
-            src="https://images-eu.ssl-images-amazon.com/images/G/30/digital/video/magellan/country/spain/TheBoysS4/TB_S4_2448x3000_ES-ES_SDP_HO_R_7c2bb475-4081-42e7-8178-5e8841434c03.jpg" 
+            src={DEFAULT_HERO_BANNER} 
+            onError={handleImageError}
             alt="Banner Amazon" 
           />
         </div>
@@ -75,32 +79,40 @@ const Hero = () => {
   return (
     <div className="hero-container dynamic-hero">
       <div className="hero-slider" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
-        {banners.map((banner) => (
-          <div key={banner.id} className="hero-slide">
-            <div 
-              className="hero-slide-blur-bg" 
-              style={{ backgroundImage: `url(${banner.image_url})` }}
-            ></div>
-            <img src={banner.image_url} alt={banner.title || 'Banner'} className="hero-slide-bg" />
-            <div className="hero-slide-overlay"></div>
-            <div className="hero-slide-content">
-              {banner.title && <h1>{banner.title}</h1>}
-              {banner.subtitle && <p>{banner.subtitle}</p>}
-              {banner.button_link && banner.button_text && (
-                <Link 
-                  to={banner.button_link} 
-                  className="hero-btn"
-                  style={{ 
-                    backgroundColor: banner.button_bg_color || '#ff9900',
-                    color: banner.button_text_color || '#111111'
-                  }}
-                >
-                  {banner.button_text}
-                </Link>
-              )}
+        {banners.map((banner) => {
+          const bannerImgUrl = getValidImageUrl(banner.image_url, DEFAULT_HERO_BANNER);
+          return (
+            <div key={banner.id} className="hero-slide">
+              <div 
+                className="hero-slide-blur-bg" 
+                style={{ backgroundImage: `url(${bannerImgUrl})` }}
+              ></div>
+              <img 
+                src={bannerImgUrl} 
+                onError={handleImageError} 
+                alt={banner.title || 'Banner'} 
+                className="hero-slide-bg" 
+              />
+              <div className="hero-slide-overlay"></div>
+              <div className="hero-slide-content">
+                {banner.title && <h1>{banner.title}</h1>}
+                {banner.subtitle && <p>{banner.subtitle}</p>}
+                {banner.button_link && banner.button_text && (
+                  <Link 
+                    to={banner.button_link} 
+                    className="hero-btn"
+                    style={{ 
+                      backgroundColor: banner.button_bg_color || '#ff9900',
+                      color: banner.button_text_color || '#111111'
+                    }}
+                  >
+                    {banner.button_text}
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {banners.length > 1 && (
         <div className="hero-indicators">
