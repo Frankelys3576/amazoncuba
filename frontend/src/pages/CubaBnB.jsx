@@ -14,6 +14,9 @@ const CubaBnB = () => {
   const [selectedMunicipality, setSelectedMunicipality] = useState('');
   const [showMap, setShowMap] = useState(true);
 
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [selectedHostalForReserve, setSelectedHostalForReserve] = useState(null);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchHostals();
@@ -228,12 +231,16 @@ const CubaBnB = () => {
                             💬 WhatsApp
                           </a>
                         )}
-                        <Link 
-                          to={`/negocio/${hostal.slug || hostal.id}`} 
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setSelectedHostalForReserve(hostal);
+                            setShowReserveModal(true);
+                          }}
                           className="btn btn-primary-hostal"
                         >
-                          Ver Hostal y Reservar
-                        </Link>
+                          Reservar ahora
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -243,6 +250,50 @@ const CubaBnB = () => {
           )}
         </div>
       </div>
+
+      {showReserveModal && (
+        <div className="modal-overlay" onClick={() => setShowReserveModal(false)} style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div className="modal-content card" onClick={e => e.stopPropagation()} style={{
+            maxWidth: '440px', width: '100%', padding: '25px', textAlign: 'center',
+            borderRadius: '16px', background: 'white', boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '10px' }}>🏡</div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#0f172a', fontWeight: '800' }}>
+              Esta página estará pronto disponible
+            </h3>
+            <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
+              El sistema de reservas automáticas en línea de <strong>CubaAirbnb</strong> estará activo muy pronto. Por el momento, puedes contactar directamente con el anfitrión vía WhatsApp.
+            </p>
+            {selectedHostalForReserve?.phone && (
+              <a
+                href={`https://wa.me/${(selectedHostalForReserve.phone.replace(/[^0-9]/g, '').startsWith('53') ? selectedHostalForReserve.phone.replace(/[^0-9]/g, '') : `53${selectedHostalForReserve.phone.replace(/[^0-9]/g, '')}`)}?text=Hola!%20Me%20interesa%20reservar%20estancia%20en%20su%20hostal%20${encodeURIComponent(selectedHostalForReserve.name)}.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn"
+                style={{
+                  background: '#25d366', color: 'white', fontWeight: 'bold',
+                  padding: '12px 20px', borderRadius: '8px', textDecoration: 'none',
+                  display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '12px',
+                  width: '100%', justifyContent: 'center'
+                }}
+              >
+                💬 Contactar por WhatsApp al Anfitrión
+              </a>
+            )}
+            <button
+              onClick={() => setShowReserveModal(false)}
+              className="btn btn-secondary"
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Entendido / Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

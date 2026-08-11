@@ -65,7 +65,7 @@ const HostalMap = ({ hostals, onHostalSelect }) => {
               <h4 class="map-popup-title">${hostal.name}</h4>
               <p class="map-popup-location">📍 ${hostal.municipality || ''}, ${hostal.province || ''}</p>
               ${hostal.price_per_night ? `<div class="map-popup-price">$${hostal.price_per_night} <span style="font-size: 11px; font-weight: normal; color: #666;">/ noche</span></div>` : ''}
-              <a href="/negocio/${hostal.slug || hostal.id}" class="map-popup-btn">Ver Hostal y Reservar</a>
+              <button onclick="alert('Esta página estará pronto disponible')" class="map-popup-btn" style="width: 100%; border: none; cursor: pointer; text-align: center; font-family: inherit;">Reservar ahora</button>
             </div>
           </div>
         `;
