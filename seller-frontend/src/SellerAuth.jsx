@@ -144,8 +144,66 @@ const SellerAuth = () => {
                 <div className="form-group" style={{marginBottom: '15px', padding: '10px', backgroundColor: '#eef2ff', borderRadius: '5px', fontSize: '13px', color: '#002a8f'}}>
                   Las cuentas de vendedor requieren aprobación del administrador. Rellena tus datos para enviar la solicitud.
                 </div>
+
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: 'bold', display: 'block', marginBottom: '10px', color: '#0f172a' }}>
+                    ¿Qué vas a registrar en AmasonCubano? *
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+                    <div
+                      onClick={() => setFormData(prev => ({ ...prev, storeType: 'business' }))}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        border: formData.storeType !== 'hostal' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                        backgroundColor: formData.storeType !== 'hostal' ? '#eff6ff' : '#ffffff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ fontSize: '26px' }}>🏪</span>
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: formData.storeType !== 'hostal' ? '#1d4ed8' : '#1e293b', fontSize: '15px' }}>
+                          Tienda o Vendedor de Productos
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          Para vender artículos, ropa, tecnología, combos de comida o servicios.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setFormData(prev => ({ ...prev, storeType: 'hostal' }))}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        border: formData.storeType === 'hostal' ? '2px solid #ff385c' : '1px solid #cbd5e1',
+                        backgroundColor: formData.storeType === 'hostal' ? '#fff1f2' : '#ffffff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ fontSize: '26px' }}>🏡</span>
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: formData.storeType === 'hostal' ? '#e11d48' : '#1e293b', fontSize: '15px' }}>
+                          Hostal / Casa de Renta (CubaAirbnb)
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          Para hospedar viajeros, colocar tu pin GPS en el mapa de Cuba y gestionar reservas.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="form-group">
-                  <label htmlFor="fullName">Nombre y Apellidos</label>
+                  <label htmlFor="fullName">Nombre y Apellidos del Propietario *</label>
                   <input 
                     type="text" 
                     id="fullName" 
@@ -156,7 +214,7 @@ const SellerAuth = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="storeName">Nombre de tu Tienda / Hostal</label>
+                  <label htmlFor="storeName">{formData.storeType === 'hostal' ? 'Nombre de tu Hostal / Casa Particular *' : 'Nombre de tu Tienda o Negocio *'}</label>
                   <input 
                     type="text" 
                     id="storeName" 
@@ -165,44 +223,6 @@ const SellerAuth = () => {
                     onChange={handleChange}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label>Tipo de Vendedor / Negocio</label>
-                  <div style={{ display: 'flex', gap: '15px', marginTop: '10px', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'normal', color: '#333' }}>
-                      <input 
-                        type="radio" 
-                        name="storeType" 
-                        value="individual" 
-                        checked={formData.storeType === 'individual'} 
-                        onChange={handleChange}
-                        style={{ width: 'auto', marginBottom: '0' }}
-                      />
-                      Vendedor Independiente
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'normal', color: '#333' }}>
-                      <input 
-                        type="radio" 
-                        name="storeType" 
-                        value="business" 
-                        checked={formData.storeType === 'business'} 
-                        onChange={handleChange}
-                        style={{ width: 'auto', marginBottom: '0' }}
-                      />
-                      Negocio / Local
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontWeight: 'bold', color: '#2563eb' }}>
-                      <input 
-                        type="radio" 
-                        name="storeType" 
-                        value="hostal" 
-                        checked={formData.storeType === 'hostal'} 
-                        onChange={handleChange}
-                        style={{ width: 'auto', marginBottom: '0' }}
-                      />
-                      Hostal / Casa de Renta (CubaAirbnb) 🏡
-                    </label>
-                  </div>
                 </div>
 
                 {formData.storeType === 'hostal' && (
