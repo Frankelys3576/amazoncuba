@@ -34,7 +34,7 @@
           "value": "seller-cuba-amazon.*"
         }
       ],
-      "destination": "/seller-frontend/assets/$1"
+      "destination": "/assets/$1"
     },
     {
       "source": "/(.*)",
@@ -44,27 +44,27 @@
           "value": "seller-cuba-amazon.*"
         }
       ],
-      "destination": "/seller-frontend/index.html"
+      "destination": "/index.html"
     },
     {
       "source": "/images/(.*)",
-      "destination": "/frontend/images/$1"
+      "destination": "/images/$1"
     },
     {
       "source": "/assets/(.*)",
-      "destination": "/frontend/assets/$1"
+      "destination": "/assets/$1"
     },
     {
       "source": "/favicon.svg",
-      "destination": "/frontend/favicon.svg"
+      "destination": "/favicon.svg"
     },
     {
       "source": "/icons.svg",
-      "destination": "/frontend/icons.svg"
+      "destination": "/icons.svg"
     },
     {
       "source": "/(.*)",
-      "destination": "/frontend/index.html"
+      "destination": "/index.html"
     }
   ]
 }
