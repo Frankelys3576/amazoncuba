@@ -129,7 +129,7 @@ const SellerAuth = () => {
       <div className="auth-container">
         
         <div className="auth-logo">
-          amason<span className="logo-cubano">Cubano</span> <span style={{ fontSize: '16px', display: 'block', marginTop: '5px', fontWeight: 'bold', color: '#1e293b' }}>Regístrate para vender productos</span>
+          AmasonCubano <span style={{ fontSize: '18px', display: 'block', marginTop: '5px' }}>Regístrate para vender productos</span>
         </div>
 
         <div className="auth-card">
