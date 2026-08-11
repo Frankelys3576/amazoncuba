@@ -118,11 +118,12 @@ const SellerRegistration = () => {
   };
 
   return (
-    <div className="seller-auth-page" style={{ padding: '30px 15px', maxWidth: '480px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 }}>AmasonCubano</h1>
-        <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>Panel de Vendedores y Hostales</p>
-      </div>
+    <div className="seller-auth-page">
+      <div className="auth-container">
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 }}>AmasonCubano</h1>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>Panel de Vendedores y Hostales</p>
+        </div>
 
       {/* Selector de Modo Limpio */}
       <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', marginBottom: '18px' }}>
@@ -396,7 +397,8 @@ const SellerRegistration = () => {
         </form>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default SellerRegistration;
