@@ -13,8 +13,9 @@ const SellerAuth = ({ initialRegister }) => {
     return !location.pathname.includes('register') && !location.pathname.includes('signup');
   });
   const [formData, setFormData] = useState({
+    email: '',
+    phone: '',
     identifier: '',
-    confirmIdentifier: '',
     password: '',
     fullName: '',
     storeName: '',
@@ -32,7 +33,11 @@ const SellerAuth = ({ initialRegister }) => {
   const [error, setError] = useState(null);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     setError(null);
   };
 
@@ -66,13 +71,12 @@ const SellerAuth = ({ initialRegister }) => {
     setError(null);
 
     try {
-      // Formatear el identificador: si no tiene '@', asumimos que es un teléfono o usuario
-      // y le agregamos un dominio ficticio para que Supabase Auth lo acepte como email.
-      const formattedEmail = formData.identifier.includes('@') 
-        ? formData.identifier.toLowerCase().trim()
-        : `${formData.identifier.trim()}@amasoncubano.com`;
-
       if (isLogin) {
+        // Formatear el identificador: si no tiene '@', asumimos que es un teléfono o usuario
+        const formattedEmail = formData.identifier.includes('@') 
+          ? formData.identifier.toLowerCase().trim()
+          : `${formData.identifier.trim()}@amasoncubano.com`;
+
         // Log in using backend
         const response = await loginSeller(formattedEmail, formData.password);
         
@@ -92,16 +96,14 @@ const SellerAuth = ({ initialRegister }) => {
         
         navigate('/dashboard');
       } else {
-        // Validación de confirmación
-        if (formData.identifier !== formData.confirmIdentifier) {
-          setError('El correo electrónico o número de teléfono no coinciden.');
-          setLoading(false);
-          return;
-        }
+        const formattedEmail = formData.email.includes('@') 
+          ? formData.email.toLowerCase().trim()
+          : `${formData.email.trim()}@amasoncubano.com`;
 
         // Register using backend
         const regResponse = await registerSeller({
           email: formattedEmail,
+          phone: formData.phone,
           password: formData.password,
           full_name: formData.fullName,
           store_name: formData.storeName,
@@ -426,30 +428,46 @@ const SellerAuth = ({ initialRegister }) => {
               </>
             )}
 
-            <div className="form-group">
-              <label htmlFor="identifier">Correo electrónico o Número de teléfono</label>
-              <input 
-                type="text" 
-                id="identifier" 
-                name="identifier" 
-                value={formData.identifier}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            {!isLogin && (
+            {isLogin ? (
               <div className="form-group">
-                <label htmlFor="confirmIdentifier">Confirmar Correo o Número</label>
+                <label htmlFor="identifier">Correo electrónico o Número de teléfono</label>
                 <input 
                   type="text" 
-                  id="confirmIdentifier" 
-                  name="confirmIdentifier" 
-                  value={formData.confirmIdentifier}
+                  id="identifier" 
+                  name="identifier" 
+                  value={formData.identifier}
                   onChange={handleChange}
+                  placeholder="ejemplo@gmail.com o 52583549"
                   required
                 />
               </div>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label htmlFor="email">Correo electrónico *</label>
+                  <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="ejemplo@gmail.com"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="phone">Número de Teléfono / WhatsApp *</label>
+                  <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="Ej: +53 52583549"
+                    required
+                  />
+                </div>
+              </>
             )}
 
             <div className="form-group">

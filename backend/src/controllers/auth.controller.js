@@ -11,7 +11,7 @@ const generateSlug = (text) => {
 const register = async (req, res) => {
   try {
     const { 
-      email, password, full_name, store_name, store_type,
+      email, password, full_name, store_name, store_type, phone,
       province, municipality, address, lat, lng, price_per_night, description
     } = req.body;
 
@@ -46,11 +46,12 @@ const register = async (req, res) => {
 
     // Crear la tienda pendiente en la base de datos
     if (store_name) {
-      // Extraer el teléfono del email si es posible y normalizarlo (quitar '+' y espacios)
+      // Extraer el teléfono del email o usar el teléfono provisto
       let phoneMatch = email.split('@')[0];
       if (phoneMatch) {
         phoneMatch = phoneMatch.replace(/\+/g, '').replace(/\s/g, '');
       }
+      const finalPhone = phone ? phone.replace(/[^0-9]/g, '') : phoneMatch;
       
       // Generate a 6-digit random number
       const store_number = Math.floor(100000 + Math.random() * 900000).toString();
@@ -72,7 +73,7 @@ const register = async (req, res) => {
           description: description || (store_type === 'hostal' ? `Hostal de ${full_name}` : `Nueva tienda de ${full_name}`),
           status: isAutoApprove ? 'approved' : 'pending',
           store_type: store_type || 'business',
-          phone: phoneMatch,
+          phone: finalPhone,
           store_number: store_number,
           zelle_info
         }
