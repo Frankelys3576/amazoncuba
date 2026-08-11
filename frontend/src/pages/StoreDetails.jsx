@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getStoreById, getProducts, getStoreCategories } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import CategoryCard from '../components/CategoryCard';
@@ -9,6 +9,7 @@ import './StoreDetails.css';
 const StoreDetails = () => {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('q');
   const filterQuery = searchParams.get('filter');
@@ -29,6 +30,11 @@ const StoreDetails = () => {
       if (!storeData) {
         setLoading(false);
         return;
+      }
+
+      // Automatically rewrite address bar URL to clean slug amasoncubano.com/slug
+      if (storeData.slug && location.pathname !== `/${storeData.slug}`) {
+        navigate(`/${storeData.slug}${location.search}`, { replace: true });
       }
       
       const storeProducts = await getProducts({ storeId: storeData.id, q: searchQuery || undefined }); 
@@ -65,7 +71,7 @@ const StoreDetails = () => {
     };
     
     fetchStoreData();
-  }, [id, searchQuery, filterQuery]);
+  }, [id, searchQuery, filterQuery, navigate, location.pathname, location.search]);
 
   if (loading) return <div className="container" style={{padding: '40px 20px'}}>Cargando tienda...</div>;
   if (!store) return <div className="container" style={{padding: '40px 20px'}}>Tienda no encontrada.</div>;
