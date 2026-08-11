@@ -50,7 +50,7 @@ const CubaBnB = () => {
       {/* Hero Banner */}
       <div className="cubabnb-hero">
         <div className="container cubabnb-hero-content">
-          <div className="hero-badge">🏡 Cuba Rbnb</div>
+          <div className="hero-badge">🏡 CubaAirbnb</div>
           <h1>Alquiler de Casas y Hostales en Cuba</h1>
           <p>Descubre hospedajes únicos, casas particulares y villas en todas las provincias de Cuba.</p>
         </div>
@@ -181,7 +181,7 @@ const CubaBnB = () => {
                         className="hostal-image"
                       />
                       <div className="hostal-badge">
-                        <CheckCircle size={14} /> Cuba Rbnb
+                        <CheckCircle size={14} /> CubaAirbnb
                       </div>
                       {hostal.price_per_night && (
                         <div className="hostal-price-badge">

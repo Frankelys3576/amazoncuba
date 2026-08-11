@@ -300,7 +300,7 @@ const SellerProfile = () => {
           </div>
 
           <div className="form-section">
-            <h3>🏡 Ubicación y Configuración Cuba Rbnb (Hostal)</h3>
+            <h3>🏡 Ubicación y Configuración CubaAirbnb (Hostal)</h3>
             <div className="form-group">
               <label htmlFor="store_type">Tipo de Negocio</label>
               <select
@@ -312,9 +312,9 @@ const SellerProfile = () => {
               >
                 <option value="business">Negocio / Tienda / Servicio</option>
                 <option value="individual">Vendedor Independiente</option>
-                <option value="hostal">🏡 Hostal / Casa de Renta (Cuba Rbnb)</option>
+                <option value="hostal">🏡 Hostal / Casa de Renta (CubaAirbnb)</option>
               </select>
-              <small>Los negocios marcados como Hostal aparecerán en la sección **Cuba Rbnb** con mapa interactivo.</small>
+              <small>Los negocios marcados como Hostal aparecerán en la sección **CubaAirbnb** con mapa interactivo.</small>
             </div>
 
             <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px' }}>

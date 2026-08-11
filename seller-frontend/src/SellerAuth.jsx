@@ -199,14 +199,14 @@ const SellerAuth = () => {
                         onChange={handleChange}
                         style={{ width: 'auto', marginBottom: '0' }}
                       />
-                      Hostal / Casa de Renta (Cuba Rbnb) 🏡
+                      Hostal / Casa de Renta (CubaAirbnb) 🏡
                     </label>
                   </div>
                 </div>
 
                 {formData.storeType === 'hostal' && (
                   <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '15px', marginBottom: '15px' }}>
-                    <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px', fontWeight: 'bold' }}>🏡 Ubicación Exacta y Datos de Cuba Rbnb</h4>
+                    <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px', fontWeight: 'bold' }}>🏡 Ubicación Exacta y Datos de CubaAirbnb</h4>
                     
                     <div className="form-group" style={{ marginBottom: '10px' }}>
                       <label htmlFor="province">Provincia en Cuba *</label>
@@ -298,7 +298,7 @@ const SellerAuth = () => {
                       </div>
                     </div>
                     <small style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '10px' }}>
-                      📍 Las coordenadas se autocalculan al elegir municipio. Puedes ajustarlas para que tu pin quede exacto en la calle de Cuba Rbnb.
+                      📍 Las coordenadas se autocalculan al elegir municipio. Puedes ajustarlas para que tu pin quede exacto en la calle de CubaAirbnb.
                     </small>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
