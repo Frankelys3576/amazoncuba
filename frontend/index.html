@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script>
+      (function() {
+        var h = window.location.hostname;
+        if (h && h !== 'amasoncubano.com' && h !== 'www.amasoncubano.com' && h !== 'localhost' && h !== '127.0.0.1' && !h.endsWith('.local')) {
+          window.location.replace('https://amasoncubano.com' + window.location.pathname + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
     <title>AmasonCubano - Tu Mercado y CubaAirbnb Hostales</title>
     <!-- Leaflet CSS & JS for CubaBnB Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
