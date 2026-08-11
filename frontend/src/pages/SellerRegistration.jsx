@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { registerSeller, loginSeller } from '../services/api';
 import { cubaLocations, defaultCoordinates } from '../utils/cubaLocations';
 import LocationPinPicker from '../components/LocationPinPicker';
 import './SellerRegistration.css';
 
-const SellerRegistration = ({ initialRegister = true }) => {
-  const location = useLocation();
-  const [isLogin, setIsLogin] = useState(() => {
-    if (initialRegister !== undefined) return !initialRegister;
-    return !location.pathname.includes('register') && !location.pathname.includes('signup');
-  });
+const SellerRegistration = () => {
+  const [isLogin, setIsLogin] = useState(true);
 
   const [formData, setFormData] = useState({
     email: '',
