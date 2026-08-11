@@ -225,6 +225,19 @@ const SellerAuth = () => {
                   />
                 </div>
 
+                <div className="form-group" style={{ margin: '15px 0', padding: '12px 14px', backgroundColor: formData.storeType === 'hostal' ? '#fff1f2' : '#f8fafc', border: formData.storeType === 'hostal' ? '1px solid #fecdd3' : '1px solid #e2e8f0', borderRadius: '8px', transition: 'all 0.2s' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0, fontWeight: 'bold', color: formData.storeType === 'hostal' ? '#be123c' : '#334155', fontSize: '14px' }}>
+                    <input 
+                      type="checkbox"
+                      name="isHostalCheckbox"
+                      checked={formData.storeType === 'hostal'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, storeType: e.target.checked ? 'hostal' : 'business' }))}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff385c' }}
+                    />
+                    🏡 Marcar esta casilla si mi negocio es un Hostal / Casa Particular (CubaAirbnb)
+                  </label>
+                </div>
+
                 {formData.storeType === 'hostal' && (
                   <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '15px', marginBottom: '15px' }}>
                     <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px', fontWeight: 'bold' }}>🏡 Ubicación Exacta y Datos de CubaAirbnb</h4>
