@@ -319,7 +319,12 @@
     font-size: 11px !important;
   }
   .navbar-main:not(.store-mode) .nav-sell-btn {
-    display: none !important;
+    display: inline-flex !important;
+    font-size: 11px;
+    padding: 4px 8px;
+    margin-left: 4px;
+    border-radius: 12px;
+    white-space: nowrap;
   }
   
   .navbar-sub {

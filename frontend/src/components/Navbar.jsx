@@ -101,7 +101,7 @@ const Navbar = () => {
 
         {/* Botón Vender (Oculto en vista de tienda) - Extremo Derecho */}
         {!isStoreView && (
-          <Link to="/vendedor/registro" className="nav-sell-btn hide-mobile" style={{ marginLeft: '10px' }}>
+          <Link to="/vendedor/registro" className="nav-sell-btn" style={{ marginLeft: '8px' }}>
             Vender un producto
           </Link>
         )}
