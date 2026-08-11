@@ -7,7 +7,7 @@
     <script>
       (function() {
         var h = window.location.hostname;
-        if (h && h !== 'amasoncubano.com' && h !== 'www.amasoncubano.com' && h !== 'localhost' && h !== '127.0.0.1' && !h.endsWith('.local')) {
+        if (h && !h.includes('seller-cuba-amazon') && !h.includes('admin-cuba-amazon') && h !== 'amasoncubano.com' && h !== 'www.amasoncubano.com' && h !== 'localhost' && h !== '127.0.0.1' && !h.endsWith('.local')) {
           window.location.replace('https://amasoncubano.com' + window.location.pathname + window.location.search + window.location.hash);
         }
       })();
