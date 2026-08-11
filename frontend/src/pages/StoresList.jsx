@@ -27,7 +27,7 @@ const StoresList = () => {
 
       <div className="container stores-grid">
         {stores.map(store => (
-          <Link to={`/negocio/${store.slug || store.id}`} key={store.id} className="store-card">
+          <Link to={`/${store.slug || store.id}`} key={store.id} className="store-card">
             <div className="store-card-banner" style={{ backgroundImage: `url(${store.banner_url})` }}></div>
             <div className="store-card-content">
               <div className="store-logo-wrapper">

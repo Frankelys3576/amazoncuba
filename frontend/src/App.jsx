@@ -29,9 +29,11 @@ function App() {
             <Route path="/mis-pedidos" element={<MyOrders />} />
             <Route path="/negocios" element={<StoresList />} />
             <Route path="/negocio/:id" element={<StoreDetails />} />
+            <Route path="/tienda/:id" element={<StoreDetails />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/ofertas" element={<DailyDeals />} />
             <Route path="/servicio-cliente" element={<CustomerService />} />
+            <Route path="/:id" element={<StoreDetails />} />
           </Routes>
         </main>
         <Footer />

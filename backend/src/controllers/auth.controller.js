@@ -1,5 +1,13 @@
 const supabase = require('../config/supabase');
 
+const generateSlug = (text) => {
+  if (!text) return '';
+  return text.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const register = async (req, res) => {
   try {
     const { 
@@ -46,6 +54,7 @@ const register = async (req, res) => {
       
       // Generate a 6-digit random number
       const store_number = Math.floor(100000 + Math.random() * 900000).toString();
+      const slug = generateSlug(store_name);
 
       const zelle_info = {
         province: province || null,
@@ -59,6 +68,7 @@ const register = async (req, res) => {
       const { error: storeError } = await supabase.from('stores').insert([
         { 
           name: store_name, 
+          slug: slug,
           description: description || (store_type === 'hostal' ? `Hostal de ${full_name}` : `Nueva tienda de ${full_name}`),
           status: isAutoApprove ? 'approved' : 'pending',
           store_type: store_type || 'business',

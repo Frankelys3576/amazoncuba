@@ -211,7 +211,7 @@ const ProductDetails = () => {
           <div className="product-description">
             <h3>Acerca de este artículo</h3>
             <div style={{marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', border: '1px solid #eee'}}>
-              <Link to={`/negocio/${product.store_slug}`} className="product-store-link" style={{fontSize: '16px', fontWeight: 'bold'}}>
+              <Link to={`/${product.store_slug}`} className="product-store-link" style={{fontSize: '16px', fontWeight: 'bold'}}>
                 Visitar la tienda {product.store_name}
               </Link>
               <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center'}}>

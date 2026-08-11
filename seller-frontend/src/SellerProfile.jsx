@@ -169,6 +169,9 @@ const SellerProfile = () => {
               <div className="preview-details">
                 <h2>{formData.name || 'Nombre de la Tienda'}</h2>
                 <p className="preview-slogan">{formData.slogan || 'Eslogan de tu tienda...'}</p>
+                <div style={{ fontSize: '13px', color: '#ff385c', fontWeight: 'bold', margin: '4px 0 8px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  🔗 Enlace público: <a href={`https://amasoncubano.com/${formData.slug || (formData.name ? formData.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '')}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>amasoncubano.com/{formData.slug || (formData.name ? formData.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '')}</a>
+                </div>
                 {formData.phone && (
                   <div className="preview-phone">
                     <Phone size={14} /> +{formData.phone}
