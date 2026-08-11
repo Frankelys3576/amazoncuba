@@ -12,6 +12,7 @@ const SellerAuth = ({ initialRegister }) => {
     if (initialRegister !== undefined) return !initialRegister;
     return !location.pathname.includes('register') && !location.pathname.includes('signup');
   });
+
   const [formData, setFormData] = useState({
     email: '',
     phone: '',
@@ -19,7 +20,7 @@ const SellerAuth = ({ initialRegister }) => {
     password: '',
     fullName: '',
     storeName: '',
-    storeType: 'individual',
+    storeType: 'hostal',
     province: '',
     municipality: '',
     address: '',
@@ -72,25 +73,19 @@ const SellerAuth = ({ initialRegister }) => {
 
     try {
       if (isLogin) {
-        // Formatear el identificador: si no tiene '@', asumimos que es un teléfono o usuario
         const formattedEmail = formData.identifier.includes('@') 
           ? formData.identifier.toLowerCase().trim()
           : `${formData.identifier.trim()}@amasoncubano.com`;
 
-        // Log in using backend
         const response = await loginSeller(formattedEmail, formData.password);
         
-        // Guardar el store ID devuelto por el backend
         if (response.store && response.store.id) {
           localStorage.setItem('seller_store_id', response.store.id.toString());
         } else {
-          // Fallback por si la tienda no se encontró, aunque no debería pasar si está bien registrada
           localStorage.setItem('seller_store_id', '1');
         }
         
         localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
-        
-        // Guardar nombre del vendedor para mostrarlo en el panel
         const fullName = response.user?.user_metadata?.full_name || response.user?.email || 'Vendedor';
         localStorage.setItem('seller_name', fullName);
         
@@ -100,7 +95,6 @@ const SellerAuth = ({ initialRegister }) => {
           ? formData.email.toLowerCase().trim()
           : `${formData.email.trim()}@amasoncubano.com`;
 
-        // Register using backend
         const regResponse = await registerSeller({
           email: formattedEmail,
           phone: formData.phone,
@@ -120,395 +114,295 @@ const SellerAuth = ({ initialRegister }) => {
         if (regResponse.autoApproved) {
           alert('¡Tu cuenta ha sido aprobada automáticamente! Ya puedes iniciar sesión.');
         } else {
-          alert('Solicitud enviada correctamente. Tu cuenta está pendiente de aprobación por el Administrador.');
+          alert('Solicitud enviada correctamente. Tu cuenta está en proceso de activación.');
         }
-        setIsLogin(true); // Cambiar a pestaña de login
+        setIsLogin(true);
       }
     } catch (err) {
-      setError(err.message || 'Ocurrió un error. Verifica tus datos.');
+      console.error(err);
+      setError(err.message || 'Error al procesar la solicitud.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="seller-auth-page">
-      <div className="auth-container">
-        
-        <div className="auth-logo">
-          AmasonCubano <span style={{ fontSize: '18px', display: 'block', marginTop: '5px' }}>Regístrate para vender productos</span>
-        </div>
+    <div className="seller-auth-page" style={{ padding: '30px 15px', maxWidth: '480px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 }}>AmasonCubano</h1>
+        <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>Panel de Vendedores y Hostales</p>
+      </div>
 
-        <div style={{ display: 'flex', width: '100%', marginBottom: '15px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #cbd5e1', backgroundColor: '#f1f5f9' }}>
-          <button
-            type="button"
-            onClick={() => { setIsLogin(true); setError(''); }}
-            style={{
-              flex: 1,
-              padding: '12px 10px',
-              border: 'none',
-              backgroundColor: isLogin ? '#2563eb' : 'transparent',
-              color: isLogin ? '#ffffff' : '#475569',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            🔑 Iniciar Sesión
-          </button>
-          <button
-            type="button"
-            onClick={() => { setIsLogin(false); setError(''); }}
-            style={{
-              flex: 1,
-              padding: '12px 10px',
-              border: 'none',
-              backgroundColor: !isLogin ? '#ff385c' : 'transparent',
-              color: !isLogin ? '#ffffff' : '#475569',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            📝 Solicitar Cuenta (Vendedor u Hostal)
-          </button>
-        </div>
+      {/* Selector de Modo Limpio */}
+      <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', marginBottom: '18px' }}>
+        <button
+          type="button"
+          onClick={() => { setIsLogin(true); setError(''); }}
+          style={{
+            flex: 1,
+            padding: '10px',
+            border: 'none',
+            borderRadius: '7px',
+            background: isLogin ? '#ffffff' : 'transparent',
+            color: isLogin ? '#0f172a' : '#64748b',
+            fontWeight: '600',
+            fontSize: '14px',
+            cursor: 'pointer',
+            boxShadow: isLogin ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          Iniciar Sesión
+        </button>
+        <button
+          type="button"
+          onClick={() => { setIsLogin(false); setError(''); }}
+          style={{
+            flex: 1,
+            padding: '10px',
+            border: 'none',
+            borderRadius: '7px',
+            background: !isLogin ? '#ffffff' : 'transparent',
+            color: !isLogin ? '#0f172a' : '#64748b',
+            fontWeight: '600',
+            fontSize: '14px',
+            cursor: 'pointer',
+            boxShadow: !isLogin ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          Crear Cuenta
+        </button>
+      </div>
 
-        <div className="auth-card">
-          <h2>{isLogin ? 'Iniciar sesión en tu cuenta' : 'Solicitar Registro de Vendedor o Hostal'}</h2>
-          
-          {isLogin && (
-            <div style={{ background: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' }}>
-              <span style={{ fontSize: '13px', color: '#be123c', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>
-                🏡 ¿Vas a registrar un Hostal o Tienda nueva?
-              </span>
-              <button
-                type="button"
-                onClick={() => { setIsLogin(false); setError(''); }}
-                style={{
-                  backgroundColor: '#ff385c',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 14px',
-                  borderRadius: '20px',
-                  fontWeight: 'bold',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  width: '100%'
-                }}
-              >
-                📝 Crear Cuenta de Hostal / Vendedor
-              </button>
-            </div>
-          )}
+      <div style={{ background: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        {error && (
+          <div style={{ color: '#b91c1c', marginBottom: '15px', padding: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecdd3', borderRadius: '6px', fontSize: '13px' }}>
+            {error}
+          </div>
+        )}
 
-          {error && <div className="auth-error" style={{color: 'red', marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '5px', fontSize: '14px'}}>{error}</div>}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {!isLogin && (
+            <>
+              {/* Selector sencillo de Tipo de Negocio */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, storeType: 'business' }))}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: formData.storeType !== 'hostal' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                    background: formData.storeType !== 'hostal' ? '#eff6ff' : '#ffffff',
+                    color: formData.storeType !== 'hostal' ? '#1d4ed8' : '#475569',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  🏪 Tienda / Vendedor
+                </button>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            {!isLogin && (
-              <>
-                <div className="form-group" style={{marginBottom: '15px', padding: '10px', backgroundColor: '#eef2ff', borderRadius: '5px', fontSize: '13px', color: '#002a8f'}}>
-                  Las cuentas de vendedor requieren aprobación del administrador. Rellena tus datos para enviar la solicitud.
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, storeType: 'hostal' }))}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: formData.storeType === 'hostal' ? '2px solid #ff385c' : '1px solid #cbd5e1',
+                    background: formData.storeType === 'hostal' ? '#fff1f2' : '#ffffff',
+                    color: formData.storeType === 'hostal' ? '#e11d48' : '#475569',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  🏡 Hostal (CubaAirbnb)
+                </button>
+              </div>
 
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: 'bold', display: 'block', marginBottom: '10px', color: '#0f172a' }}>
-                    ¿Qué vas a registrar en AmasonCubano? *
-                  </label>
-                  <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
-                    <div
-                      onClick={() => setFormData(prev => ({ ...prev, storeType: 'business' }))}
-                      style={{
-                        padding: '14px',
-                        borderRadius: '10px',
-                        border: formData.storeType !== 'hostal' ? '2px solid #2563eb' : '1px solid #cbd5e1',
-                        backgroundColor: formData.storeType !== 'hostal' ? '#eff6ff' : '#ffffff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <span style={{ fontSize: '26px' }}>🏪</span>
-                      <div>
-                        <div style={{ fontWeight: 'bold', color: formData.storeType !== 'hostal' ? '#1d4ed8' : '#1e293b', fontSize: '15px' }}>
-                          Tienda o Vendedor de Productos
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          Para vender artículos, ropa, tecnología, combos de comida o servicios.
-                        </div>
-                      </div>
-                    </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Nombre y Apellidos *</label>
+                <input 
+                  type="text" 
+                  name="fullName" 
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  placeholder="Propietario del negocio"
+                  required
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
 
-                    <div
-                      onClick={() => setFormData(prev => ({ ...prev, storeType: 'hostal' }))}
-                      style={{
-                        padding: '14px',
-                        borderRadius: '10px',
-                        border: formData.storeType === 'hostal' ? '2px solid #ff385c' : '1px solid #cbd5e1',
-                        backgroundColor: formData.storeType === 'hostal' ? '#fff1f2' : '#ffffff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <span style={{ fontSize: '26px' }}>🏡</span>
-                      <div>
-                        <div style={{ fontWeight: 'bold', color: formData.storeType === 'hostal' ? '#e11d48' : '#1e293b', fontSize: '15px' }}>
-                          Hostal / Casa de Renta (CubaAirbnb)
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          Para hospedar viajeros, colocar tu pin GPS en el mapa de Cuba y gestionar reservas.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>
+                  {formData.storeType === 'hostal' ? 'Nombre del Hostal *' : 'Nombre de la Tienda *'}
+                </label>
+                <input 
+                  type="text" 
+                  name="storeName" 
+                  value={formData.storeName}
+                  onChange={handleChange}
+                  placeholder={formData.storeType === 'hostal' ? 'Ej: Hostal Colonial' : 'Ej: Mi Tienda'}
+                  required
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
 
-                <div className="form-group">
-                  <label htmlFor="fullName">Nombre y Apellidos del Propietario *</label>
-                  <input 
-                    type="text" 
-                    id="fullName" 
-                    name="fullName" 
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="storeName">{formData.storeType === 'hostal' ? 'Nombre de tu Hostal / Casa Particular *' : 'Nombre de tu Tienda o Negocio *'}</label>
-                  <input 
-                    type="text" 
-                    id="storeName" 
-                    name="storeName" 
-                    value={formData.storeName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+              {formData.storeType === 'hostal' && (
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>📍 Datos de Ubicación y Hostal</span>
 
-                <div className="form-group" style={{ margin: '15px 0', padding: '12px 14px', backgroundColor: formData.storeType === 'hostal' ? '#fff1f2' : '#f8fafc', border: formData.storeType === 'hostal' ? '1px solid #fecdd3' : '1px solid #e2e8f0', borderRadius: '8px', transition: 'all 0.2s' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0, fontWeight: 'bold', color: formData.storeType === 'hostal' ? '#be123c' : '#334155', fontSize: '14px' }}>
-                    <input 
-                      type="checkbox"
-                      name="isHostalCheckbox"
-                      checked={formData.storeType === 'hostal'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, storeType: e.target.checked ? 'hostal' : 'business' }))}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff385c' }}
-                    />
-                    🏡 Marcar esta casilla si mi negocio es un Hostal / Casa Particular (CubaAirbnb)
-                  </label>
-                </div>
-
-                {formData.storeType === 'hostal' && (
-                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '15px', marginBottom: '15px' }}>
-                    <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px', fontWeight: 'bold' }}>🏡 Ubicación Exacta y Datos de CubaAirbnb</h4>
-                    
-                    <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label htmlFor="province">Provincia en Cuba *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Provincia *</label>
                       <select
-                        id="province"
                         name="province"
                         value={formData.province}
                         onChange={handleProvinceChange}
                         required={formData.storeType === 'hostal'}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc', width: '100%', background: 'white' }}
+                        style={{ width: '100%', padding: '7px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: 'white' }}
                       >
-                        <option value="">-- Seleccionar Provincia --</option>
+                        <option value="">Seleccionar</option>
                         {Object.keys(cubaLocations).map(prov => (
                           <option key={prov} value={prov}>{prov}</option>
                         ))}
                       </select>
                     </div>
 
-                    {formData.province && (
-                      <div className="form-group" style={{ marginBottom: '10px' }}>
-                        <label htmlFor="municipality">Municipio *</label>
-                        <select
-                          id="municipality"
-                          name="municipality"
-                          value={formData.municipality}
-                          onChange={handleMunicipalityChange}
-                          required={formData.storeType === 'hostal'}
-                          style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc', width: '100%', background: 'white' }}
-                        >
-                          <option value="">-- Seleccionar Municipio --</option>
-                          {(cubaLocations[formData.province] || []).map(muni => (
-                            <option key={muni} value={muni}>{muni}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label htmlFor="address">Dirección Exacta (Calle, entrecalles, número) *</label>
-                      <input
-                        type="text"
-                        id="address"
-                        name="address"
-                        placeholder="Ej: Calle Martí #120 e/ Castillo y Libertad"
-                        value={formData.address}
-                        onChange={handleChange}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Municipio *</label>
+                      <select
+                        name="municipality"
+                        value={formData.municipality}
+                        onChange={handleMunicipalityChange}
                         required={formData.storeType === 'hostal'}
-                      />
-                    </div>
-
-                    <LocationPinPicker
-                      lat={formData.lat}
-                      lng={formData.lng}
-                      province={formData.province}
-                      municipality={formData.municipality}
-                      onLocationChange={({ lat, lng }) => setFormData(prev => ({ ...prev, lat, lng }))}
-                    />
-
-                    <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label htmlFor="price_per_night">Tarifa por Noche ($ USD/CUP) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        id="price_per_night"
-                        name="price_per_night"
-                        placeholder="Ej: 35.00"
-                        value={formData.price_per_night}
-                        onChange={handleChange}
-                        required={formData.storeType === 'hostal'}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <div className="form-group" style={{ flex: 1, marginBottom: '10px' }}>
-                        <label htmlFor="lat">Latitud GPS (Mapa)</label>
-                        <input
-                          type="number"
-                          step="any"
-                          id="lat"
-                          name="lat"
-                          placeholder="Ej: 23.1381"
-                          value={formData.lat}
-                          onChange={handleChange}
-                        />
-                      </div>
-                      <div className="form-group" style={{ flex: 1, marginBottom: '10px' }}>
-                        <label htmlFor="lng">Longitud GPS (Mapa)</label>
-                        <input
-                          type="number"
-                          step="any"
-                          id="lng"
-                          name="lng"
-                          placeholder="Ej: -82.3532"
-                          value={formData.lng}
-                          onChange={handleChange}
-                        />
-                      </div>
-                    </div>
-                    <small style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '10px' }}>
-                      📍 Las coordenadas se autocalculan al elegir municipio. Puedes ajustarlas para que tu pin quede exacto en la calle de CubaAirbnb.
-                    </small>
-
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label htmlFor="description">Descripción del Hostal y Servicios</label>
-                      <textarea
-                        id="description"
-                        name="description"
-                        rows="2"
-                        placeholder="Habitaciones privadas, Wifi, climatización, desayunos..."
-                        value={formData.description}
-                        onChange={handleChange}
-                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc', background: 'white' }}
-                      />
+                        style={{ width: '100%', padding: '7px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: 'white' }}
+                      >
+                        <option value="">Seleccionar</option>
+                        {(cubaLocations[formData.province] || []).map(muni => (
+                          <option key={muni} value={muni}>{muni}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                )}
-              </>
-            )}
 
-            {isLogin ? (
-              <div className="form-group">
-                <label htmlFor="identifier">Correo electrónico o Número de teléfono</label>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Dirección Exacta *</label>
+                    <input
+                      type="text"
+                      name="address"
+                      placeholder="Calle y número"
+                      value={formData.address}
+                      onChange={handleChange}
+                      required={formData.storeType === 'hostal'}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <LocationPinPicker
+                    lat={formData.lat}
+                    lng={formData.lng}
+                    province={formData.province}
+                    municipality={formData.municipality}
+                    onLocationChange={({ lat, lng }) => setFormData(prev => ({ ...prev, lat, lng }))}
+                  />
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Precio por Noche ($ USD/CUP) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="price_per_night"
+                      placeholder="Ej: 35.00"
+                      value={formData.price_per_night}
+                      onChange={handleChange}
+                      required={formData.storeType === 'hostal'}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Correo electrónico *</label>
                 <input 
-                  type="text" 
-                  id="identifier" 
-                  name="identifier" 
-                  value={formData.identifier}
+                  type="email" 
+                  name="email" 
+                  value={formData.email}
                   onChange={handleChange}
-                  placeholder="ejemplo@gmail.com o 52583549"
+                  placeholder="correo@ejemplo.com"
                   required
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
-            ) : (
-              <>
-                <div className="form-group">
-                  <label htmlFor="email">Correo electrónico *</label>
-                  <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="ejemplo@gmail.com"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="phone">Número de Teléfono / WhatsApp *</label>
-                  <input 
-                    type="tel" 
-                    id="phone" 
-                    name="phone" 
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="Ej: +53 52583549"
-                    required
-                  />
-                </div>
-              </>
-            )}
 
-            <div className="form-group">
-              <label htmlFor="password">Contraseña</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Teléfono / WhatsApp *</label>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+53 51234567"
+                  required
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </>
+          )}
+
+          {isLogin && (
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Correo electrónico o Teléfono</label>
               <input 
-                type="password" 
-                id="password" 
-                name="password" 
-                value={formData.password}
+                type="text" 
+                name="identifier" 
+                value={formData.identifier}
                 onChange={handleChange}
+                placeholder="correo@ejemplo.com o 51234567"
                 required
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
               />
             </div>
+          )}
 
-            <button type="submit" className="btn btn-primary btn-block seller-auth-btn" disabled={loading}>
-              {loading ? 'Cargando...' : (isLogin ? 'Continuar' : 'Enviar solicitud de vendedor')}
-            </button>
-          </form>
-
-          <div className="auth-terms">
-            Al {isLogin ? 'iniciar sesión' : 'solicitar una cuenta'}, aceptas las Condiciones de Uso y el Aviso de Privacidad de AmasonCubano para Vendedores.
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Contraseña *</label>
+            <input 
+              type="password" 
+              name="password" 
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+            />
           </div>
-        </div>
 
-        <div className="auth-toggle">
-          <div className="divider-container">
-            <div className="divider-line"></div>
-            <div className="divider-text">
-              {isLogin ? '¿Eres nuevo en AmasonCubano?' : '¿Ya tienes una cuenta?'}
-            </div>
-            <div className="divider-line"></div>
-          </div>
-          
-          <button 
-            className="btn btn-secondary btn-block auth-toggle-btn"
-            onClick={() => setIsLogin(!isLogin)}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '11px',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#0f172a',
+              color: '#ffffff',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              marginTop: '4px'
+            }}
           >
-            {isLogin ? 'Solicitar cuenta de vendedor' : 'Inicia sesión'}
+            {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Registrar Cuenta')}
           </button>
-        </div>
-
+        </form>
       </div>
     </div>
   );
