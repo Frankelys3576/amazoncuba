@@ -44,7 +44,7 @@ const Navbar = () => {
       <div className={`navbar-main ${isStoreView ? 'store-mode' : ''}`}>
         {/* Logo */}
         <Link to="/" className="nav-logo-link nav-item">
-          <div className="nav-logo">AmasonCubano</div>
+          <div className="nav-logo">amason<span className="logo-cubano">Cubano</span></div>
         </Link>
 
         {/* Search Bar */}

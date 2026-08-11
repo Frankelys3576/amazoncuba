@@ -30,10 +30,20 @@
 }
 
 .nav-logo {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.5px;
-  color: #fff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.nav-logo .logo-cubano {
+  color: #ff385c;
+  font-weight: 300;
+  letter-spacing: 0.3px;
+  margin-left: 1px;
 }
 
 .nav-logo-link {

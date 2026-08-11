@@ -27,6 +27,22 @@
   font-weight: 600;
 }
 
+.footer-logo {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.footer-logo .logo-cubano {
+  color: #ff385c;
+  font-weight: 300;
+  letter-spacing: 0.3px;
+  margin-left: 1px;
+}
+
 .footer-section p {
   color: #ddd;
   line-height: 1.5;

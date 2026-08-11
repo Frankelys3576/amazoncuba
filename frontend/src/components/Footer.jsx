@@ -7,7 +7,7 @@ const Footer = () => {
     <footer className="main-footer">
       <div className="footer-container">
         <div className="footer-section">
-          <h3>AmasonCubano</h3>
+          <h3 className="footer-logo">amason<span className="logo-cubano">Cubano</span></h3>
           <p>Conectando negocios locales con clientes en toda Cuba. Compra rápido, seguro y cerca de ti.</p>
         </div>
         <div className="footer-section">
