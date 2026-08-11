@@ -16,7 +16,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<SellerAuth />} />
+        <Route path="/login" element={<SellerAuth initialRegister={false} />} />
+        <Route path="/register" element={<SellerAuth initialRegister={true} />} />
+        <Route path="/signup" element={<SellerAuth initialRegister={true} />} />
         
         <Route path="/" element={<SellerLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

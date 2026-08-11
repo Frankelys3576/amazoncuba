@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { loginSeller, registerSeller } from './services/api';
 import { cubaLocations, defaultCoordinates } from './utils/cubaLocations';
 import LocationPinPicker from './components/LocationPinPicker';
 import './SellerAuth.css';
 
-const SellerAuth = () => {
+const SellerAuth = ({ initialRegister }) => {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const [isLogin, setIsLogin] = useState(() => {
+    if (initialRegister !== undefined) return !initialRegister;
+    return !location.pathname.includes('register') && !location.pathname.includes('signup');
+  });
   const [formData, setFormData] = useState({
     identifier: '',
     confirmIdentifier: '',
@@ -133,8 +137,45 @@ const SellerAuth = () => {
           AmasonCubano <span style={{ fontSize: '18px', display: 'block', marginTop: '5px' }}>Regístrate para vender productos</span>
         </div>
 
+        <div style={{ display: 'flex', width: '100%', marginBottom: '15px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #cbd5e1', backgroundColor: '#f1f5f9' }}>
+          <button
+            type="button"
+            onClick={() => { setIsLogin(true); setError(''); }}
+            style={{
+              flex: 1,
+              padding: '12px 10px',
+              border: 'none',
+              backgroundColor: isLogin ? '#2563eb' : 'transparent',
+              color: isLogin ? '#ffffff' : '#475569',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            🔑 Iniciar Sesión
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsLogin(false); setError(''); }}
+            style={{
+              flex: 1,
+              padding: '12px 10px',
+              border: 'none',
+              backgroundColor: !isLogin ? '#ff385c' : 'transparent',
+              color: !isLogin ? '#ffffff' : '#475569',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            📝 Solicitar Cuenta (Vendedor u Hostal)
+          </button>
+        </div>
+
         <div className="auth-card">
-          <h2>{isLogin ? 'Iniciar sesión' : 'Solicitar cuenta'}</h2>
+          <h2>{isLogin ? 'Iniciar sesión en tu cuenta' : 'Solicitar Registro de Vendedor o Hostal'}</h2>
           
           {error && <div className="auth-error" style={{color: 'red', marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '5px', fontSize: '14px'}}>{error}</div>}
 
