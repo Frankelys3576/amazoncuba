@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { registerSeller, loginSeller } from '../services/api';
 import { cubaLocations, defaultCoordinates } from '../utils/cubaLocations';
 import LocationPinPicker from '../components/LocationPinPicker';
+import AddressInputWithAutocomplete from '../components/AddressInputWithAutocomplete';
 import './SellerRegistration.css';
 
 const SellerRegistration = () => {
@@ -284,18 +285,21 @@ const SellerRegistration = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Dirección Exacta *</label>
-                    <input
-                      type="text"
-                      name="address"
-                      placeholder="Calle y número"
-                      value={formData.address}
-                      onChange={handleChange}
-                      required={formData.storeType === 'hostal'}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
-                    />
-                  </div>
+                  <AddressInputWithAutocomplete
+                    address={formData.address}
+                    province={formData.province}
+                    municipality={formData.municipality}
+                    onChangeAddress={(newAddr) => setFormData(prev => ({ ...prev, address: newAddr }))}
+                    onSelectSuggestion={({ address: selectedAddr, lat, lng }) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        address: selectedAddr,
+                        lat: lat ? lat.toString() : prev.lat,
+                        lng: lng ? lng.toString() : prev.lng
+                      }));
+                    }}
+                    required={formData.storeType === 'hostal'}
+                  />
 
                   <LocationPinPicker
                     lat={formData.lat}
