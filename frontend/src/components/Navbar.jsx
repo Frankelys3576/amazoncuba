@@ -20,15 +20,19 @@ const Navbar = () => {
   const routerLocation = useRouterLocation();
 
   // Determinar si estamos en la vista de una tienda específica
-  const isStoreView = routerLocation.pathname.startsWith('/negocio/');
-  const storeIdMatch = routerLocation.pathname.match(/\/negocio\/([^/]+)/);
-  const currentStoreId = storeIdMatch ? storeIdMatch[1] : null;
+  const pathFirstSegment = routerLocation.pathname.split('/')[1] || '';
+  const knownMainRoutes = ['', 'cubabnb', 'product', 'cart', 'checkout', 'mis-pedidos', 'negocios', 'search', 'ofertas', 'servicio-cliente'];
+  
+  const isStoreView = routerLocation.pathname.startsWith('/negocio/') || (pathFirstSegment && !knownMainRoutes.includes(pathFirstSegment));
+  const currentStoreId = routerLocation.pathname.startsWith('/negocio/') 
+    ? routerLocation.pathname.split('/')[2] 
+    : (pathFirstSegment && !knownMainRoutes.includes(pathFirstSegment) ? pathFirstSegment : null);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       if (isStoreView && currentStoreId) {
-        navigate(`/negocio/${currentStoreId}?q=${encodeURIComponent(searchQuery.trim())}`);
+        navigate(`/${currentStoreId}?q=${encodeURIComponent(searchQuery.trim())}`);
       } else {
         navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       }
@@ -126,9 +130,9 @@ const Navbar = () => {
 
         {isStoreView ? (
           <>
-            <Link to={`/negocio/${currentStoreId}?filter=bestsellers`}>Lo más vendido</Link>
-            <Link to={`/negocio/${currentStoreId}?filter=deals`}>Oferta del día</Link>
-            <Link to={`/negocio/${currentStoreId}?filter=new`}>Nuevos</Link>
+            <Link to={`/${currentStoreId}?filter=bestsellers`}>Lo más vendido</Link>
+            <Link to={`/${currentStoreId}?filter=deals`}>Oferta del día</Link>
+            <Link to={`/${currentStoreId}?filter=new`}>Nuevos</Link>
           </>
         ) : (
           <>

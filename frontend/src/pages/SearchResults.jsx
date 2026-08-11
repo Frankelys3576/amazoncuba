@@ -87,19 +87,19 @@ const SearchResults = () => {
           <div className="search-products-grid">
             {results.map(item => item.is_store ? (
               <div key={`store-${item.id}`} className="search-grid-item" style={{ border: '2px solid #007185', background: '#f0f8ff' }}>
-                <Link to={`/negocio/${item.slug || item.id}`} className="search-grid-image-container" style={{ height: '150px' }}>
+                <Link to={`/${item.slug || item.id}`} className="search-grid-image-container" style={{ height: '150px' }}>
                   <img src={item.logo_url} alt={item.name} className="search-grid-image" style={{ objectFit: 'contain' }} />
                 </Link>
                 <div className="search-grid-details">
                   <div style={{ color: '#007185', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px' }}>
                     🏢 NEGOCIO OFICIAL
                   </div>
-                  <Link to={`/negocio/${item.slug || item.id}`} className="search-grid-title-link">
+                  <Link to={`/${item.slug || item.id}`} className="search-grid-title-link">
                     <h2 className="search-grid-title" style={{ fontSize: '18px' }}>{item.name}</h2>
                   </Link>
                   <p style={{ fontSize: '14px', color: '#565959', margin: '10px 0' }}>{item.description}</p>
                   
-                  <Link to={`/negocio/${item.slug || item.id}`} className="btn btn-primary search-grid-cart-btn" style={{marginTop: 'auto', width: '100%', padding: '10px', borderRadius: '20px', fontSize: '14px', textAlign: 'center', display: 'block'}}>
+                  <Link to={`/${item.slug || item.id}`} className="btn btn-primary search-grid-cart-btn" style={{marginTop: 'auto', width: '100%', padding: '10px', borderRadius: '20px', fontSize: '14px', textAlign: 'center', display: 'block'}}>
                     Visitar Negocio
                   </Link>
                 </div>
