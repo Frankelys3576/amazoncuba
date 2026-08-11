@@ -15,7 +15,7 @@ const SellerRegistration = () => {
     password: '',
     fullName: '',
     storeName: '',
-    storeType: 'hostal',
+    storeType: 'business',
     province: '',
     municipality: '',
     address: '',

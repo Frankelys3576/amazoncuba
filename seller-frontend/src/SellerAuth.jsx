@@ -17,7 +17,7 @@ const SellerAuth = () => {
     password: '',
     fullName: '',
     storeName: '',
-    storeType: 'hostal',
+    storeType: 'business',
     province: '',
     municipality: '',
     address: '',
