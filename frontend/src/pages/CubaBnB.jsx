@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Search, MapPin, Filter, Map as MapIcon, EyeOff, Home, Star, CheckCircle } from 'lucide-react';
 import { getStores } from '../services/api';
 import { cubaLocations } from '../utils/cubaLocations';

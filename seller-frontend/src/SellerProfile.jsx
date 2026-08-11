@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Image, MessageSquare, Phone, AlignLeft, Save, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { Store, Image, Phone, AlignLeft, Save, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import { getStoreById, updateStoreProfile, uploadImage, deleteAccount } from './services/api';
 import { cubaLocations } from './utils/cubaLocations';
 import './SellerProfile.css';

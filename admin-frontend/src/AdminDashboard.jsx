@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Store, ShoppingBag, TrendingUp, DollarSign, ArrowUpRight, X } from 'lucide-react';
+import { Users, Store, ShoppingBag, DollarSign, ArrowUpRight, X } from 'lucide-react';
 import { getStores, getOrders, getProducts } from './services/api';
 import './AdminDashboard.css';
 

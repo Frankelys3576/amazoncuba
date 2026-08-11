@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Hero from '../components/Hero';
 import CategoryCard from '../components/CategoryCard';
-import QuadCategoryCard from '../components/QuadCategoryCard';
 import ProductCard from '../components/ProductCard';
 import { getProducts } from '../services/api';
 import { useLocation } from '../context/LocationContext';

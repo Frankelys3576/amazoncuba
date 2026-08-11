@@ -10,7 +10,7 @@ const getProducts = async (req, res) => {
     if (category) query = query.eq('category_id', category);
     if (store_category_id) query = query.eq('store_category_id', store_category_id);
     if (q) query = query.ilike('name', `%${q}%`);
-    
+
     if (province && municipality) {
       const searchTags = [
         `${province}:${municipality}`,
@@ -25,7 +25,7 @@ const getProducts = async (req, res) => {
       ];
       query = query.overlaps('delivery_locations', searchTags);
     }
-    
+
     // Sort by featured first, then by creation date
     query = query.order('is_featured', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
 
@@ -35,7 +35,7 @@ const getProducts = async (req, res) => {
       console.error('Supabase error fetching products:', error.message);
       return res.status(500).json({ error: 'Error fetching products from database' });
     }
-    
+
     const formattedData = (data || []).map(item => ({
       ...item,
       store_accepts_zelle: item.stores ? item.stores.accepts_zelle === true : false,
@@ -65,9 +65,9 @@ const getProductById = async (req, res) => {
       console.error('Supabase error fetching product:', error.message);
       return res.status(500).json({ error: 'Error fetching product from database' });
     }
-    
+
     if (!data) return res.status(404).json({ error: 'Producto no encontrado' });
-    
+
     const formattedData = {
       ...data,
       store_accepts_zelle: data.stores ? data.stores.accepts_zelle === true : false,
@@ -87,7 +87,7 @@ const getProductById = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const { name, description, price, price_usd, currency, stock, category_id, store_category_id, image_url, store_id, province, municipality, delivery_locations, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
-    
+
     // Si no mandan delivery_locations, creamos uno básico por retrocompatibilidad
     const locationsArray = delivery_locations || [`${province}:${municipality}`];
     // Si no mandan moneda, por defecto es USD
@@ -101,7 +101,7 @@ const createProduct = async (req, res) => {
       .select();
 
     if (error) throw error;
-    
+
     res.status(201).json(data[0]);
   } catch (error) {
     console.error('Error creating product:', error.message);
@@ -112,7 +112,7 @@ const createProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // 1. Eliminar referencias en order_items primero
     await supabase
       .from('order_items')
@@ -127,7 +127,7 @@ const deleteProduct = async (req, res) => {
       .select();
 
     if (error) throw error;
-    
+
     res.json({ message: 'Producto eliminado correctamente', product: data ? data[0] : null });
   } catch (error) {
     console.error('Error deleting product:', error.message);
@@ -139,11 +139,11 @@ const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
+
     // Si viene delivery_locations y province/municipality, podemos dejarlos pasar
     // Si no mandan moneda, no la sobreescribimos pero sí nos aseguramos de que no sea null
     if (updateData.currency === null) updateData.currency = 'USD';
-    
+
     // Nos aseguramos que no vengan campos extraños o vacíos que rompan
     delete updateData.id;
     delete updateData.created_at;
@@ -155,7 +155,7 @@ const updateProduct = async (req, res) => {
       .select();
 
     if (error) throw error;
-    
+
     res.json(data[0]);
   } catch (error) {
     console.error('Error updating product:', error.message);
@@ -165,14 +165,14 @@ const updateProduct = async (req, res) => {
 const registerProductView = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Solo insertamos un registro en product_views, created_at se pone automático por defecto en BD
     const { error } = await supabase
       .from('product_views')
       .insert([{ product_id: id }]);
 
     if (error) throw error;
-    
+
     res.status(200).json({ message: 'View registered' });
   } catch (error) {
     console.error('Error registering product view:', error.message);
@@ -210,7 +210,7 @@ const addProductReview = async (req, res) => {
 
     const { data, error } = await supabase
       .from('product_reviews')
-      .insert([{ 
+      .insert([{
         product_id: id,
         customer_name,
         rating,

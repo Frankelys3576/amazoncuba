@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Image as ImageIcon, X, UploadCloud } from 'lucide-react';
+import { Plus, Edit2, Trash2, Image as ImageIcon, X } from 'lucide-react';
 import { getSettings, updateSetting, uploadImage } from './services/api';
 import { cubaLocations } from './cubaLocations';
 import './AdminMarketing.css';
