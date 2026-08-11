@@ -177,6 +177,31 @@ const SellerAuth = ({ initialRegister }) => {
         <div className="auth-card">
           <h2>{isLogin ? 'Iniciar sesión en tu cuenta' : 'Solicitar Registro de Vendedor o Hostal'}</h2>
           
+          {isLogin && (
+            <div style={{ background: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', color: '#be123c', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>
+                🏡 ¿Vas a registrar un Hostal o Tienda nueva?
+              </span>
+              <button
+                type="button"
+                onClick={() => { setIsLogin(false); setError(''); }}
+                style={{
+                  backgroundColor: '#ff385c',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  fontWeight: 'bold',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  width: '100%'
+                }}
+              >
+                📝 Crear Cuenta de Hostal / Vendedor
+              </button>
+            </div>
+          )}
+
           {error && <div className="auth-error" style={{color: 'red', marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '5px', fontSize: '14px'}}>{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
