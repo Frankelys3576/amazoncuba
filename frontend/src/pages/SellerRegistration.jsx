@@ -118,56 +118,56 @@ const SellerRegistration = () => {
   };
 
   return (
-    <div className="seller-auth-page">
-      <div className="auth-container">
+    <div className="seller-auth-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', width: '100%', padding: '20px 12px', minHeight: 'calc(100vh - 120px)', backgroundColor: '#f8fafc', boxSizing: 'border-box' }}>
+      <div className="auth-container" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '16px', boxSizing: 'border-box' }}>
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 }}>AmasonCubano</h1>
           <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>Panel de Vendedores y Hostales</p>
         </div>
 
-      {/* Selector de Modo Limpio */}
-      <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', marginBottom: '18px' }}>
-        <button
-          type="button"
-          onClick={() => { setIsLogin(true); setError(''); }}
-          style={{
-            flex: 1,
-            padding: '10px',
-            border: 'none',
-            borderRadius: '7px',
-            background: isLogin ? '#ffffff' : 'transparent',
-            color: isLogin ? '#0f172a' : '#64748b',
-            fontWeight: '600',
-            fontSize: '14px',
-            cursor: 'pointer',
-            boxShadow: isLogin ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            transition: 'all 0.2s'
-          }}
-        >
-          Iniciar Sesión
-        </button>
-        <button
-          type="button"
-          onClick={() => { setIsLogin(false); setError(''); }}
-          style={{
-            flex: 1,
-            padding: '10px',
-            border: 'none',
-            borderRadius: '7px',
-            background: !isLogin ? '#ffffff' : 'transparent',
-            color: !isLogin ? '#0f172a' : '#64748b',
-            fontWeight: '600',
-            fontSize: '14px',
-            cursor: 'pointer',
-            boxShadow: !isLogin ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            transition: 'all 0.2s'
-          }}
-        >
-          Crear Cuenta
-        </button>
-      </div>
+        {/* Selector de Modo Limpio */}
+        <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '10px', width: '100%', boxSizing: 'border-box' }}>
+          <button
+            type="button"
+            onClick={() => { setIsLogin(true); setError(''); }}
+            style={{
+              flex: 1,
+              padding: '10px',
+              border: 'none',
+              borderRadius: '7px',
+              background: isLogin ? '#ffffff' : 'transparent',
+              color: isLogin ? '#0f172a' : '#64748b',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: isLogin ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Iniciar Sesión
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsLogin(false); setError(''); }}
+            style={{
+              flex: 1,
+              padding: '10px',
+              border: 'none',
+              borderRadius: '7px',
+              background: !isLogin ? '#ffffff' : 'transparent',
+              color: !isLogin ? '#0f172a' : '#64748b',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: !isLogin ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Crear Cuenta
+          </button>
+        </div>
 
-      <div style={{ background: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '20px 16px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', width: '100%', boxSizing: 'border-box' }}>
         {error && (
           <div style={{ color: '#b91c1c', marginBottom: '15px', padding: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecdd3', borderRadius: '6px', fontSize: '13px' }}>
             {error}
