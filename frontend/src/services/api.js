@@ -87,9 +87,9 @@ export const updateOrder = async (id, status) => {
   }
 };
 
-export const getStores = async () => {
+export const getStores = async (type = 'business') => {
   try {
-    const response = await fetch(`${API_URL}/stores?type=business`);
+    const response = await fetch(`${API_URL}/stores?type=${type}`);
     if (!response.ok) throw new Error('Error al obtener tiendas');
     return await response.json();
   } catch (error) {
