@@ -1,17 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "(?!amasoncubano\\.com|www\\.amasoncubano\\.com).*"
-        }
-      ],
-      "destination": "https://amasoncubano.com/$1",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/(.*)",
