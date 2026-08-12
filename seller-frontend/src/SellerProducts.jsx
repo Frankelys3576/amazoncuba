@@ -24,7 +24,7 @@ const SellerProducts = () => {
     stock: '',
     category_id: '',
     store_category_id: '',
-    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80',
+    image_url: '',
     image_url_2: '',
     image_url_3: '',
     image_url_4: '',
