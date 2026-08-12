@@ -70,9 +70,11 @@ const SellerAuth = () => {
 
     try {
       if (isLogin) {
-        const formattedEmail = formData.identifier.includes('@') 
-          ? formData.identifier.toLowerCase().trim()
-          : `${formData.identifier.trim()}@amasoncubano.com`;
+        let formattedEmail = formData.identifier.trim().toLowerCase();
+        if (!formattedEmail.includes('@')) {
+          const cleanPhone = formattedEmail.replace(/[^0-9]/g, '');
+          formattedEmail = `${cleanPhone}@amasoncubano.com`;
+        }
 
         const response = await loginSeller(formattedEmail, formData.password);
         
@@ -88,9 +90,8 @@ const SellerAuth = () => {
         
         navigate('/dashboard');
       } else {
-        const formattedEmail = formData.email.includes('@') 
-          ? formData.email.toLowerCase().trim()
-          : `${formData.email.trim()}@amasoncubano.com`;
+        const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+        const formattedEmail = `${cleanPhone}@amasoncubano.com`;
 
         const regResponse = await registerSeller({
           email: formattedEmail,
@@ -331,26 +332,13 @@ const SellerAuth = () => {
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Correo electrónico *</label>
-                <input 
-                  type="email" 
-                  name="email" 
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="correo@ejemplo.com"
-                  required
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Teléfono / WhatsApp *</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Número de Teléfono (Usuario) *</label>
                 <input 
                   type="tel" 
                   name="phone" 
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="+53 51234567"
+                  placeholder="Ej: 5351234567"
                   required
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
                 />
@@ -360,13 +348,13 @@ const SellerAuth = () => {
 
           {isLogin && (
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Correo electrónico o Teléfono</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Número de Teléfono</label>
               <input 
                 type="text" 
                 name="identifier" 
                 value={formData.identifier}
                 onChange={handleChange}
-                placeholder="correo@ejemplo.com o 51234567"
+                placeholder="Ej: 5351234567"
                 required
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
               />
