@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { getStoreById } from '../services/api';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import ZelleWarningModal from '../components/ZelleWarningModal';
 import './Cart.css';
 
@@ -59,7 +60,7 @@ const Cart = () => {
               {cart.map(item => (
                 <div key={item.id} className="cart-item">
                   <div className="cart-item-image">
-                    <img src={item.image_url} alt={item.name} />
+                    <img src={getValidImageUrl(item.image_url)} alt={item.name} onError={handleImageError} />
                   </div>
                   <div className="cart-item-details">
                     <Link to={`/product/${item.id}`} className="cart-item-title">

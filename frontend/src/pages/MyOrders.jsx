@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrdersByIds, updateOrder } from '../services/api';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './MyOrders.css';
 
 const MyOrders = () => {
@@ -123,7 +124,7 @@ const MyOrders = () => {
                 <div className="products-preview">
                   {order.items.slice(0, 3).map((item, idx) => (
                     <div key={idx} className="product-preview-item">
-                      <img src={item.image_url} alt={item.name} />
+                      <img src={getValidImageUrl(item.image_url)} alt={item.name} onError={handleImageError} />
                       <div className="product-preview-details">
                         <span className="product-name">{item.name}</span>
                         <span className="product-qty-price">{item.quantity} x ${item.price}</span>

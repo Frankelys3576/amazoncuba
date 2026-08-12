@@ -3,6 +3,7 @@ import { useLocation as useRouterLocation, Link } from 'react-router-dom';
 import { getProducts, getStores } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useLocation } from '../context/LocationContext';
+import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './SearchResults.css';
 
 const useQuery = () => {
@@ -107,7 +108,7 @@ const SearchResults = () => {
             ) : (
               <div key={`product-${item.id}`} className="search-grid-item">
                 <Link to={`/product/${item.id}`} className="search-grid-image-container">
-                  <img src={item.image_url} alt={item.name} className="search-grid-image" />
+                  <img src={getValidImageUrl(item.image_url)} alt={item.name} className="search-grid-image" onError={handleImageError} />
                 </Link>
                 <div className="search-grid-details">
                   <Link to={`/product/${item.id}`} className="search-grid-title-link">
