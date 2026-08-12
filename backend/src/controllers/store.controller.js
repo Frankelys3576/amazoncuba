@@ -18,7 +18,8 @@ const formatStore = (store) => {
     address: store.address || info.address || '',
     lat: store.lat !== undefined && store.lat !== null ? store.lat : (info.lat !== undefined ? info.lat : null),
     lng: store.lng !== undefined && store.lng !== null ? store.lng : (info.lng !== undefined ? info.lng : null),
-    price_per_night: store.price_per_night || info.price_per_night || null
+    price_per_night: store.price_per_night || info.price_per_night || null,
+    gallery: info.gallery || []
   };
 };
 
@@ -126,7 +127,7 @@ const updateStoreStatus = async (req, res) => {
 const updateStoreProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, slogan, phone, logo_url, banner_url, is_open, has_delivery, opening_time, closing_time, store_type, province, municipality, address, lat, lng, price_per_night } = req.body;
+    const { name, description, slogan, phone, logo_url, banner_url, is_open, has_delivery, opening_time, closing_time, store_type, province, municipality, address, lat, lng, price_per_night, gallery } = req.body;
     
     // First fetch existing store data to preserve zelle_info
     const { data: existingStore } = await supabase.from('stores').select('*').eq('id', id).single();
@@ -147,7 +148,7 @@ const updateStoreProfile = async (req, res) => {
     if (closing_time !== undefined) updates.closing_time = closing_time;
     if (store_type !== undefined) updates.store_type = store_type;
     
-    if (province !== undefined || municipality !== undefined || address !== undefined || lat !== undefined || lng !== undefined || price_per_night !== undefined) {
+    if (province !== undefined || municipality !== undefined || address !== undefined || lat !== undefined || lng !== undefined || price_per_night !== undefined || gallery !== undefined) {
       const currentZelleInfo = existingStore?.zelle_info || {};
       updates.zelle_info = {
         ...currentZelleInfo,
@@ -156,7 +157,8 @@ const updateStoreProfile = async (req, res) => {
         ...(address !== undefined && { address }),
         ...(lat !== undefined && { lat }),
         ...(lng !== undefined && { lng }),
-        ...(price_per_night !== undefined && { price_per_night })
+        ...(price_per_night !== undefined && { price_per_night }),
+        ...(gallery !== undefined && { gallery })
       };
     }
     

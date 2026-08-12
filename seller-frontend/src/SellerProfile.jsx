@@ -35,7 +35,8 @@ const SellerProfile = () => {
     address: '',
     lat: '23.1367',
     lng: '-82.3584',
-    price_per_night: ''
+    price_per_night: '',
+    gallery: []
   });
 
   useEffect(() => {
@@ -61,7 +62,8 @@ const SellerProfile = () => {
             address: data.address || '',
             lat: data.lat !== null && data.lat !== undefined ? String(data.lat) : '23.1367',
             lng: data.lng !== null && data.lng !== undefined ? String(data.lng) : '-82.3584',
-            price_per_night: data.price_per_night || ''
+            price_per_night: data.price_per_night !== null && data.price_per_night !== undefined ? String(data.price_per_night) : '',
+            gallery: data.gallery || []
           });
         }
       } catch (err) {
@@ -97,6 +99,41 @@ const SellerProfile = () => {
     } finally {
       setUploading(prev => ({ ...prev, [type]: false }));
     }
+  };
+
+  const handleGalleryUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    if (formData.gallery.length + files.length > 10) {
+      alert('Puedes subir un máximo de 10 imágenes para tu galería.');
+      return;
+    }
+
+    setUploading(prev => ({ ...prev, gallery: true }));
+    try {
+      const newUrls = [];
+      for (const file of files) {
+        const result = await uploadImage(file);
+        if (result && result.url) {
+          newUrls.push(result.url);
+        }
+      }
+      setFormData(prev => ({ ...prev, gallery: [...prev.gallery, ...newUrls] }));
+      setMessage({ text: `Imágenes subidas correctamente.`, type: 'success' });
+    } catch (error) {
+      console.error(error);
+      setMessage({ text: error.message || 'Error al subir las imágenes.', type: 'error' });
+    } finally {
+      setUploading(prev => ({ ...prev, gallery: false }));
+    }
+  };
+
+  const removeGalleryImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      gallery: prev.gallery.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -487,6 +524,35 @@ const SellerProfile = () => {
               
               {formData.banner_url && <small style={{color: '#25d366'}}>✓ Banner cargado</small>}
             </div>
+
+            {formData.store_type === 'hostal' && (
+              <div className="form-group" style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                <label style={{ color: '#0f172a' }}>Galería del Hostal (Máximo 10 fotos)</label>
+                <input 
+                  type="file" 
+                  accept="image/png, image/jpeg, image/jpg"
+                  multiple
+                  onChange={handleGalleryUpload}
+                  disabled={uploading.gallery || formData.gallery.length >= 10}
+                />
+                <small>Selecciona múltiples imágenes a la vez. {uploading.gallery && 'Subiendo galería...'}</small>
+                
+                {formData.gallery.length > 0 && (
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
+                    {formData.gallery.map((url, index) => (
+                      <div key={index} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                        <img src={url} alt={`Gallery ${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+                        <button 
+                          type="button" 
+                          onClick={() => removeGalleryImage(index)}
+                          style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '22px', height: '22px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="form-actions">

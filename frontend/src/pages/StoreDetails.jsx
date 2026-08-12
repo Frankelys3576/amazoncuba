@@ -113,6 +113,88 @@ const StoreDetails = () => {
     return `${formattedHour}:${m} ${ampm}`;
   };
 
+  const renderHostalView = () => {
+    return (
+      <div className="hostal-details-page">
+        <div className="container" style={{ paddingTop: '20px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '5px' }}>{store.name}</h1>
+          <p style={{ color: '#475569', fontSize: '15px', marginBottom: '20px' }}>
+            📍 {store.municipality}, {store.province} {store.address ? `- ${store.address}` : ''}
+          </p>
+          
+          <div className="hostal-gallery-grid">
+            {store.gallery && store.gallery.length > 0 ? (
+              <>
+                <img src={store.gallery[0]} className="hostal-gallery-main" alt="Principal" />
+                {store.gallery.slice(1, 5).map((img, i) => (
+                  <img key={i} src={img} className="hostal-gallery-img" alt={`Galería ${i}`} />
+                ))}
+              </>
+            ) : (
+              <img src={store.banner_url || 'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1200'} className="hostal-gallery-main" alt="Principal" />
+            )}
+          </div>
+          
+          <div className="hostal-layout">
+            <div className="hostal-content">
+              <h2>Sobre este alojamiento</h2>
+              <p style={{ color: '#475569', lineHeight: '1.6', fontSize: '16px' }}>
+                {store.description || 'Este hostal aún no ha añadido una descripción.'}
+              </p>
+              
+              <div style={{ margin: '30px 0', borderTop: '1px solid #e2e8f0', paddingTop: '30px' }}>
+                <h2>Habitaciones y Servicios</h2>
+                {products.length === 0 ? (
+                  <p style={{color: '#64748b'}}>No hay habitaciones ni servicios registrados por el momento.</p>
+                ) : (
+                  <div className="store-products-grid">
+                    {products.map(product => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="hostal-sidebar">
+              <div className="hostal-booking-card">
+                {store.price_per_night ? (
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>
+                    ${store.price_per_night} <span style={{fontSize: '14px', fontWeight: 'normal', color: '#64748b'}}>noche</span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>
+                    Precios a consultar
+                  </div>
+                )}
+                
+                {store.phone ? (
+                  <a 
+                    href={`https://wa.me/${store.phone.replace(/[^0-9]/g, '').startsWith('53') && store.phone.replace(/[^0-9]/g, '').length > 8 ? store.phone.replace(/[^0-9]/g, '') : `53${store.phone.replace(/[^0-9]/g, '')}`}?text=Hola%20${encodeURIComponent(store.name)},%20vengo%20de%20AmasonCubano%20y%20me%20interesa%20su%20alojamiento.`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="btn"
+                    style={{ width: '100%', padding: '14px', borderRadius: '8px', fontSize: '16px', background: '#ff385c', border: 'none', color: 'white', textDecoration: 'none', textAlign: 'center', display: 'block', fontWeight: 'bold' }}
+                  >
+                    Contactar Anfitrión
+                  </a>
+                ) : (
+                  <button className="btn" disabled style={{ width: '100%', padding: '14px', borderRadius: '8px', background: '#cbd5e1', color: 'white', border: 'none' }}>
+                    Contacto no disponible
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (store.store_type === 'hostal') {
+    return renderHostalView();
+  }
+
   return (
     <div className="store-details-page">
       <div 
