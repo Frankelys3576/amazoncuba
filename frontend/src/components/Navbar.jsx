@@ -122,7 +122,7 @@ const Navbar = () => {
               <span className="text-bold location-name" style={{ fontSize: '13px' }}>
                 {location.municipality && location.province 
                   ? `${location.municipality}, ${location.province}` 
-                  : 'Filtrar por Ubicación'}
+                  : 'Provincia y Municipio'}
               </span>
             </div>
           </div>
