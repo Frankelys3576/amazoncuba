@@ -18,6 +18,7 @@ export const getProducts = async (params = {}) => {
     if (params.category) query.append('category', params.category);
     if (params.province) query.append('province', params.province);
     if (params.municipality) query.append('municipality', params.municipality);
+    if (params.requireImage) query.append('requireImage', 'true');
 
     const queryString = query.toString();
     const url = queryString ? `${API_URL}/products?${queryString}` : `${API_URL}/products`;

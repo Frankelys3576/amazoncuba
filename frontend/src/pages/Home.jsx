@@ -18,7 +18,8 @@ const Home = () => {
       setLoading(true);
       const data = await getProducts({
         province: location.province,
-        municipality: location.municipality
+        municipality: location.municipality,
+        requireImage: true
       });
       setProducts(data);
       setLoading(false);

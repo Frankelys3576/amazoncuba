@@ -2,7 +2,7 @@ const supabase = require('../config/supabase');
 
 // Obtener todos los productos
 const getProducts = async (req, res) => {
-  const { storeId, q, category, province, municipality, store_category_id } = req.query;
+  const { storeId, q, category, province, municipality, store_category_id, requireImage } = req.query;
 
   try {
     let query = supabase.from('products').select('*, stores(accepts_zelle, name, phone, slug)');
@@ -10,6 +10,9 @@ const getProducts = async (req, res) => {
     if (category) query = query.eq('category_id', category);
     if (store_category_id) query = query.eq('store_category_id', store_category_id);
     if (q) query = query.ilike('name', `%${q}%`);
+    if (requireImage) {
+      query = query.not('image_url', 'is', null).neq('image_url', '');
+    }
 
     if (province && municipality) {
       const searchTags = [
