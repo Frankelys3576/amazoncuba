@@ -19,6 +19,7 @@ const SellerLayout = () => {
   const [storeId, setStoreId] = useState(null);
   const [storeNumber, setStoreNumber] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [storeType, setStoreType] = useState('business');
   
   useEffect(() => {
     // Check if seller is logged in
@@ -32,8 +33,9 @@ const SellerLayout = () => {
       if (name) setSellerName(name);
       
       getStoreById(id).then(storeData => {
-         if (storeData && storeData.store_number) {
-            setStoreNumber(storeData.store_number);
+         if (storeData) {
+            if (storeData.store_number) setStoreNumber(storeData.store_number);
+            if (storeData.store_type) setStoreType(storeData.store_type);
          }
       }).catch(err => console.error(err));
     }
@@ -53,8 +55,8 @@ const SellerLayout = () => {
 
   const navItems = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Resumen' },
-    { path: '/products', icon: <Package size={20} />, label: 'Mis Productos' },
-    { path: '/categories', icon: <FolderTree size={20} />, label: 'Secciones' },
+    { path: '/products', icon: <Package size={20} />, label: storeType === 'hostal' ? 'Habitaciones' : 'Mis Productos' },
+    ...(storeType !== 'hostal' ? [{ path: '/categories', icon: <FolderTree size={20} />, label: 'Secciones' }] : []),
     { path: '/orders', icon: <ShoppingBag size={20} />, label: 'Pedidos' },
     { path: '/profile', icon: <Store size={20} />, label: 'Mi Tienda' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Configuración' },
