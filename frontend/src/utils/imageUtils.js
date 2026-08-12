@@ -11,12 +11,24 @@ export const NO_PHOTO_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
 
 export const DEFAULT_PRODUCT_FALLBACK = NO_PHOTO_PLACEHOLDER;
 
+// Detect broken/unreachable URLs (local IPs, localhost references, etc.)
+const isUnreachableUrl = (url) => {
+  if (!url) return true;
+  // Match private/local IP addresses and localhost
+  return /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.|localhost)/i.test(url);
+};
+
 export const getValidImageUrl = (url, fallback = DEFAULT_PRODUCT_FALLBACK) => {
   if (!url || typeof url !== 'string' || url.trim() === '') {
     return fallback;
   }
   
   let cleanUrl = url.trim();
+
+  // If it's a local/private network URL, return placeholder immediately
+  if (isUnreachableUrl(cleanUrl)) {
+    return fallback;
+  }
   
   // Convert http:// to https:// to prevent Mixed Content blocking in modern browsers
   if (cleanUrl.startsWith('http://')) {
