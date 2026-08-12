@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Mail, Calendar, Clock, CheckCircle, Search, Trash2 } from 'lucide-react';
-import { getUsers, deleteUser } from './services/api';
+import { Users, Mail, Calendar, Clock, CheckCircle, Search, Trash2, Edit } from 'lucide-react';
+import { getUsers, deleteUser, updateUser } from './services/api';
 import './AdminUsers.css';
 
 const AdminUsers = () => {
@@ -9,6 +9,11 @@ const AdminUsers = () => {
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
   const [customDates, setCustomDates] = useState({ start: '', end: '' });
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({ email: '', password: '' });
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -53,7 +58,6 @@ const AdminUsers = () => {
     return true;
   });
 
-  const handleDeleteUser = async (id, name) => {
     if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${name}? Esta acción no se puede deshacer.`)) {
       try {
         await deleteUser(id);
@@ -62,6 +66,33 @@ const AdminUsers = () => {
         alert('Error al eliminar el usuario. Intenta nuevamente.');
         console.error(error);
       }
+    }
+  };
+
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    setEditFormData({ email: user.email, password: '' });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      const dataToUpdate = {};
+      if (editFormData.email && editFormData.email !== editingUser.email) dataToUpdate.email = editFormData.email;
+      if (editFormData.password) dataToUpdate.password = editFormData.password;
+      
+      if (Object.keys(dataToUpdate).length > 0) {
+        await updateUser(editingUser.id, dataToUpdate);
+        setUsers(users.map(u => u.id === editingUser.id ? { ...u, email: editFormData.email || u.email } : u));
+        alert('Usuario actualizado correctamente.');
+      }
+      setIsEditModalOpen(false);
+    } catch (error) {
+      alert('Error al actualizar: ' + error.message);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -186,7 +217,27 @@ const AdminUsers = () => {
                       )}
                     </span>
                   </td>
-                  <td>
+                  <td style={{display: 'flex', gap: '5px'}}>
+                    <button 
+                      onClick={() => openEditModal(user)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background-color 0.2s'
+                      }}
+                      title="Editar credenciales"
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <Edit size={18} />
+                    </button>
                     <button 
                       onClick={() => handleDeleteUser(user.id, user.full_name)}
                       style={{
@@ -214,6 +265,46 @@ const AdminUsers = () => {
           </tbody>
         </table>
       </div>
+
+      {isEditModalOpen && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div style={{background: 'white', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%'}}>
+            <h2 style={{marginTop: 0}}>Editar Credenciales</h2>
+            <p style={{fontSize: '14px', color: '#64748b', marginBottom: '20px'}}>
+              Modifica el correo de acceso o establece una nueva contraseña para <strong>{editingUser?.full_name}</strong>. 
+              <em>Las contraseñas actuales no se pueden ver porque están encriptadas de forma segura.</em>
+            </p>
+            <form onSubmit={handleEditSubmit}>
+              <div style={{marginBottom: '15px'}}>
+                <label style={{display: 'block', marginBottom: '5px', fontWeight: '500'}}>Correo (Usuario):</label>
+                <input 
+                  type="email" 
+                  value={editFormData.email} 
+                  onChange={e => setEditFormData({...editFormData, email: e.target.value})}
+                  required
+                  style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #cbd5e1'}}
+                />
+              </div>
+              <div style={{marginBottom: '20px'}}>
+                <label style={{display: 'block', marginBottom: '5px', fontWeight: '500'}}>Nueva Contraseña (Opcional):</label>
+                <input 
+                  type="password" 
+                  value={editFormData.password}
+                  onChange={e => setEditFormData({...editFormData, password: e.target.value})}
+                  placeholder="Dejar en blanco para no cambiar"
+                  style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #cbd5e1'}}
+                />
+              </div>
+              <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px'}}>
+                <button type="button" onClick={() => setIsEditModalOpen(false)} style={{padding: '10px 15px', border: '1px solid #cbd5e1', background: 'white', borderRadius: '4px', cursor: 'pointer'}}>Cancelar</button>
+                <button type="submit" disabled={editLoading} style={{padding: '10px 15px', border: 'none', background: '#3b82f6', color: 'white', borderRadius: '4px', cursor: 'pointer'}}>
+                  {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

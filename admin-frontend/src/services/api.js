@@ -193,6 +193,26 @@ export const deleteUser = async (id) => {
   }
 };
 
+export const updateUser = async (id, data) => {
+  try {
+    const response = await fetch(`${API_URL}/users/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Error al actualizar usuario');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('API updateUser error:', error);
+    throw error;
+  }
+};
+
 export const getSettings = async () => {
   try {
     const response = await fetch(`${API_URL}/settings`);

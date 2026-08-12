@@ -36,7 +36,32 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, password } = req.body;
+    
+    if (!email && !password) {
+      return res.status(400).json({ error: 'Debe proporcionar un nuevo correo o contraseña.' });
+    }
+
+    const updates = {};
+    if (email) updates.email = email;
+    if (password) updates.password = password;
+
+    const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
+    
+    if (error) throw error;
+    
+    res.json({ message: 'Usuario actualizado correctamente', user: data.user });
+  } catch (error) {
+    console.error('Error updating user:', error.message);
+    res.status(500).json({ error: 'Error al actualizar usuario: ' + error.message });
+  }
+};
+
 module.exports = {
   getUsers,
-  deleteUser
+  deleteUser,
+  updateUser
 };
