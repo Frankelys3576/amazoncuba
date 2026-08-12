@@ -62,6 +62,10 @@ const ProductCard = ({ product }) => {
           <p className="product-card-delivery">
             {product.description?.startsWith('[RESERVACIÓN]') ? '🏡 Disponibilidad inmediata en Cuba' : 'Envío GRATIS a Cuba'}
           </p>
+          <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            📍 {product.municipality && product.municipality !== 'Toda la provincia' ? product.municipality : (product.province || 'Toda Cuba')}
+            {product.province && product.province !== 'Toda Cuba' && product.municipality && product.municipality !== 'Toda la provincia' ? `, ${product.province}` : ''}
+          </p>
           <button onClick={handleAddToCart} className="add-to-cart-btn-mobile" style={{ backgroundColor: product.description?.startsWith('[RESERVACIÓN]') ? '#ff385c' : undefined, color: product.description?.startsWith('[RESERVACIÓN]') ? 'white' : undefined }}>
             <ShoppingCart size={16} />
             {product.description?.startsWith('[RESERVACIÓN]') ? 'Reservar' : 'Agregar'}
