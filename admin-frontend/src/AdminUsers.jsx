@@ -58,6 +58,7 @@ const AdminUsers = () => {
     return true;
   });
 
+  const handleDeleteUser = async (id, name) => {
     if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${name}? Esta acción no se puede deshacer.`)) {
       try {
         await deleteUser(id);
