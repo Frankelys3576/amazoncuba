@@ -81,6 +81,8 @@
 
 .cubabnb-input,
 .cubabnb-select {
+  width: 100%;
+  box-sizing: border-box;
   padding: 11px 14px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;

@@ -82,7 +82,7 @@ const Home = () => {
           </div>
         )}
 
-        {/* Banner Promocional CubaBnB */}
+        {/* Banner Promocional CubaBnB (Oculto temporalmente a petición)
         <div style={{
           background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #ff385c 100%)',
           borderRadius: '16px',
@@ -107,6 +107,7 @@ const Home = () => {
             Explorar CubaAirbnb ➔
           </Link>
         </div>
+        */}
 
         {/* Primera Fila de Categorías Generales */}
         <div className="home-row">
