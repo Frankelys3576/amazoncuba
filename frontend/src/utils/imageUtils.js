@@ -1,13 +1,5 @@
 // SVG data URI placeholder that says "Sin foto disponible"
-export const NO_PHOTO_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-  <rect width="400" height="400" fill="#f1f5f9"/>
-  <rect x="140" y="120" width="120" height="90" rx="8" fill="none" stroke="#94a3b8" stroke-width="3"/>
-  <circle cx="170" cy="148" r="10" fill="#94a3b8"/>
-  <path d="M145 200 L175 170 L205 195 L225 175 L255 200" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linejoin="round"/>
-  <text x="200" y="260" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#64748b">Sin foto disponible</text>
-</svg>
-`)}`;
+export const NO_PHOTO_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiB2aWV3Qm94PSIwIDAgNDAwIDQwMCI+CiAgPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmMWY1ZjkiLz4KICA8cmVjdCB4PSIxNDAiIHk9IjEyMCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI5MCIgcng9IjgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzk0YTNiOCIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGNpcmNsZSBjeD0iMTcwIiBjeT0iMTQ4IiByPSIxMCIgZmlsbD0iIzk0YTNiOCIvPgogIDxwYXRoIGQ9Ik0xNDUgMjAwIEwxNzUgMTcwIEwyMDUgMTk1IEwyMjUgMTc1IEwyNTUgMjAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDx0ZXh0IHg9IjIwMCIgeT0iMjYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGZvbnQtd2VpZ2h0PSI2MDAiIGZpbGw9IiM2NDc0OGIiPlNpbiBmb3RvIGRpc3BvbmlibGU8L3RleHQ+Cjwvc3ZnPg==';
 
 export const DEFAULT_PRODUCT_FALLBACK = NO_PHOTO_PLACEHOLDER;
 
@@ -24,6 +16,10 @@ export const getValidImageUrl = (url, fallback = DEFAULT_PRODUCT_FALLBACK) => {
   }
   
   let cleanUrl = url.trim();
+
+  if (cleanUrl === 'null' || cleanUrl === 'undefined') {
+    return fallback;
+  }
 
   // If it's a local/private network URL, return placeholder immediately
   if (isUnreachableUrl(cleanUrl)) {
