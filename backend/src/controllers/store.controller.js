@@ -301,6 +301,72 @@ const updateZelleInfo = async (req, res) => {
   }
 };
 
+// Actualizar credenciales del vendedor (teléfono como email y contraseña)
+const updateStoreCredentials = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { phone, password } = req.body;
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+    
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (storeError || !store) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+    
+    const updates = {};
+    let cleanPhone = null;
+    
+    if (phone) {
+      cleanPhone = phone.replace(/[^0-9]/g, '');
+      updates.email = `${cleanPhone}@amasoncubano.com`;
+    }
+    
+    if (password) {
+      updates.password = password;
+    }
+    
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No se enviaron datos para actualizar' });
+    }
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, updates);
+    
+    if (updateError) {
+      console.error('Error updating auth user:', updateError);
+      return res.status(500).json({ error: 'Error al actualizar las credenciales en Auth' });
+    }
+    
+    if (cleanPhone) {
+      const { error: storeUpdateError } = await supabase.from('stores').update({ phone: cleanPhone }).eq('id', id);
+      if (storeUpdateError) {
+         console.error('Error updating store phone:', storeUpdateError);
+      }
+    }
+    
+    res.json({ message: 'Credenciales actualizadas exitosamente', phone: cleanPhone || store.phone });
+  } catch (err) {
+    console.error('Error in updateStoreCredentials:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 module.exports = {
   getStores,
   getStoreById,
@@ -308,5 +374,6 @@ module.exports = {
   updateZelleInfo,
   updateStoreProfile,
   getStoreStats,
-  getAdminStoreDetails
+  getAdminStoreDetails,
+  updateStoreCredentials
 };

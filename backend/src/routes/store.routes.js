@@ -9,6 +9,7 @@ router.get('/:id', storeController.getStoreById);
 router.get('/:id/admin-details', storeController.getAdminStoreDetails);
 router.put('/:id/status', storeController.updateStoreStatus);
 router.put('/:id/zelle', storeController.updateZelleInfo);
+router.put('/:id/credentials', storeController.updateStoreCredentials);
 router.put('/:id', storeController.updateStoreProfile);
 router.get('/:id/stats', storeController.getStoreStats);
 

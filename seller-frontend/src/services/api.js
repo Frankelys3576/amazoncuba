@@ -325,3 +325,25 @@ export const deleteStoreCategory = async (storeId, categoryId) => {
     throw error;
   }
 };
+
+export const updateCredentials = async (storeId, credentialsData) => {
+  try {
+    const token = localStorage.getItem('seller_token');
+    const response = await fetch(`${API_URL}/stores/${storeId}/credentials`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(credentialsData),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Error updating credentials');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating credentials:', error);
+    throw error;
+  }
+};

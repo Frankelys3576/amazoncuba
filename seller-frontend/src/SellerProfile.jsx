@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Image, Phone, AlignLeft, Save, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
-import { getStoreById, updateStoreProfile, uploadImage, deleteAccount } from './services/api';
+import { Store, Image, Phone, AlignLeft, Save, AlertCircle, CheckCircle2, Trash2, KeyRound } from 'lucide-react';
+import { getStoreById, updateStoreProfile, uploadImage, deleteAccount, updateCredentials } from './services/api';
 import { cubaLocations } from './utils/cubaLocations';
 import LocationPinPicker from './components/LocationPinPicker';
 import './SellerProfile.css';
@@ -14,6 +14,9 @@ const SellerProfile = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [uploading, setUploading] = useState({ logo: false, banner: false });
+  
+  const [credentials, setCredentials] = useState({ phone: '', password: '' });
+  const [credentialsSaving, setCredentialsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -41,13 +44,13 @@ const SellerProfile = () => {
         if (!storeId) return;
         const data = await getStoreById(storeId);
         if (data) {
-          setFormData({
-            name: data.name || '',
-            slogan: data.slogan || '',
-            description: data.description || '',
-            phone: data.phone || '',
-            logo_url: data.logo_url || '',
-            banner_url: data.banner_url || '',
+            setFormData({
+              name: data.name || '',
+              slogan: data.slogan || '',
+              description: data.description || '',
+              phone: data.phone || '',
+              logo_url: data.logo_url || '',
+              banner_url: data.banner_url || '',
             is_open: data.is_open !== false, // defaults true
             has_delivery: data.has_delivery || false,
             opening_time: data.opening_time || '09:00',
@@ -110,6 +113,39 @@ const SellerProfile = () => {
       setMessage({ text: 'Error al actualizar el perfil. Intenta de nuevo.', type: 'error' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCredentialsSubmit = async (e) => {
+    e.preventDefault();
+    setCredentialsSaving(true);
+    setMessage({ text: '', type: '' });
+    
+    try {
+      const dataToUpdate = {};
+      if (credentials.phone) dataToUpdate.phone = credentials.phone;
+      if (credentials.password) dataToUpdate.password = credentials.password;
+      
+      if (Object.keys(dataToUpdate).length === 0) {
+        setCredentialsSaving(false);
+        return;
+      }
+
+      await updateCredentials(storeId, dataToUpdate);
+      
+      // Si cambió el teléfono, actualiza la sesión en localStorage (solo visual) y el formulario
+      if (credentials.phone) {
+         setFormData(prev => ({...prev, phone: credentials.phone}));
+      }
+      
+      setMessage({ text: 'Credenciales de acceso actualizadas correctamente.', type: 'success' });
+      setCredentials({ phone: '', password: '' });
+      setTimeout(() => setMessage({ text: '', type: '' }), 5000);
+    } catch (err) {
+      console.error(err);
+      setMessage({ text: err.message || 'Error al actualizar credenciales. Intenta de nuevo.', type: 'error' });
+    } finally {
+      setCredentialsSaving(false);
     }
   };
 
@@ -455,11 +491,46 @@ const SellerProfile = () => {
 
           <div className="form-actions">
             <button type="submit" className="btn btn-primary save-btn" disabled={saving}>
-              {saving ? 'Guardando...' : <><Save size={18}/> Guardar Cambios</>}
+              {saving ? 'Guardando...' : <><Save size={18}/> Guardar Cambios del Perfil</>}
             </button>
           </div>
+        </form>
+
+        <form onSubmit={handleCredentialsSubmit} className="seller-form" style={{ marginTop: '30px' }}>
+          <div className="form-section">
+            <h3><KeyRound size={18}/> 🔐 Seguridad y Acceso</h3>
+            <p style={{fontSize: '13px', color: '#64748b', marginBottom: '15px'}}>Cambia tu número de teléfono de inicio de sesión o establece una nueva contraseña.</p>
+            <div className="form-group">
+              <label htmlFor="cred_phone">Nuevo Número de Teléfono (Usuario)</label>
+              <input 
+                type="tel" 
+                id="cred_phone" 
+                value={credentials.phone}
+                onChange={(e) => setCredentials(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder={`Actual: ${formData.phone}`}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="cred_password">Nueva Contraseña</label>
+              <input 
+                type="password" 
+                id="cred_password"
+                value={credentials.password}
+                onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Dejar en blanco para no cambiar"
+              />
+            </div>
+          </div>
           
-          <div className="danger-zone">
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary save-btn" disabled={credentialsSaving} style={{backgroundColor: '#0f172a'}}>
+              {credentialsSaving ? 'Actualizando...' : <><KeyRound size={18}/> Actualizar Credenciales</>}
+            </button>
+          </div>
+        </form>
+          
+        <div className="danger-zone" style={{ marginTop: '30px' }}>
             <h3><AlertCircle size={18} color="#ef4444" /> Zona de Peligro</h3>
             <p>Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate bien.</p>
             <button 
