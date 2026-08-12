@@ -15,7 +15,9 @@ const AdminDashboard = () => {
 
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
-  const [activeModal, setActiveModal] = useState(null); // 'sales' | 'products' | null
+  const [stores, setStores] = useState([]);
+  const [activeModal, setActiveModal] = useState(null); // 'sales' | 'products' | 'daily_registrations' | null
+  const [selectedDayStores, setSelectedDayStores] = useState(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -31,6 +33,7 @@ const AdminDashboard = () => {
         
         setOrders(ordersData);
         setProducts(productsData);
+        setStores(storesData);
 
         setStats({
           totalStores: storesData.filter(s => s.status === 'approved').length,
@@ -57,6 +60,43 @@ const AdminDashboard = () => {
       setActiveModal('products');
     }
   };
+
+  const handleDayClick = (dayData) => {
+    setSelectedDayStores(dayData);
+    setActiveModal('daily_registrations');
+  };
+
+  const getLast7DaysStats = () => {
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      days.push({
+        date: d,
+        label: d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }),
+        stores: []
+      });
+    }
+
+    stores.forEach(store => {
+      if (!store.created_at) return;
+      const storeDate = new Date(store.created_at);
+      storeDate.setHours(0, 0, 0, 0);
+      
+      const dayMatch = days.find(d => d.date.getTime() === storeDate.getTime());
+      if (dayMatch) {
+        dayMatch.stores.push(store);
+      }
+    });
+
+    const maxCount = Math.max(...days.map(d => d.stores.length), 1);
+    return { days, maxCount };
+  };
+
+  const chartData = getLast7DaysStats();
 
   const statCards = [
     { id: 'sales', title: 'Ingresos Totales', value: `$${stats.totalSales.toFixed(2)}`, icon: <DollarSign size={24} />, trend: '+12.5%' },
@@ -96,14 +136,34 @@ const AdminDashboard = () => {
 
       <div className="dashboard-charts">
         <div className="chart-container">
-          <h3>Ventas Generales (Últimos 7 días)</h3>
-          <div className="fake-chart">
-            {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-              <div key={i} className="bar-wrapper">
-                <div className="bar" style={{ height: `${h}%` }}></div>
-                <span className="bar-label">Día {i+1}</span>
-              </div>
-            ))}
+          <h3>Nuevos Vendedores (Últimos 7 días)</h3>
+          <p style={{fontSize: '13px', color: '#64748b', marginBottom: '15px'}}>Haz clic en una barra para ver qué negocios se registraron ese día.</p>
+          <div className="fake-chart" style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '15px', padding: '10px 0', borderBottom: '1px solid #e2e8f0' }}>
+            {chartData.days.map((day, i) => {
+              const heightPercentage = (day.stores.length / chartData.maxCount) * 100;
+              return (
+                <div key={i} className="bar-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => handleDayClick(day)}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: day.stores.length > 0 ? '#3b82f6' : '#94a3b8' }}>
+                    {day.stores.length}
+                  </span>
+                  <div 
+                    className="bar" 
+                    style={{ 
+                      height: `${Math.max(heightPercentage, 2)}%`, 
+                      width: '100%', 
+                      maxWidth: '40px',
+                      backgroundColor: day.stores.length > 0 ? '#3b82f6' : '#e2e8f0',
+                      borderRadius: '4px 4px 0 0',
+                      transition: 'all 0.2s ease',
+                      minHeight: '4px'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = day.stores.length > 0 ? '#3b82f6' : '#e2e8f0'}
+                  ></div>
+                  <span className="bar-label" style={{ fontSize: '11px', color: '#64748b' }}>{day.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -183,6 +243,43 @@ const AdminDashboard = () => {
                           <td>${Number(product.price).toFixed(2)}</td>
                           <td>{product.stock}</td>
                           <td>{product.category_id}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'daily_registrations' && selectedDayStores && (
+        <div className="admin-modal-overlay" onClick={() => setActiveModal(null)}>
+          <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2>Negocios Registrados el {selectedDayStores.label}</h2>
+              <button onClick={() => setActiveModal(null)} className="close-btn"><X size={24}/></button>
+            </div>
+            <div className="admin-modal-body">
+              {selectedDayStores.stores.length === 0 ? (
+                <p className="no-data">No se registraron negocios en este día.</p>
+              ) : (
+                <div className="data-table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Nombre del Negocio</th>
+                        <th>Teléfono (Usuario)</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedDayStores.stores.map(store => (
+                        <tr key={store.id}>
+                          <td><strong>{store.name}</strong></td>
+                          <td>{store.phone || 'N/A'}</td>
+                          <td><span className={`status-tag ${store.status}`}>{store.status}</span></td>
                         </tr>
                       ))}
                     </tbody>
