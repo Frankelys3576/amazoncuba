@@ -60,7 +60,11 @@ const ProductCard = ({ product }) => {
             )}
           </p>
           <p className="product-card-delivery">
-            {product.description?.startsWith('[RESERVACIÓN]') ? '🏡 Disponibilidad inmediata en Cuba' : 'Envío GRATIS a Cuba'}
+            {product.description?.startsWith('[RESERVACIÓN]') 
+              ? '🏡 Disponibilidad inmediata en Cuba' 
+              : product.store_has_delivery 
+                ? '🚚 Tenemos domicilio' 
+                : '🏬 Recogida en tienda (No tenemos domicilio)'}
           </p>
           <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
             📍 {product.municipality && product.municipality !== 'Toda la provincia' ? product.municipality : (product.province || 'Toda Cuba')}

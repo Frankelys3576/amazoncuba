@@ -5,7 +5,7 @@ const getProducts = async (req, res) => {
   const { storeId, q, category, province, municipality, store_category_id, requireImage } = req.query;
 
   try {
-    let query = supabase.from('products').select('*, stores(accepts_zelle, name, phone, slug)');
+    let query = supabase.from('products').select('*, stores(accepts_zelle, name, phone, slug, has_delivery)');
     if (storeId) query = query.eq('store_id', storeId);
     if (category) query = query.eq('category_id', category);
     if (store_category_id) query = query.eq('store_category_id', store_category_id);
@@ -42,6 +42,7 @@ const getProducts = async (req, res) => {
     const formattedData = (data || []).map(item => ({
       ...item,
       store_accepts_zelle: item.stores ? item.stores.accepts_zelle === true : false,
+      store_has_delivery: item.stores ? item.stores.has_delivery === true : false,
       store_name: item.store_name || item.stores?.name,
       store_phone: item.store_phone || item.stores?.phone,
       store_slug: item.store_slug || item.stores?.slug || item.stores?.id
@@ -60,7 +61,7 @@ const getProductById = async (req, res) => {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('products')
-      .select('*, stores(accepts_zelle, name, phone, slug)')
+      .select('*, stores(accepts_zelle, name, phone, slug, has_delivery)')
       .eq('id', id)
       .single();
 
@@ -74,6 +75,7 @@ const getProductById = async (req, res) => {
     const formattedData = {
       ...data,
       store_accepts_zelle: data.stores ? data.stores.accepts_zelle === true : false,
+      store_has_delivery: data.stores ? data.stores.has_delivery === true : false,
       store_name: data.store_name || data.stores?.name,
       store_phone: data.store_phone || data.stores?.phone,
       store_slug: data.store_slug || data.stores?.slug || data.stores?.id
