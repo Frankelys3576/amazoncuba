@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Store, Users as UsersIcon, CheckCircle, Clock, XCircle, Building2, UserCircle } from 'lucide-react';
-import { getUsers, getStores } from './services/api';
+import { Search, Store, Users as UsersIcon, CheckCircle, Clock, XCircle, Building2, UserCircle, Edit } from 'lucide-react';
+import { getUsers, getStores, updateUser } from './services/api';
 import './AdminDirectory.css';
 
 const AdminDirectory = () => {
@@ -13,6 +13,11 @@ const AdminDirectory = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approved, rejected
   const [typeFilter, setTypeFilter] = useState('all'); // all, individual, business (only applies to stores)
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({ email: '', password: '' });
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -56,6 +61,43 @@ const AdminDirectory = () => {
 
   const filteredStores = getFilteredStores();
   const filteredUsers = getFilteredUsers();
+
+  const getUserByStore = (store) => {
+    if (!store.phone) return null;
+    const phoneMatch = store.phone.replace(/[^0-9]/g, '');
+    return users.find(u => u.email.startsWith(phoneMatch));
+  };
+
+  const openEditModal = (user) => {
+    if (!user) {
+      alert('No se pudo encontrar el usuario asociado (credenciales) de este negocio.');
+      return;
+    }
+    setEditingUser(user);
+    setEditFormData({ email: user.email, password: '' });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      const dataToUpdate = {};
+      if (editFormData.email && editFormData.email !== editingUser.email) dataToUpdate.email = editFormData.email;
+      if (editFormData.password) dataToUpdate.password = editFormData.password;
+      
+      if (Object.keys(dataToUpdate).length > 0) {
+        await updateUser(editingUser.id, dataToUpdate);
+        setUsers(users.map(u => u.id === editingUser.id ? { ...u, email: editFormData.email || u.email } : u));
+        alert('Credenciales actualizadas correctamente.');
+      }
+      setIsEditModalOpen(false);
+    } catch (error) {
+      alert('Error al actualizar: ' + error.message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   if (loading) return <div className="admin-loading">Cargando directorio...</div>;
 
@@ -123,6 +165,7 @@ const AdminDirectory = () => {
                 <th>Tipo</th>
                 <th>Estado</th>
                 <th>Fecha de Registro</th>
+                <th>Acciones</th>
               </tr>
             ) : (
               <tr>
@@ -130,6 +173,7 @@ const AdminDirectory = () => {
                 <th>Nombre</th>
                 <th>Fecha de Registro</th>
                 <th>Estado (Auth)</th>
+                <th>Acciones</th>
               </tr>
             )}
           </thead>
@@ -156,6 +200,15 @@ const AdminDirectory = () => {
                       </span>
                     </td>
                     <td data-label="Fecha de Registro">{new Date(store.created_at).toLocaleDateString()}</td>
+                    <td data-label="Acciones">
+                      <button 
+                        onClick={() => openEditModal(getUserByStore(store))}
+                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '5px' }}
+                        title="Editar Credenciales"
+                      >
+                        <Edit size={18} />
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
@@ -169,6 +222,15 @@ const AdminDirectory = () => {
                     <td data-label="Nombre">{user.full_name || 'Sin nombre'}</td>
                     <td data-label="Fecha de Registro">{new Date(user.created_at).toLocaleDateString()}</td>
                     <td data-label="Estado (Auth)"><span className="status-badge approved">Activo</span></td>
+                    <td data-label="Acciones">
+                      <button 
+                        onClick={() => openEditModal(user)}
+                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '5px' }}
+                        title="Editar Credenciales"
+                      >
+                        <Edit size={18} />
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
@@ -178,6 +240,46 @@ const AdminDirectory = () => {
           </tbody>
         </table>
       </div>
+
+      {isEditModalOpen && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div style={{background: 'white', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%'}}>
+            <h2 style={{marginTop: 0}}>Editar Credenciales</h2>
+            <p style={{fontSize: '14px', color: '#64748b', marginBottom: '20px'}}>
+              Modifica el correo de acceso o establece una nueva contraseña para <strong>{editingUser?.full_name || 'el usuario'}</strong>. 
+              <em>Las contraseñas actuales no se pueden ver porque están encriptadas de forma segura.</em>
+            </p>
+            <form onSubmit={handleEditSubmit}>
+              <div style={{marginBottom: '15px'}}>
+                <label style={{display: 'block', marginBottom: '5px', fontWeight: '500'}}>Correo (Usuario):</label>
+                <input 
+                  type="email" 
+                  value={editFormData.email} 
+                  onChange={e => setEditFormData({...editFormData, email: e.target.value})}
+                  required
+                  style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #cbd5e1'}}
+                />
+              </div>
+              <div style={{marginBottom: '20px'}}>
+                <label style={{display: 'block', marginBottom: '5px', fontWeight: '500'}}>Nueva Contraseña (Opcional):</label>
+                <input 
+                  type="password" 
+                  value={editFormData.password}
+                  onChange={e => setEditFormData({...editFormData, password: e.target.value})}
+                  placeholder="Dejar en blanco para no cambiar"
+                  style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #cbd5e1'}}
+                />
+              </div>
+              <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px'}}>
+                <button type="button" onClick={() => setIsEditModalOpen(false)} style={{padding: '10px 15px', border: '1px solid #cbd5e1', background: 'white', borderRadius: '4px', cursor: 'pointer'}}>Cancelar</button>
+                <button type="submit" disabled={editLoading} style={{padding: '10px 15px', border: 'none', background: '#3b82f6', color: 'white', borderRadius: '4px', cursor: 'pointer'}}>
+                  {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
