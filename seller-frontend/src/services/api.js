@@ -42,10 +42,12 @@ export const getCategories = async () => {
 
 export const createProduct = async (productData) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/products`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(productData)
     });
@@ -59,10 +61,12 @@ export const createProduct = async (productData) => {
 
 export const updateProduct = async (id, productData) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/products/${id}`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(productData)
     });
@@ -76,8 +80,12 @@ export const updateProduct = async (id, productData) => {
 
 export const deleteProduct = async (id) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/products/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
     if (!response.ok) throw new Error('Error al eliminar producto');
     return await response.json();
@@ -161,10 +169,12 @@ export const updateOrder = async (id, status) => {
 
 export const deleteAccount = async (storeId) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/auth/delete`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ storeId })
     });
@@ -233,10 +243,12 @@ export const registerSeller = async (userData) => {
 };
 
 export const updateStoreProfile = async (id, profileData) => {
+  const token = localStorage.getItem('seller_token');
   const response = await fetch(`${API_URL}/stores/${id}`, {
     method: 'PUT',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(profileData)
   });
@@ -285,9 +297,10 @@ export const getStoreCategories = async (storeId) => {
 
 export const createStoreCategory = async (storeId, categoryData) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/stores/${storeId}/categories`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(categoryData),
     });
     if (!response.ok) throw new Error('Error creating store category');
@@ -300,9 +313,10 @@ export const createStoreCategory = async (storeId, categoryData) => {
 
 export const updateStoreCategory = async (storeId, categoryId, categoryData) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(categoryData),
     });
     if (!response.ok) throw new Error('Error updating store category');
@@ -315,8 +329,10 @@ export const updateStoreCategory = async (storeId, categoryId, categoryData) => 
 
 export const deleteStoreCategory = async (storeId, categoryId) => {
   try {
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
       method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!response.ok) throw new Error('Error deleting store category');
     return await response.json();

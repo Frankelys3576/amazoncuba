@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { authenticateSeller } = require('../middleware/auth.middleware');
 
 // POST /api/auth/register
 router.post('/register', authController.register);
@@ -9,6 +10,6 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 
 // POST /api/auth/delete
-router.post('/delete', authController.deleteAccount);
+router.post('/delete', authenticateSeller, authController.deleteAccount);
 
 module.exports = router;

@@ -101,9 +101,9 @@ const Navbar = () => {
 
         {/* Botón Vender (Oculto en vista de tienda) - Extremo Derecho */}
         {!isStoreView && (
-          <Link to="/vendedor/registro" className="nav-sell-btn" style={{ marginLeft: '8px' }}>
+          <a href="https://seller-cuba-amazon.vercel.app" className="nav-sell-btn" style={{ marginLeft: '8px', textDecoration: 'none' }}>
             Vender un producto
-          </Link>
+          </a>
         )}
       </div>
 

@@ -152,11 +152,9 @@ const login = async (req, res) => {
 
 const deleteAccount = async (req, res) => {
   try {
-    const { storeId } = req.body;
-
-    if (!storeId) {
-      return res.status(400).json({ error: 'Store ID is required' });
-    }
+    // La tienda viene del middleware authenticateSeller (por el token del vendedor logueado),
+    // no del body, para que nadie pueda borrar la cuenta de otra tienda mandando otro storeId.
+    const storeId = req.store.id;
 
     // 1. Obtener todos los productos de la tienda
     const { data: products } = await supabase

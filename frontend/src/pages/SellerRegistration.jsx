@@ -82,9 +82,8 @@ const SellerRegistration = () => {
         
         window.location.href = "https://seller-cuba-amazon.vercel.app/dashboard";
       } else {
-        const formattedEmail = formData.email.includes('@') 
-          ? formData.email.toLowerCase().trim()
-          : `${formData.email.trim()}@amasoncubano.com`;
+        const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+        const formattedEmail = `${cleanPhone}@amasoncubano.com`;
 
         const regResponse = await registerSeller({
           email: formattedEmail,
@@ -324,19 +323,6 @@ const SellerRegistration = () => {
                   </div>
                 </div>
               )}
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Correo electrónico *</label>
-                <input 
-                  type="email" 
-                  name="email" 
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="correo@ejemplo.com"
-                  required
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Teléfono / WhatsApp *</label>

@@ -88,10 +88,14 @@ const getProductById = async (req, res) => {
   }
 };
 
-// Crear un nuevo producto (solo admins teóricamente)
+// Crear un nuevo producto (requiere ser el dueño de la tienda)
 const createProduct = async (req, res) => {
   try {
     const { name, description, price, price_usd, currency, stock, category_id, store_category_id, image_url, store_id, province, municipality, delivery_locations, image_url_2, image_url_3, image_url_4, image_url_5 } = req.body;
+
+    if (String(store_id) !== String(req.store.id)) {
+      return res.status(403).json({ error: 'No tienes permiso para crear productos en esta tienda' });
+    }
 
     // Si no mandan delivery_locations, creamos uno básico por retrocompatibilidad
     const locationsArray = delivery_locations || [`${province}:${municipality}`];
@@ -117,6 +121,20 @@ const createProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('products')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingProduct) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    if (String(existingProduct.store_id) !== String(req.store.id)) {
+      return res.status(403).json({ error: 'No tienes permiso para eliminar este producto' });
+    }
 
     // 1. Eliminar referencias en order_items primero
     await supabase
@@ -144,6 +162,20 @@ const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
+
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('products')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingProduct) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    if (String(existingProduct.store_id) !== String(req.store.id)) {
+      return res.status(403).json({ error: 'No tienes permiso para editar este producto' });
+    }
 
     // Si viene delivery_locations y province/municipality, podemos dejarlos pasar
     // Si no mandan moneda, no la sobreescribimos pero sí nos aseguramos de que no sea null

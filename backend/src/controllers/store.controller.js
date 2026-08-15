@@ -308,30 +308,9 @@ const updateStoreCredentials = async (req, res) => {
   try {
     const { id } = req.params;
     const { phone, password } = req.body;
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Token no proporcionado' });
-    }
+    // req.user y req.store ya vienen validados por el middleware authenticateSeller/requireStoreOwnership
+    const { user, store } = req;
 
-    const token = authHeader.split(' ')[1];
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Token inválido o expirado' });
-    }
-    
-    const { data: store, error: storeError } = await supabase
-      .from('stores')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (storeError || !store) {
-      return res.status(404).json({ error: 'Tienda no encontrada' });
-    }
-    
     const updates = {};
     let cleanPhone = null;
     
