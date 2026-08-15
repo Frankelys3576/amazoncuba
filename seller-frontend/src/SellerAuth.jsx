@@ -73,7 +73,7 @@ const SellerAuth = () => {
         let formattedEmail = formData.identifier.trim().toLowerCase();
         if (!formattedEmail.includes('@')) {
           const cleanPhone = formattedEmail.replace(/[^0-9]/g, '');
-          formattedEmail = `${cleanPhone}@amasoncubano.com`;
+          formattedEmail = `${cleanPhone}@cubaamazon.com`;
         }
 
         const response = await loginSeller(formattedEmail, formData.password);
@@ -91,7 +91,7 @@ const SellerAuth = () => {
         navigate('/dashboard');
       } else {
         const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
-        const formattedEmail = `${cleanPhone}@amasoncubano.com`;
+        const formattedEmail = `${cleanPhone}@cubaamazon.com`;
 
         const regResponse = await registerSeller({
           email: formattedEmail,

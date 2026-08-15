@@ -70,7 +70,7 @@ const SellerRegistration = () => {
       if (isLogin) {
         const formattedEmail = formData.identifier.includes('@') 
           ? formData.identifier.toLowerCase().trim()
-          : `${formData.identifier.trim()}@amasoncubano.com`;
+          : `${formData.identifier.trim()}@cubaamazon.com`;
 
         const response = await loginSeller(formattedEmail, formData.password);
         if (response.store && response.store.id) {
@@ -83,7 +83,7 @@ const SellerRegistration = () => {
         window.location.href = "https://seller-cuba-amazon.vercel.app/dashboard";
       } else {
         const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
-        const formattedEmail = `${cleanPhone}@amasoncubano.com`;
+        const formattedEmail = `${cleanPhone}@cubaamazon.com`;
 
         const regResponse = await registerSeller({
           email: formattedEmail,

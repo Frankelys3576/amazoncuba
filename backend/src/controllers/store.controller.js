@@ -316,7 +316,7 @@ const updateStoreCredentials = async (req, res) => {
     
     if (phone) {
       cleanPhone = phone.replace(/[^0-9]/g, '');
-      updates.email = `${cleanPhone}@amasoncubano.com`;
+      updates.email = `${cleanPhone}@cubaamazon.com`;
     }
     
     if (password) {
