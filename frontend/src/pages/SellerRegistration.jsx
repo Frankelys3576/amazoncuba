@@ -73,9 +73,21 @@ const SellerRegistration = () => {
           : `${formData.identifier.trim()}@cubaamazon.com`;
 
         const response = await loginSeller(formattedEmail, formData.password);
-        if (response.store && response.store.id) {
-          localStorage.setItem('seller_store_id', response.store.id.toString());
+
+        // La tienda se resuelve por user_id, así que las cuentas que no
+        // tienen ninguna asociada reciben store: null. Antes se seguía
+        // igualmente al panel, sin id de tienda (o con el que hubiera
+        // quedado de una sesión anterior), y allí todas las peticiones
+        // fallan. Mejor explicarlo aquí que mandarlo a un panel roto.
+        if (!response.store || !response.store.id) {
+          localStorage.removeItem('seller_store_id');
+          localStorage.removeItem('seller_token');
+          localStorage.removeItem('seller_name');
+          setError('No hay ninguna tienda asociada a esta cuenta. Por favor, contacta al soporte para vincularla.');
+          return;
         }
+
+        localStorage.setItem('seller_store_id', response.store.id);
         localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
         const fullName = response.user?.user_metadata?.full_name || response.user?.email || 'Vendedor';
         localStorage.setItem('seller_name', fullName);

@@ -23,13 +23,20 @@ describe('Products (e2e)', () => {
     };
   };
 
+  // class-validator's @IsUUID checks the RFC variant nibble too (must be
+  // 8/9/a/b), unlike SpanishParseUuidPipe's looser route-param regex — so
+  // these need to be real uuid-shaped (version 7, variant 8) to pass the
+  // CreateProductDto validation this spec exercises via POST.
+  const STORE_ID = '11111111-1111-7111-8111-111111111111';
+  const PRODUCT_ID = '22222222-2222-7222-8222-222222222222';
+
   beforeEach(async () => {
     prismaMock = {
       product: {
         findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn().mockResolvedValue({ id: 1, store_id: 1 }),
-        findUnique: jest.fn().mockResolvedValue({ id: 1, store_id: 1 }),
-        update: jest.fn().mockResolvedValue({ id: 1, store_id: 1 }),
+        create: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
+        findUnique: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
+        update: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
       },
     };
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -56,7 +63,7 @@ describe('Products (e2e)', () => {
       .useValue({
         canActivate: (context: any) => {
           const req = context.switchToHttp().getRequest();
-          req.store = { id: 1 };
+          req.store = { id: STORE_ID };
           return true;
         },
       })
@@ -74,14 +81,16 @@ describe('Products (e2e)', () => {
     await app.close();
   });
 
-  // M3: pins the Spanish exceptionFactory end to end through the real pipe
-  // wired into the controller, not just the pipe class in isolation.
-  it('GET /api/products/:id with a non-numeric id returns 400 with the Spanish message', () => {
+  // M3 (updated for the uuid migration): pins the Spanish exceptionFactory
+  // end to end through the real pipe wired into the controller, not just the
+  // pipe class in isolation. Ids became uuid v7 strings, so the pipe is now
+  // SpanishParseUuidPipe and its message reflects that.
+  it('GET /api/products/:id with a non-uuid id returns 400 with the Spanish message', () => {
     return request(app.getHttpServer())
       .get('/api/products/abc')
       .expect(400)
       .expect((res) => {
-        expect(res.body.error).toBe('El identificador debe ser un número entero');
+        expect(res.body.error).toBe('El identificador debe ser un UUID válido');
       });
   });
 
@@ -94,47 +103,61 @@ describe('Products (e2e)', () => {
       });
   });
 
-  // M4: the BigInt.prototype.toJSON shim (src/common/bigint.ts, imported for
-  // its side effect by AppModule) is what makes it possible to
-  // JSON-serialize a response at all when Prisma returns a real bigint id/FK
-  // — without it, res.send() throws "Do not know how to serialize a BigInt"
-  // and this request would 500. A mock that returns plain `number` ids
-  // (as the rest of this file's fixtures do) would never exercise that path;
-  // this one deliberately returns a real `bigint` the way the generated
-  // Prisma client actually does.
-  it('GET /api/products serializes a real Prisma bigint id/store_id without throwing (BigInt.prototype.toJSON shim)', () => {
+  // C2: schema.prisma still carries 15 `BigInt` `legacy_*` columns (the
+  // migration's rollback scaffolding), and formatProduct spreads the whole
+  // row (`...rest`). A row with a genuine bigint on it therefore reaches
+  // res.json(), where JSON.stringify throws "Do not know how to serialize a
+  // BigInt" and this request 500s — unless the global
+  // StripLegacyFieldsInterceptor removed the column first.
+  //
+  // This fixture returns real `bigint`s (`1n`), not `Number`s. Every other
+  // Prisma mock in this suite returns plain `Number`/string fields, which is
+  // exactly why 121/121 stayed green when the previous BigInt regression
+  // test was deleted. Revert the interceptor and this test fails with a 500.
+  it('GET /api/products serializes a row carrying real bigint legacy_* columns, and never returns them', () => {
     prismaMock.product.findMany.mockResolvedValueOnce([
-      { id: BigInt(1), store_id: BigInt(7), name: 'Café', price: 5 },
+      {
+        id: PRODUCT_ID,
+        legacy_id: 1n,
+        store_id: STORE_ID,
+        legacy_store_id: 7n,
+        legacy_category_id: 3n,
+        legacy_store_category_id: null,
+        name: 'Café',
+        price: 5,
+      },
     ]);
 
     return request(app.getHttpServer())
       .get('/api/products')
       .expect(200)
       .expect((res) => {
-        expect(res.body[0].id).toBe(1);
-        expect(res.body[0].store_id).toBe(7);
+        expect(res.body[0].id).toBe(PRODUCT_ID);
+        expect(res.body[0].store_id).toBe(STORE_ID);
+        expect(
+          Object.keys(res.body[0]).filter((k) => k.startsWith('legacy_')),
+        ).toEqual([]);
       });
   });
 
   // CRITICAL 1: SellerProducts.jsx always sends store_id as a string
-  // (localStorage.getItem never gets parsed), never as a number. A fixture
-  // that posts store_id: 1 (a number) exercises a payload shape the real
-  // frontend never sends and would pass even if the DTO rejected the
-  // string the client actually posts. Send it as the frontend does.
-  it('POST /api/products with an authenticated store and valid body (store_id as a string, as the frontend sends it) returns 201', () => {
+  // (localStorage.getItem never gets parsed). Store ids are uuid v7 strings
+  // post-migration, so this is now the DTO's native shape (no numeric
+  // coercion involved).
+  it('POST /api/products with an authenticated store and valid body (store_id as the frontend sends it) returns 201', () => {
     return request(app.getHttpServer())
       .post('/api/products')
       .send({
         name: 'Café',
         price: 5,
-        store_id: '1',
+        store_id: STORE_ID,
         province: 'La Habana',
         municipality: 'Playa',
       })
       .expect(201);
   });
 
-  it('POST /api/products with a non-numeric string store_id still returns 400', () => {
+  it('POST /api/products with a non-uuid string store_id still returns 400', () => {
     return request(app.getHttpServer())
       .post('/api/products')
       .send({
@@ -150,7 +173,7 @@ describe('Products (e2e)', () => {
   it('POST /api/products with a missing required field returns 400', () => {
     return request(app.getHttpServer())
       .post('/api/products')
-      .send({ price: 5, store_id: 1 })
+      .send({ price: 5, store_id: STORE_ID })
       .expect(400);
   });
 
@@ -162,13 +185,13 @@ describe('Products (e2e)', () => {
   // asserts the field actually reaches the mocked Prisma call's data.
   it('PUT /api/products/:id with is_featured survives validation and reaches prisma.product.update', () => {
     return request(app.getHttpServer())
-      .put('/api/products/1')
+      .put(`/api/products/${PRODUCT_ID}`)
       .send({ is_featured: true })
       .expect(200)
       .expect(() => {
         expect(prismaMock.product.update).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { id: 1 },
+            where: { id: PRODUCT_ID },
             data: expect.objectContaining({ is_featured: true }),
           }),
         );

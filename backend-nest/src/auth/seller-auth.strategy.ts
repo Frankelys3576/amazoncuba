@@ -7,7 +7,6 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-http-bearer';
 import { SupabaseService } from '../supabase/supabase.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { extractPhoneFromEmail } from './extract-phone-from-email.util';
 
 @Injectable()
 export class SellerAuthStrategy extends PassportStrategy(Strategy, 'bearer') {
@@ -28,9 +27,8 @@ export class SellerAuthStrategy extends PassportStrategy(Strategy, 'bearer') {
       throw new UnauthorizedException('Token inválido o expirado');
     }
 
-    const phone = extractPhoneFromEmail(user.email);
-    const store = await this.prisma.store.findFirst({
-      where: { phone },
+    const store = await this.prisma.store.findUnique({
+      where: { user_id: user.id },
     });
 
     if (!store) {

@@ -1071,15 +1071,44 @@ Supabase Dashboard → Database → Backups → take an on-demand backup. Record
 
 Run: `node backend/migrations/verify_integrity.mjs > /tmp/prod-before.txt`
 
+- [ ] **Step 3b: Record the current foreign-key definitions**
+
+Run in the SQL editor and **save the output** — this is the only record of what production's referential actions were before the migration touched them:
+
+```sql
+select conrelid::regclass::text as table_name, conname, pg_get_constraintdef(oid)
+from pg_constraint
+where contype = 'f'
+  and conrelid = any (array[
+    'public.stores','public.categories','public.products','public.store_categories',
+    'public.orders','public.order_items','public.platform_settings',
+    'public.product_views','public.product_reviews']::regclass[])
+order by 1, 2;
+```
+
+Three reasons this matters. It is the rollback reference — section E replays these definitions, but if you ever revert by hand this is what you restore to. It tells you the **real constraint names**, which Step 5's checker compares against a hardcoded list (see the note there). And any row whose definition contains `ON DELETE` or `ON UPDATE` is an action the migration must preserve — the migration was originally written to silently drop all of them, which is why this step exists.
+
 - [ ] **Step 4: Apply**
 
 Run `001_uuid_v7_function.sql` then `002_uuid_v7_migration.sql` in the production SQL editor.
-Expected: `COMMIT`. Any exception rolls the whole transaction back — the database is unchanged and the migration can be fixed and retried.
+Expected: `COMMIT`.
+
+**Expect the first attempt to abort, and treat that as the pre-flight working rather than as a failure.** Section 0 refuses to proceed if it finds a dependent view or matview, a foreign key from a table outside the nine, an RLS policy on any of the nine, a unique constraint or index sitting on a column about to be renamed, or a non-internal trigger. Each of those would otherwise let the migration **commit cleanly while causing silent structural damage** — a view or index quietly repointing at the `legacy_*` column, a trigger that breaks at the next write rather than at migration time. Every one of these was reproduced against a real Postgres 17 instance; none of them raises an error on its own.
+
+Two aborts do NOT name their cause, so recognise them by their message. A `DEFERRABLE INITIALLY DEFERRED` foreign key on any of the nine produces `cannot ALTER TABLE "..." because it has pending trigger events` — section B's updates queue deferred referential checks that section C cannot alter past. Supabase's UI does not create deferrable foreign keys, so this is unlikely, but the message gives no hint. And re-running the migration against an already-migrated database now aborts at pre-flight, because section G's index on the renamed column trips the unique/index check — that is the pre-flight correctly refusing a second run, not a defect.
+
+When it aborts, the exception names the offending object. Drop or adjust that object, note it so it can be recreated afterwards against the new uuid columns, and re-run. **Every abort is a clean, complete rollback** — the database is unchanged and there is no partial state to clean up. Repeat until it commits.
+
+Section E raises a `NOTICE` for each foreign key whose captured definition carries a non-default `ON DELETE`/`ON UPDATE`, so you can see what is being preserved. **Confirm before you start that the Supabase SQL editor surfaces NOTICE output** — if it does not, that evidence is invisible and Step 3b's saved output is your only record.
 
 - [ ] **Step 5: Verify**
 
 Run: `node backend/migrations/verify_uuid_v7.mjs && node backend/migrations/verify_integrity.mjs > /tmp/prod-after.txt && diff /tmp/prod-before.txt /tmp/prod-after.txt`
 Expected: identical row counts, zero orphans, ownership section added.
+
+The integrity checker also verifies that each child row's `legacy_*` foreign key still resolves to the same parent it did before — a cross-wired join in section B would otherwise leave every row pointing at *some* valid parent and pass an orphan check with zero orphans. It asserts the eight foreign keys still exist, too.
+
+**One known false-alarm mode:** the checker names those eight constraints from a hardcoded list, while the migration now preserves whatever names production actually uses. If Step 3b showed a constraint under a different name, the checker reports `ERROR` on a perfectly healthy database. Compare against Step 3b's output before treating it as a real failure. We could not enumerate production's constraint names ahead of time — `pg_constraint` is not reachable through PostgREST — and a false alarm a human resolves at the console was judged better than no check at all.
 
 - [ ] **Step 6: Deploy the Express changes**
 

@@ -7,21 +7,23 @@ describe('StoresService', () => {
     store: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn(), ...overrides },
   }) as any;
 
+  const STORE_ID = '11111111-1111-1111-1111-111111111111';
+
   describe('findOne', () => {
-    it('looks up by numeric id when the param is numeric', async () => {
+    it('looks up by id when the param is uuid-shaped', async () => {
       const prisma = makePrisma({
-        findUnique: jest.fn().mockResolvedValue({ id: 5, zelle_info: {} }),
+        findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} }),
       });
       const service = new StoresService(prisma, {} as any);
 
-      await service.findOne('5');
+      await service.findOne(STORE_ID);
 
-      expect(prisma.store.findUnique).toHaveBeenCalledWith({ where: { id: 5 } });
+      expect(prisma.store.findUnique).toHaveBeenCalledWith({ where: { id: STORE_ID } });
     });
 
-    it('looks up by slug when the param is not numeric', async () => {
+    it('looks up by slug when the param is not uuid-shaped', async () => {
       const prisma = makePrisma({
-        findFirst: jest.fn().mockResolvedValue({ id: 5, slug: 'cafeteria-juan', zelle_info: {} }),
+        findFirst: jest.fn().mockResolvedValue({ id: STORE_ID, slug: 'cafeteria-juan', zelle_info: {} }),
       });
       const service = new StoresService(prisma, {} as any);
 
@@ -32,11 +34,20 @@ describe('StoresService', () => {
       });
     });
 
-    it('throws NotFoundException when nothing matches', async () => {
+    it('throws NotFoundException when nothing matches a uuid-shaped id', async () => {
       const prisma = makePrisma({ findUnique: jest.fn().mockResolvedValue(null) });
       const service = new StoresService(prisma, {} as any);
 
-      await expect(service.findOne('999')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.findOne('99999999-9999-9999-9999-999999999999'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws NotFoundException when nothing matches a slug', async () => {
+      const prisma = makePrisma({ findFirst: jest.fn().mockResolvedValue(null) });
+      const service = new StoresService(prisma, {} as any);
+
+      await expect(service.findOne('no-such-slug')).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -49,8 +60,8 @@ describe('StoresService', () => {
       const service = new StoresService(prisma, supabase);
 
       const result = await service.updateCredentials(
-        7,
-        { user: { id: 'u1' }, store: { id: 7, phone: '5551234' } } as any,
+        STORE_ID,
+        { user: { id: 'u1' }, store: { id: STORE_ID, phone: '5551234' } } as any,
         { phone: '+53 5559999', password: 'newpass1' },
       );
 
@@ -64,7 +75,7 @@ describe('StoresService', () => {
         password: 'newpass1',
       });
       expect(update).toHaveBeenCalledWith({
-        where: { id: 7 },
+        where: { id: STORE_ID },
         data: { phone: '535559999' },
       });
       expect(result).toEqual({
@@ -87,34 +98,36 @@ describe('StoresService', () => {
 
       await expect(
         service.updateCredentials(
-          7,
-          { user: { id: 'u1' }, store: { id: 7, phone: '5551234' } } as any,
+          STORE_ID,
+          { user: { id: 'u1' }, store: { id: STORE_ID, phone: '5551234' } } as any,
           { password: 'newpass1' },
         ),
       ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 
-  // IMPORTANT 7: SellerAuthStrategy matches store phone by exact equality
-  // against the digits-only phone derived from the caller's email. If a
-  // seller saves a phone with symbols/spaces through their own profile form
-  // (updateProfile) while updateCredentials normalizes to digits-only, the
-  // two diverge and every guarded endpoint 403s for that seller from then on.
-  describe('updateProfile: phone normalization (IMPORTANT 7)', () => {
-    it('strips non-digit characters from phone before writing it, matching updateCredentials', async () => {
-      const update = jest.fn().mockResolvedValue({ id: 7, zelle_info: {} });
+  // I4: the two backends share one database, so updateProfile must write the
+  // phone exactly as Express does — verbatim (store.controller.js:142).
+  // Normalizing here previously, while Express did not, meant the same
+  // request produced different data in the same column depending on which
+  // backend served it. The rationale for normalizing (SellerAuthStrategy
+  // matching a store by its phone) no longer holds: the strategy resolves
+  // the store by user_id.
+  describe('updateProfile: phone is stored verbatim (I4)', () => {
+    it('writes the phone exactly as sent, matching Express', async () => {
+      const update = jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} });
       const prisma = makePrisma({
-        findUnique: jest.fn().mockResolvedValue({ id: 7, zelle_info: {} }),
+        findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} }),
         update,
       });
       const service = new StoresService(prisma, {} as any);
 
-      await service.updateProfile(7, { phone: '+53 5551234' } as any);
+      await service.updateProfile(STORE_ID, { phone: '+53 5551234' } as any);
 
       expect(update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 7 },
-          data: expect.objectContaining({ phone: '535551234' }),
+          where: { id: STORE_ID },
+          data: expect.objectContaining({ phone: '+53 5551234' }),
         }),
       );
     });
@@ -138,38 +151,38 @@ describe('StoresService', () => {
         const prisma = makePrisma({ update: jest.fn().mockRejectedValue(notFoundError) });
         const service = new StoresService(prisma, {} as any);
 
-        await expect(service.updateStatus(999, 'approved')).rejects.toBeInstanceOf(NotFoundException);
+        await expect(service.updateStatus(STORE_ID, 'approved')).rejects.toBeInstanceOf(NotFoundException);
       });
 
       it('propagates a non-P2025 error unchanged', async () => {
         const prisma = makePrisma({ update: jest.fn().mockRejectedValue(dbError) });
         const service = new StoresService(prisma, {} as any);
 
-        await expect(service.updateStatus(1, 'approved')).rejects.toBe(dbError);
+        await expect(service.updateStatus(STORE_ID, 'approved')).rejects.toBe(dbError);
       });
     });
 
     describe('updateProfile', () => {
       it('rethrows a P2025 as NotFoundException', async () => {
         const prisma = makePrisma({
-          findUnique: jest.fn().mockResolvedValue({ id: 999, zelle_info: {} }),
+          findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} }),
           update: jest.fn().mockRejectedValue(notFoundError),
         });
         const service = new StoresService(prisma, {} as any);
 
-        await expect(service.updateProfile(999, { name: 'Nueva' } as any)).rejects.toBeInstanceOf(
+        await expect(service.updateProfile(STORE_ID, { name: 'Nueva' } as any)).rejects.toBeInstanceOf(
           NotFoundException,
         );
       });
 
       it('propagates a non-P2025 error unchanged', async () => {
         const prisma = makePrisma({
-          findUnique: jest.fn().mockResolvedValue({ id: 1, zelle_info: {} }),
+          findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} }),
           update: jest.fn().mockRejectedValue(dbError),
         });
         const service = new StoresService(prisma, {} as any);
 
-        await expect(service.updateProfile(1, { name: 'Nueva' } as any)).rejects.toBe(dbError);
+        await expect(service.updateProfile(STORE_ID, { name: 'Nueva' } as any)).rejects.toBe(dbError);
       });
     });
 
@@ -178,7 +191,7 @@ describe('StoresService', () => {
         const prisma = makePrisma({ update: jest.fn().mockRejectedValue(notFoundError) });
         const service = new StoresService(prisma, {} as any);
 
-        await expect(service.updateZelleInfo(999, { accepts_zelle: true })).rejects.toBeInstanceOf(
+        await expect(service.updateZelleInfo(STORE_ID, { accepts_zelle: true })).rejects.toBeInstanceOf(
           NotFoundException,
         );
       });
@@ -187,7 +200,7 @@ describe('StoresService', () => {
         const prisma = makePrisma({ update: jest.fn().mockRejectedValue(dbError) });
         const service = new StoresService(prisma, {} as any);
 
-        await expect(service.updateZelleInfo(1, { accepts_zelle: true })).rejects.toBe(dbError);
+        await expect(service.updateZelleInfo(STORE_ID, { accepts_zelle: true })).rejects.toBe(dbError);
       });
     });
   });
@@ -201,13 +214,13 @@ describe('StoresService', () => {
   describe('Finding 2: Decimal coercion on updateZelleInfo', () => {
     it('coerces price_per_night to a plain number on the returned row', async () => {
       const update = jest.fn().mockResolvedValue({
-        id: 1,
+        id: STORE_ID,
         price_per_night: new Prisma.Decimal(75.5),
       });
       const prisma = makePrisma({ update });
       const service = new StoresService(prisma, {} as any);
 
-      const result = await service.updateZelleInfo(1, { accepts_zelle: true });
+      const result = await service.updateZelleInfo(STORE_ID, { accepts_zelle: true });
 
       expect(typeof result.price_per_night).toBe('number');
       expect(result.price_per_night).toBe(75.5);
@@ -215,18 +228,18 @@ describe('StoresService', () => {
     });
 
     it('leaves price_per_night null, not 0, when the column is null', async () => {
-      const update = jest.fn().mockResolvedValue({ id: 1, price_per_night: null });
+      const update = jest.fn().mockResolvedValue({ id: STORE_ID, price_per_night: null });
       const prisma = makePrisma({ update });
       const service = new StoresService(prisma, {} as any);
 
-      const result = await service.updateZelleInfo(1, { accepts_zelle: true });
+      const result = await service.updateZelleInfo(STORE_ID, { accepts_zelle: true });
 
       expect(result.price_per_night).toBeNull();
     });
 
     it('does not add store_name/store_slug/etc fields (must not route through formatStore)', async () => {
       const update = jest.fn().mockResolvedValue({
-        id: 1,
+        id: STORE_ID,
         name: 'Casa X',
         province: null,
         zelle_info: {},
@@ -235,7 +248,7 @@ describe('StoresService', () => {
       const prisma = makePrisma({ update });
       const service = new StoresService(prisma, {} as any);
 
-      const result = await service.updateZelleInfo(1, { accepts_zelle: true });
+      const result = await service.updateZelleInfo(STORE_ID, { accepts_zelle: true });
 
       // formatStore would coerce `province: null` to `''` and add a
       // `gallery` field; updateZelleInfo must not pick up that shape.

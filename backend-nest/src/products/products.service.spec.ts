@@ -32,7 +32,7 @@ describe('ProductsService', () => {
 
       await service.findAll({ storeId: '5' });
 
-      expect(findMany.mock.calls[0][0].where).toEqual({ store_id: 5 });
+      expect(findMany.mock.calls[0][0].where).toEqual({ store_id: '5' });
     });
 
     it('builds where.category_id from category', async () => {
@@ -42,7 +42,7 @@ describe('ProductsService', () => {
 
       await service.findAll({ category: '3' });
 
-      expect(findMany.mock.calls[0][0].where).toEqual({ category_id: 3 });
+      expect(findMany.mock.calls[0][0].where).toEqual({ category_id: '3' });
     });
 
     it('builds where.store_category_id from store_category_id', async () => {
@@ -52,7 +52,7 @@ describe('ProductsService', () => {
 
       await service.findAll({ store_category_id: '7' });
 
-      expect(findMany.mock.calls[0][0].where).toEqual({ store_category_id: 7 });
+      expect(findMany.mock.calls[0][0].where).toEqual({ store_category_id: '7' });
     });
 
     it('builds where.name contains (case-insensitive) from q', async () => {
@@ -129,8 +129,8 @@ describe('ProductsService', () => {
       await service.findAll({ storeId: '5', category: '3', q: 'pan' });
 
       expect(findMany.mock.calls[0][0].where).toEqual({
-        store_id: 5,
-        category_id: 3,
+        store_id: '5',
+        category_id: '3',
         name: { contains: 'pan', mode: 'insensitive' },
       });
     });
@@ -227,7 +227,7 @@ describe('ProductsService', () => {
       } as any;
       const service = new ProductsService(prisma);
 
-      const result = await service.update(1, { price: 55 } as any, { id: 1 } as any);
+      const result = await service.update('1', { price: 55 } as any, { id: 1 } as any);
 
       expect(typeof result.price).toBe('number');
       expect(result.price).toBe(55);
@@ -251,7 +251,7 @@ describe('ProductsService', () => {
       } as any;
       const service = new ProductsService(prisma);
 
-      const result = await service.update(1, { price: 55 } as any, { id: 1 } as any);
+      const result = await service.update('1', { price: 55 } as any, { id: 1 } as any);
 
       expect(result.price_usd).toBeNull();
       expect(result.rating_avg).toBeNull();
@@ -263,7 +263,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findUnique: jest.fn().mockResolvedValue(null) } } as any;
       const service = new ProductsService(prisma);
 
-      await expect(service.remove(1, { id: 1 } as any)).rejects.toBeInstanceOf(
+      await expect(service.remove('1', { id: 1 } as any)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -274,7 +274,7 @@ describe('ProductsService', () => {
       } as any;
       const service = new ProductsService(prisma);
 
-      await expect(service.remove(1, { id: 1 } as any)).rejects.toBeInstanceOf(
+      await expect(service.remove('1', { id: 1 } as any)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
     });
@@ -297,7 +297,7 @@ describe('ProductsService', () => {
       } as any;
       const service = new ProductsService(prisma);
 
-      const result = await service.remove(1, { id: 1 } as any);
+      const result = await service.remove('1', { id: 1 } as any);
 
       expect(typeof result.product.price).toBe('number');
       expect(result.product.price).toBe(20);

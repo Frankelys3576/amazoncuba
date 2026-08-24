@@ -1,13 +1,5 @@
 const supabase = require('../config/supabase');
 
-// Misma heurística que auth.controller.js login(): el teléfono se extrae
-// del local-part del email y se usa para encontrar la tienda del vendedor
-// (no existe una columna user_id que vincule stores <-> auth.users).
-const extractPhoneFromEmail = (email) => {
-  let phone = email.split('@')[0];
-  return phone.replace(/\+/g, '').replace(/\s/g, '');
-};
-
 const authenticateSeller = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -22,13 +14,11 @@ const authenticateSeller = async (req, res, next) => {
       return res.status(401).json({ error: 'Token inválido o expirado' });
     }
 
-    const phone = extractPhoneFromEmail(user.email);
     const { data: store } = await supabase
       .from('stores')
       .select('*')
-      .ilike('phone', `%${phone}%`)
-      .limit(1)
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     if (!store) {
       return res.status(403).json({ error: 'No se encontró una tienda asociada a este usuario' });

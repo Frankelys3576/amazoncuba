@@ -9,15 +9,16 @@ datasource db {
 }
 
 model Category {
-  id       BigInt    @id @default(autoincrement())
-  name     String
-  products Product[]
+  legacy_id BigInt    @default(autoincrement())
+  name      String
+  id        String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  products  Product[]
 
   @@map("categories")
 }
 
 model Store {
-  id               BigInt          @id @default(autoincrement())
+  legacy_id        BigInt          @default(autoincrement())
   name             String
   description      String?
   logo_url         String?
@@ -41,6 +42,8 @@ model Store {
   lat              Float?
   lng              Float?
   price_per_night  Decimal?
+  id               String          @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  user_id          String?         @unique @db.Uuid
   products         Product[]
   store_categories StoreCategory[]
 
@@ -48,40 +51,44 @@ model Store {
 }
 
 model Product {
-  id                 BigInt          @id @default(autoincrement())
-  name               String
-  description        String?
-  price              Decimal
-  stock              Int?            @default(0)
-  category_id        BigInt?
-  store_id           BigInt?
-  image_url          String?
-  created_at         DateTime        @default(now()) @db.Timestamptz(6)
-  province           String?
-  municipality       String?
-  image_url_2        String?
-  image_url_3        String?
-  image_url_4        String?
-  image_url_5        String?
-  delivery_locations String[]        @default([])
-  currency           String?         @default("USD") @db.VarChar
-  is_featured        Boolean?        @default(false)
-  rating_avg         Decimal?        @default(0.00)
-  review_count       Int?            @default(0)
-  store_category_id  BigInt?
-  price_usd          Decimal?
-  category           Category?       @relation(fields: [category_id], references: [id])
-  store              Store?          @relation(fields: [store_id], references: [id])
-  store_category     StoreCategory?  @relation(fields: [store_category_id], references: [id])
-  order_items        OrderItem[]
-  product_reviews    ProductReview[]
-  product_views      ProductView[]
+  legacy_id                BigInt          @default(autoincrement())
+  name                     String
+  description              String?
+  price                    Decimal
+  stock                    Int?            @default(0)
+  legacy_category_id       BigInt?
+  legacy_store_id          BigInt?
+  image_url                String?
+  created_at               DateTime        @default(now()) @db.Timestamptz(6)
+  province                 String?
+  municipality             String?
+  image_url_2              String?
+  image_url_3              String?
+  image_url_4              String?
+  image_url_5              String?
+  delivery_locations       String[]        @default([])
+  currency                 String?         @default("USD") @db.VarChar
+  is_featured              Boolean?        @default(false)
+  rating_avg               Decimal?        @default(0.00)
+  review_count             Int?            @default(0)
+  legacy_store_category_id BigInt?
+  price_usd                Decimal?
+  id                       String          @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  category_id              String?         @db.Uuid
+  store_id                 String?         @db.Uuid
+  store_category_id        String?         @db.Uuid
+  category                 Category?       @relation(fields: [category_id], references: [id])
+  store                    Store?          @relation(fields: [store_id], references: [id])
+  store_category           StoreCategory?  @relation(fields: [store_category_id], references: [id])
+  order_items              OrderItem[]
+  product_reviews          ProductReview[]
+  product_views            ProductView[]
 
   @@map("products")
 }
 
 model Order {
-  id                BigInt      @id @default(autoincrement())
+  legacy_id         BigInt      @default(autoincrement())
   customer_name     String
   customer_email    String
   customer_address  String?
@@ -91,17 +98,21 @@ model Order {
   customer_phone    String?
   payment_method    String?     @default("cash_on_delivery")
   payment_proof_url String?
+  id                String      @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   order_items       OrderItem[]
 
   @@map("orders")
 }
 
 model OrderItem {
-  id                BigInt   @id @default(autoincrement())
-  order_id          BigInt?
-  product_id        BigInt?
+  legacy_id         BigInt   @default(autoincrement())
+  legacy_order_id   BigInt?
+  legacy_product_id BigInt?
   quantity          Int
   price_at_purchase Decimal
+  id                String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  order_id          String?  @db.Uuid
+  product_id        String?  @db.Uuid
   order             Order?   @relation(fields: [order_id], references: [id])
   product           Product? @relation(fields: [product_id], references: [id])
 
@@ -109,43 +120,48 @@ model OrderItem {
 }
 
 model PlatformSetting {
-  id         BigInt   @id @default(autoincrement())
+  legacy_id  BigInt   @default(autoincrement())
   key        String   @unique @db.VarChar
   value      String
   updated_at DateTime @default(now()) @db.Timestamptz(6)
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
 
   @@map("platform_settings")
 }
 
 model ProductView {
-  id         String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
-  product_id BigInt?
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  product    Product?  @relation(fields: [product_id], references: [id])
+  id                String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  legacy_product_id BigInt?
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  product_id        String?   @db.Uuid
+  product           Product?  @relation(fields: [product_id], references: [id])
 
   @@map("product_views")
 }
 
 model ProductReview {
-  id            String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
-  product_id    BigInt?
-  customer_name String    @db.VarChar
-  rating        Int
-  comment       String?
-  created_at    DateTime? @default(now()) @db.Timestamptz(6)
-  product       Product?  @relation(fields: [product_id], references: [id])
+  id                String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  legacy_product_id BigInt?
+  customer_name     String    @db.VarChar
+  rating            Int
+  comment           String?
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  product_id        String?   @db.Uuid
+  product           Product?  @relation(fields: [product_id], references: [id])
 
   @@map("product_reviews")
 }
 
 model StoreCategory {
-  id         BigInt    @id @default(autoincrement())
-  store_id   BigInt?
-  name       String
-  image_url  String?
-  created_at DateTime  @default(now()) @db.Timestamptz(6)
-  store      Store?    @relation(fields: [store_id], references: [id])
-  products   Product[]
+  legacy_id       BigInt    @default(autoincrement())
+  legacy_store_id BigInt?
+  name            String
+  image_url       String?
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  id              String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  store_id        String?   @db.Uuid
+  store           Store?    @relation(fields: [store_id], references: [id])
+  products        Product[]
 
   @@map("store_categories")
 }

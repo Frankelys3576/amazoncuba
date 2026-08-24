@@ -107,8 +107,13 @@ const SellerProducts = () => {
         price_usd: newProduct.price_usd ? parseFloat(newProduct.price_usd) : null,
         stock: parseInt(newProduct.stock, 10) || 0,
         currency: storeInfo?.accepts_zelle ? 'CUP' : newProduct.currency,
-        category_id: parseInt(newProduct.category_id, 10) || null,
-        store_category_id: newProduct.store_category_id ? parseInt(newProduct.store_category_id, 10) : null,
+        // Los ids son UUID v7 (cadenas), no enteros: se envían tal cual.
+        // parseInt('01a03535-9bc0-...', 10) devolvía 1 — un número válido en
+        // apariencia que el backend insertaba en una columna uuid (error 500);
+        // y Number() sobre ese mismo valor daba NaN, que al ser falsy hacía
+        // que la sección personalizada se guardara como null sin ningún aviso.
+        category_id: newProduct.category_id || null,
+        store_category_id: newProduct.store_category_id || null,
         province: newProduct.delivery_locations[0].split(':')[0],
         municipality: newProduct.delivery_locations[0].split(':')[1]
       };
@@ -436,7 +441,7 @@ const SellerProducts = () => {
                   <label>Sección de tu Tienda (Opcional)</label>
                   <select 
                     value={newProduct.store_category_id || ''}
-                    onChange={(e) => setNewProduct({...newProduct, store_category_id: e.target.value === '' ? null : Number(e.target.value)})}
+                    onChange={(e) => setNewProduct({...newProduct, store_category_id: e.target.value === '' ? null : e.target.value})}
                   >
                     <option value="">Ninguna</option>
                     {storeCategories.map(cat => (

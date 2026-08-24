@@ -1,13 +1,44 @@
 const supabase = require('../config/supabase');
 
+// Los ids son UUID v7 desde la migración. Se declara una sola vez para que
+// getOrders (query ?ids=) y updateOrder (:id) validen exactamente igual.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const getOrders = async (req, res) => {
   try {
     const { storeId, ids } = req.query;
 
     let orderIds = [];
-    
+    const idsProvided = Boolean(ids);
+
     if (ids) {
-      orderIds = ids.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      orderIds = ids
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => UUID.test(id));
+    }
+
+    // If the caller explicitly asked for specific order ids but none of them
+    // were valid uuids, they must get nothing back -- never fall through to
+    // a broader query. Without this, an unauthenticated
+    // `GET /api/orders?ids=garbage` would return every order on the platform,
+    // PII (customer_name/email/phone/address) included. Do not "simplify"
+    // this away, and keep it in sync with orders.service.ts's copy.
+    //
+    // I6: this used to carry an extra `&& !storeId`, so the guard was closed
+    // only for the no-storeId case -- `?storeId=<uuid>&ids=garbage` still
+    // returned every order for that store, PII included, on an
+    // unauthenticated route, while the comment read as though the leak was
+    // shut. Dropped, rather than documented as a caveat: when both params
+    // are supplied and the ids ARE valid, the code below already intersects
+    // them (`orderIds.filter(id => storeOrderIds.includes(id))`), so an
+    // empty valid-id set returning nothing is just the limit case of the
+    // intersection already implemented -- falling through to the whole store
+    // was the anomaly. No client sends both params (frontend's
+    // getOrdersByIds sends ids only, seller-frontend and
+    // admin-frontend/AdminDirectory.jsx send storeId only).
+    if (idsProvided && orderIds.length === 0) {
+      return res.json([]);
     }
 
     if (storeId) {
@@ -106,7 +137,18 @@ const updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
+    // I8: sin esto, un id que no sea uuid llega a PostgREST, que responde
+    // 22P02 ("invalid input syntax for type uuid") y el catch de abajo lo
+    // convierte en un 500. Se valida con la misma expresión que usa
+    // getOrders para ?ids=, siguiendo el estilo del resto del backend
+    // (store.controller.js hace lo mismo en línea para distinguir id de
+    // slug). El mensaje es el mismo que devuelve SpanishParseUuidPipe en
+    // backend-nest, para que ambos backends respondan igual.
+    if (!UUID.test(id)) {
+      return res.status(400).json({ error: 'El identificador debe ser un UUID válido' });
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .update({ status })

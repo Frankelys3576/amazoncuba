@@ -70,13 +70,13 @@ const getStores = async (req, res) => {
 const getStoreById = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Check if id is numeric
-    const isNumeric = /^\d+$/.test(id);
-    
+
+    // uuid -> primary key, anything else -> slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
     let query = supabase.from('stores').select('*');
-    if (isNumeric) {
-      query = query.eq('id', parseInt(id, 10));
+    if (isUuid) {
+      query = query.eq('id', id);
     } else {
       query = query.eq('slug', id);
     }

@@ -1,4 +1,3 @@
-import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -8,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -35,12 +35,12 @@ export class CreateProductDto {
   stock?: number;
 
   @IsOptional()
-  @IsInt({ message: 'La categoría debe ser un número entero' })
-  category_id?: number;
+  @IsUUID(undefined, { message: 'La categoría debe ser un identificador UUID' })
+  category_id?: string;
 
   @IsOptional()
-  @IsInt({ message: 'La categoría de la tienda debe ser un número entero' })
-  store_category_id?: number;
+  @IsUUID(undefined, { message: 'La categoría de la tienda debe ser un identificador UUID' })
+  store_category_id?: string;
 
   @IsOptional()
   @IsString({ message: 'La imagen debe ser una URL de texto' })
@@ -63,15 +63,12 @@ export class CreateProductDto {
   image_url_5?: string;
 
   // CRITICAL 1: the seller dashboard always sends store_id as a string
-  // (SellerProducts.jsx reads it straight out of localStorage, never
-  // parses it) — Express tolerated that because PostgREST coerces a
-  // string to bigint on the way into Postgres. @Type(() => Number) mirrors
-  // that tolerance by coercing a numeric string ('7') to a number before
-  // @IsInt() validates it; a non-numeric string ('abc') becomes NaN, which
-  // still fails @IsInt() as it must.
-  @Type(() => Number)
-  @IsInt({ message: 'La tienda debe ser un número entero' })
-  store_id: number;
+  // (SellerProducts.jsx reads it straight out of localStorage). Store ids
+  // are uuid v7 strings post-migration, so no numeric coercion is needed —
+  // @IsUUID rejects anything that isn't uuid-shaped (e.g. 'abc') with 400,
+  // same as the old @IsInt did for non-numeric strings.
+  @IsUUID(undefined, { message: 'La tienda debe ser un identificador UUID' })
+  store_id: string;
 
   @IsOptional()
   @IsString({ message: 'La provincia debe ser texto' })
