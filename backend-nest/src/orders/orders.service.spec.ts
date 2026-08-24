@@ -123,6 +123,23 @@ describe('OrdersService', () => {
       );
     });
 
+    // I5: Express trims each entry before the uuid test
+    // (order.controller.js:11-14). Without the trim the whitespace-padded
+    // second id fails the regex and is silently dropped, so the same
+    // tracking link returns two orders on Express and one here.
+    it('trims whitespace around each id before validating it, as Express does', async () => {
+      const prisma = {
+        order: { findMany: jest.fn().mockResolvedValue([]) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await service.findAll({ ids: `${ORDER_1}, ${ORDER_2}` });
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: [ORDER_1, ORDER_2] } } }),
+      );
+    });
+
     // Mirrors the Express fix in order.controller.js (commit 04bc48e):
     // GET /api/orders?ids=<garbage> is unauthenticated (customer order
     // tracking). If every id in the list is invalid and no storeId narrows

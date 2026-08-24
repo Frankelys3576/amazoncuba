@@ -22,8 +22,16 @@ export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: { storeId?: string; ids?: string }) {
+    // I5: `.map(trim)` before the uuid test, matching
+    // order.controller.js:11-14. Express trimmed and Nest did not, so
+    // `?ids=<uuid>,%20<uuid>` returned two orders on Express and one on
+    // Nest — a shopper's order-tracking link would show a different number
+    // of orders depending on which backend served it.
     let orderIds: string[] = query.ids
-      ? query.ids.split(',').filter((id) => UUID.test(id))
+      ? query.ids
+          .split(',')
+          .map((id) => id.trim())
+          .filter((id) => UUID.test(id))
       : [];
 
     // Mirrors the Express fix in commit 04bc48e ("Return empty result for
