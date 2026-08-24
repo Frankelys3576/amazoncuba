@@ -77,13 +77,23 @@ const SellerAuth = () => {
         }
 
         const response = await loginSeller(formattedEmail, formData.password);
-        
-        if (response.store && response.store.id) {
-          localStorage.setItem('seller_store_id', response.store.id.toString());
-        } else {
-          localStorage.setItem('seller_store_id', '1');
+
+        // Antes se guardaba '1' como id de tienda cuando el login no devolvía
+        // ninguna: con la heurística anterior (buscar la tienda por teléfono)
+        // casi siempre aparecía alguna, así que era un caso teórico. Ahora la
+        // tienda se resuelve por user_id, y las cuentas que no tienen tienda
+        // asociada reciben store: null. Entrar al panel con un id inventado
+        // deja al vendedor con un panel roto (cada petición responde 404 o
+        // 500) en vez de una explicación, así que no se entra.
+        if (!response.store || !response.store.id) {
+          localStorage.removeItem('seller_store_id');
+          localStorage.removeItem('seller_token');
+          localStorage.removeItem('seller_name');
+          setError('No hay ninguna tienda asociada a esta cuenta. Por favor, contacta al soporte para vincularla.');
+          return;
         }
-        
+
+        localStorage.setItem('seller_store_id', response.store.id);
         localStorage.setItem('seller_token', response.session?.access_token || 'mock_token');
         const fullName = response.user?.user_metadata?.full_name || response.user?.email || 'Vendedor';
         localStorage.setItem('seller_name', fullName);
