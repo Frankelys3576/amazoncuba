@@ -1,7 +1,8 @@
 # UUID v7 Migration + Seller Ownership — Design
 
-> Status: **design approved, not yet planned**. The implementation plan is a separate document.
-> One prerequisite is unresolved and blocks part of this design — see *Open prerequisite*.
+> Status: **design approved**. The implementation plan is a separate document.
+> Revised after planning began: the three-phase split was replaced by a single transaction once the
+> foreign-key graph was traced, and the Postgres version was confirmed as 17.6.
 
 ## Goal
 
@@ -29,38 +30,44 @@ them and must not be read as doing so.
 load-bearing until cutover. Both share one Supabase database, so the schema work happens once and
 serves both.
 
-## Open prerequisite — blocks the id-generation design
+## Id generation — resolved
 
-Native `uuidv7()` requires **Postgres 18**. The project's version must be confirmed
-(Dashboard → Settings → Infrastructure) before the plan is written, because the two branches differ
-materially:
+**The project runs PostgreSQL 17.6.** Native `uuidv7()` arrived in PG 18, so it is not available.
 
-| Version | Approach | Consequence |
-|---|---|---|
-| **PG 18+** | `default uuidv7()` on the column | Database generates ids. No application code changes for id creation. |
-| **Older** | `pg_uuidv7` extension, if installable | Same as above once installed. |
-| **Older, no extension** | Generate v7 in application code | **Every insert path in both backends changes**, and the two must implement the same algorithm and agree. Materially larger, and a correctness risk if they drift. |
+This does **not** force application-side generation. UUID v7 is generated database-side by a
+`plpgsql` function using `gen_random_uuid()` (pgcrypto, built in) for the random bits and
+`clock_timestamp()` for the 48-bit millisecond prefix, with the version and variant nibbles set
+explicitly. Generation stays in exactly one place, so the two backends cannot drift, and no insert
+path in either changes.
 
-Do not begin implementation until this is settled. If the third row applies, the plan needs a
-shared, tested v7 generator and a decision about which backend owns it.
+**The function must be verified empirically before anything depends on it.** The bit manipulation
+that sets the version and variant nibbles is easy to get subtly wrong, and a wrong version nibble
+yields ids that look like uuids, sort correctly, and are not v7. Verification asserts: the version
+nibble is `7`, the variant bits are RFC-4122, values generated in sequence sort ascending, and
+distinct calls in the same millisecond do not collide. This is a task with assertions, not an
+assumption.
 
-## Phasing
+## Structure — one transaction, all nine tables
 
-Tables migrate in dependency order. Each phase is independently shippable and independently
-revertable.
+The original design phased this into three migrations. **That was wrong**, and the reason is worth
+recording so it is not reintroduced: a foreign key requires matching column types, so converting
+`stores.id` and `categories.id` forces `products.store_id`, `products.category_id` and
+`store_categories.store_id` in the same transaction. Once `products` and `store_categories` are
+being rewritten, converting their own primary keys is nearly free — which in turn forces
+`products.store_category_id`, `order_items.product_id`, `product_views.product_id` and
+`product_reviews.product_id`.
 
-**Phase 1 — `stores`, `categories`.** Also adds `user_id`, runs the backfill, and switches the
-seller auth path. **Finding #0 is closed at the end of this phase.**
+That is seven of nine tables in one connected component. Only `orders` (referenced by
+`order_items.order_id`) and `platform_settings` sit outside it.
 
-**Phase 2 — `products`, `store_categories`.** Also rewires `product_views.product_id` and
-`product_reviews.product_id`; those two tables already have uuid primary keys.
+Phasing would therefore have delivered little: the first phase was already about 80% of the work,
+and the intermediate state left `products` carrying a uuid foreign key alongside a bigint primary
+key — a shape both backends would have to tolerate correctly, and the most error-prone option
+available.
 
-**Phase 3 — `orders`, `order_items`, `platform_settings`.**
-
-Phases 2 and 3 carry **no security value** — they are consistency and cleanup. If the project
-stalls after phase 1 the schema is half-uuid, which is survivable (`product_views` already has a
-uuid key alongside integer-keyed `products` today) but should be a deliberate choice rather than an
-accident.
+At **460 rows total** the entire migration runs in seconds. It ships as **one transaction covering
+all nine tables**, plus `stores.user_id`, the backfill, and the seller auth switch. One rollback
+point, no mixed-type intermediate state, and finding #0 closes with it.
 
 ## Schema
 
@@ -140,7 +147,7 @@ phase 1. The audit identified these categories:
 
 The last group deserves emphasis: **those two sellers cannot log in today either.** Their phone
 values do not match under Express's current substring lookup, so they are already locked out and
-may not have reported it. Phase 1 does not regress them; it makes an existing failure explicit.
+may not have reported it. The migration does not regress them; it makes an existing failure explicit.
 
 ## Assigning an owner to an unowned store
 
@@ -195,7 +202,7 @@ Per phase, in a short maintenance window:
 3. Apply the phase in a single transaction.
 4. Post-migration verification script: row count per table matches pre-migration, every foreign key
    resolves, no orphans.
-5. **Phase 1 only:** invalidate all Supabase auth sessions, so every seller logs in fresh and
+5. **Invalidate all Supabase auth sessions**, so every seller logs in fresh and
    receives the new uuid rather than carrying a stale integer in `localStorage`. With roughly 17
    accounts the support cost is negligible; the alternative is silent failures in sellers'
    browsers.
@@ -203,7 +210,7 @@ Per phase, in a short maintenance window:
 
 ## Rollback
 
-Within a phase, before commit: `rollback`.
+Before commit: `rollback`. The whole migration is one transaction, so this is total.
 
 After commit: swap the primary key back to `legacy_id`, which is retained precisely for this. The
 application change is reverted alongside — the two must move together, since Express resolving by
@@ -224,7 +231,7 @@ Verification is therefore:
   migration against real data.
 - **Post-migration assertions** on row counts and referential integrity, scripted so they run
   identically in the dry run and in production.
-- **One real login** per phase before reopening traffic — the check that would have caught the
+- **One real login** before reopening traffic — the check that would have caught the
   `req.store` defect during the NestJS migration, and the one that matters most here.
 - Existing unit and e2e suites still run, but as regression cover for the *code* changes (pipe
   swaps, removed coercions), not as evidence the migration worked.
@@ -233,8 +240,8 @@ Verification is therefore:
 
 | Risk | Mitigation |
 |---|---|
-| Postgres version does not support `uuidv7()` | Resolve before planning. Third branch materially enlarges the project. |
-| Project stalls after phase 1, leaving a half-uuid schema | Survivable; two tables are already uuid. Decide up front to finish. |
+| The hand-written v7 function is subtly wrong (bad version nibble) | Verified empirically with assertions on version, variant, ordering and collisions before anything depends on it. |
+| Project stalls after the migration, leaving a half-uuid schema | Survivable; two tables are already uuid. Decide up front to finish. |
 | Two approved stores lose seller access | They are already locked out today. Runbook assigns owners. |
 | A seller carries a stale integer id in `localStorage` | Sessions invalidated at cutover. |
 | Migration breaks a foreign key silently | Post-migration integrity assertions, run in dry run first. |
@@ -242,8 +249,11 @@ Verification is therefore:
 
 ## Decisions on record
 
-- Combine finding #0 with the id migration rather than shipping #0 first. Accepted cost: #0 ships
-  on the larger project's timeline. Mitigated by phasing `stores` into phase 1.
+- Combine finding #0 with the id migration rather than shipping #0 first.
+- Migrate all nine tables in one transaction rather than phasing. The foreign-key graph made the
+  phase split illusory (see *Structure*).
+- Generate UUID v7 in the database via a plpgsql function, since the project is on PG 17.6 and
+  native `uuidv7()` requires PG 18. Keeps generation single-sourced; no insert paths change.
 - Fix in `backend/` first; `backend-nest/` follows and is not load-bearing until cutover.
 - Backfill only doubly-unambiguous matches; leave the rest null rather than guessing an owner.
 - Assign owners by SQL runbook, not an endpoint, until finding #3 exists.
