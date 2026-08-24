@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { StoreCategoriesService } from './store-categories.service';
-import { SpanishParseIntPipe } from '../common/spanish-parse-int.pipe';
+import { SpanishParseUuidPipe } from '../common/spanish-parse-uuid.pipe';
 import { CreateStoreCategoryDto, UpdateStoreCategoryDto } from './dto/store-category.dto';
 import { SellerAuthGuard } from '../auth/seller-auth.guard';
 import { StoreOwnershipGuard } from '../auth/store-ownership.guard';
@@ -10,21 +10,21 @@ export class StoreCategoriesController {
   constructor(private readonly storeCategoriesService: StoreCategoriesService) {}
 
   @Get()
-  findAll(@Param('id', SpanishParseIntPipe) storeId: number) {
+  findAll(@Param('id', SpanishParseUuidPipe) storeId: string) {
     return this.storeCategoriesService.findAll(storeId);
   }
 
   @Post()
   @UseGuards(SellerAuthGuard, StoreOwnershipGuard)
-  create(@Param('id', SpanishParseIntPipe) storeId: number, @Body() dto: CreateStoreCategoryDto) {
+  create(@Param('id', SpanishParseUuidPipe) storeId: string, @Body() dto: CreateStoreCategoryDto) {
     return this.storeCategoriesService.create(storeId, dto);
   }
 
   @Put(':categoryId')
   @UseGuards(SellerAuthGuard, StoreOwnershipGuard)
   update(
-    @Param('id', SpanishParseIntPipe) storeId: number,
-    @Param('categoryId', SpanishParseIntPipe) categoryId: number,
+    @Param('id', SpanishParseUuidPipe) storeId: string,
+    @Param('categoryId', SpanishParseUuidPipe) categoryId: string,
     @Body() dto: UpdateStoreCategoryDto,
   ) {
     return this.storeCategoriesService.update(storeId, categoryId, dto);
@@ -33,8 +33,8 @@ export class StoreCategoriesController {
   @Delete(':categoryId')
   @UseGuards(SellerAuthGuard, StoreOwnershipGuard)
   remove(
-    @Param('id', SpanishParseIntPipe) storeId: number,
-    @Param('categoryId', SpanishParseIntPipe) categoryId: number,
+    @Param('id', SpanishParseUuidPipe) storeId: string,
+    @Param('categoryId', SpanishParseUuidPipe) categoryId: string,
   ) {
     return this.storeCategoriesService.remove(storeId, categoryId);
   }

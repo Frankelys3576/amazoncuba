@@ -18,7 +18,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { SellerAuthGuard } from '../auth/seller-auth.guard';
 import type { RequestWithStore } from '../auth/request-with-store.interface';
-import { SpanishParseIntPipe } from '../common/spanish-parse-int.pipe';
+import { SpanishParseUuidPipe } from '../common/spanish-parse-uuid.pipe';
 
 @Controller('api/products')
 export class ProductsController {
@@ -30,7 +30,7 @@ export class ProductsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', SpanishParseIntPipe) id: number) {
+  findOne(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.productsService.findOne(id);
   }
 
@@ -44,7 +44,7 @@ export class ProductsController {
   @Put(':id')
   @UseGuards(SellerAuthGuard)
   update(
-    @Param('id', SpanishParseIntPipe) id: number,
+    @Param('id', SpanishParseUuidPipe) id: string,
     @Body() dto: UpdateProductDto,
     @Req() req: RequestWithStore,
   ) {
@@ -53,7 +53,7 @@ export class ProductsController {
 
   @Delete(':id')
   @UseGuards(SellerAuthGuard)
-  remove(@Param('id', SpanishParseIntPipe) id: number, @Req() req: RequestWithStore) {
+  remove(@Param('id', SpanishParseUuidPipe) id: string, @Req() req: RequestWithStore) {
     return this.productsService.remove(id, req.store);
   }
 
@@ -62,18 +62,18 @@ export class ProductsController {
   // needs an explicit override to match.
   @Post(':id/view')
   @HttpCode(HttpStatus.OK)
-  registerView(@Param('id', SpanishParseIntPipe) id: number) {
+  registerView(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.productsService.registerView(id);
   }
 
   @Get(':id/reviews')
-  findReviews(@Param('id', SpanishParseIntPipe) id: number) {
+  findReviews(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.productsService.findReviews(id);
   }
 
   @Post(':id/reviews')
   @HttpCode(HttpStatus.CREATED)
-  addReview(@Param('id', SpanishParseIntPipe) id: number, @Body() dto: CreateProductReviewDto) {
+  addReview(@Param('id', SpanishParseUuidPipe) id: string, @Body() dto: CreateProductReviewDto) {
     return this.productsService.addReview(id, dto);
   }
 }
