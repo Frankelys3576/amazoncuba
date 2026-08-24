@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Store, Users as UsersIcon, CheckCircle, Clock, XCircle, Building2, UserCircle, Edit } from 'lucide-react';
+import { Search, Store, Users as UsersIcon, CheckCircle, Clock, XCircle, Building2, UserCircle, Edit, ShoppingCart } from 'lucide-react';
+import { getOrders } from './services/api';
 import { getUsers, getStores, updateUser } from './services/api';
 import './AdminDirectory.css';
 
@@ -7,6 +8,11 @@ const AdminDirectory = () => {
   const [users, setUsers] = useState([]);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Orders view state
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   
   // View states
   const [activeTab, setActiveTab] = useState('stores'); // 'users' or 'stores'
@@ -76,6 +82,28 @@ const AdminDirectory = () => {
     setEditingUser(user);
     setEditFormData({ email: user.email, password: '' });
     setIsEditModalOpen(true);
+  };
+
+  // Open orders modal for a store
+  const openOrdersModal = async (store) => {
+    setSelectedStore(store);
+    setShowOrdersModal(true);
+    setOrdersLoading(true);
+    try {
+      const data = await getOrders({ storeId: store.id });
+      setOrders(data);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      alert('Error al cargar los pedidos');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const closeOrdersModal = () => {
+    setShowOrdersModal(false);
+    setOrders([]);
+    setSelectedStore(null);
   };
 
   const handleEditSubmit = async (e) => {
@@ -202,12 +230,19 @@ const AdminDirectory = () => {
                     <td data-label="Fecha de Registro">{new Date(store.created_at).toLocaleDateString()}</td>
                     <td data-label="Acciones">
                       <button 
-                        onClick={() => openEditModal(getUserByStore(store))}
-                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '5px' }}
-                        title="Editar Credenciales"
-                      >
-                        <Edit size={18} />
-                      </button>
+                          onClick={() => openEditModal(getUserByStore(store))}
+                          style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '5px' }}
+                          title="Editar Credenciales"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button 
+                          onClick={() => openOrdersModal(store)}
+                          style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '5px', marginLeft: '8px' }}
+                          title="Ver Ventas"
+                        >
+                          <ShoppingCart size={18} />
+                        </button>
                     </td>
                   </tr>
                 ))
@@ -277,6 +312,50 @@ const AdminDirectory = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Orders Modal */}
+      {showOrdersModal && selectedStore && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div style={{background: 'white', padding: '24px', borderRadius: '8px', width: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
+            <h2 style={{marginTop: 0}}>{`Ventas de ${selectedStore.name}`}</h2>
+            {ordersLoading ? (
+              <p>Cargando ventas...</p>
+            ) : orders.length === 0 ? (
+              <p>No hay ventas para esta tienda.</p>
+            ) : (
+              <table className="directory-table" style={{marginTop: '16px'}}>
+                <thead>
+                  <tr>
+                    <th>Pedido ID</th>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map(order => (
+                    order.order_items.map(item => (
+                      <tr key={`${order.id}-${item.id}`}>
+                        <td>{order.id}</td>
+                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                        <td>{item.products?.name || 'Sin nombre'}</td>
+                        <td>{item.quantity}</td>
+                        <td>{item.price_at_purchase}</td>
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <div style={{marginTop: '20px', textAlign: 'right'}}>
+              <button onClick={closeOrdersModal} style={{padding: '8px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
