@@ -84,6 +84,9 @@ model Product {
   product_reviews          ProductReview[]
   product_views            ProductView[]
 
+  @@index([category_id])
+  @@index([store_category_id])
+  @@index([store_id])
   @@map("products")
 }
 
@@ -116,6 +119,8 @@ model OrderItem {
   order             Order?   @relation(fields: [order_id], references: [id])
   product           Product? @relation(fields: [product_id], references: [id])
 
+  @@index([order_id])
+  @@index([product_id])
   @@map("order_items")
 }
 
@@ -134,8 +139,9 @@ model ProductView {
   legacy_product_id BigInt?
   created_at        DateTime? @default(now()) @db.Timestamptz(6)
   product_id        String?   @db.Uuid
-  product           Product?  @relation(fields: [product_id], references: [id])
+  product           Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([product_id])
   @@map("product_views")
 }
 
@@ -147,8 +153,9 @@ model ProductReview {
   comment           String?
   created_at        DateTime? @default(now()) @db.Timestamptz(6)
   product_id        String?   @db.Uuid
-  product           Product?  @relation(fields: [product_id], references: [id])
+  product           Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([product_id])
   @@map("product_reviews")
 }
 
@@ -163,5 +170,6 @@ model StoreCategory {
   store           Store?    @relation(fields: [store_id], references: [id])
   products        Product[]
 
+  @@index([store_id])
   @@map("store_categories")
 }
