@@ -608,7 +608,6 @@ const SellerProfile = () => {
               <Trash2 size={18}/> Eliminar cuenta para siempre
             </button>
           </div>
-        </form>
       </div>
     </div>
   );
