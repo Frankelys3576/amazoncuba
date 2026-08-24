@@ -6,11 +6,14 @@
 
 ## Where these came from
 
-Every finding below was surfaced during the `backend-nest` NestJS + Prisma migration
-(sub-project 1/4, merged as `fe02272`) and verified against the running Express source, not
-inferred. **None is a regression introduced by that migration** — all four are live in
-production today via `backend/`, and the port reproduces them faithfully because porting
-faithfully was that project's binding constraint.
+Findings #1-#4 were surfaced during the `backend-nest` NestJS + Prisma migration (sub-project
+1/4, merged as `fe02272`). #0 was found afterwards, by a security scan of the pushed branch.
+All were verified against the running Express source, not inferred.
+
+**None is a regression introduced by that migration** — all five are live in production today
+via `backend/`, and the port reproduces them faithfully because porting faithfully was that
+project's binding constraint. In #0's case the port is in fact *stricter* than Express, and
+still exploitable.
 
 ## The constraint that shapes all of this work
 
@@ -24,12 +27,70 @@ resolve one of:
 - fix in `backend-nest/` and cut the relevant frontend over (slower, but the fix lands once), or
 - fix in both (safest during the overlap; costs double implementation).
 
-That sequencing choice is the first thing to settle, and it applies to all four items at once
-rather than per-item.
+That sequencing choice applies to #1-#4 at once rather than per-item. **#0 is the exception:
+it must be fixed in `backend/` regardless, because that is what serves traffic today.**
 
 ---
 
-## 1. Order price tampering — highest financial impact
+## 0. Seller account takeover via the email→store heuristic — most severe finding
+
+**Found after the initial draft**, by a security scan of the pushed branch. It outranks everything
+below and changes the ordering again.
+
+**What:** A seller's identity is bound to their store by *parsing the local part of their login
+email*. There is no column linking `stores` to `auth.users` — the Express middleware says so in a
+comment: *"no existe una columna user_id que vincule stores <-> auth.users"*. Anyone who can
+create an account with a chosen local part therefore inherits whichever store matches it.
+
+**Evidence — every link verified:**
+
+1. `POST /api/auth/register` is **unauthenticated** (`backend/src/routes/auth.routes.js:7`; the
+   port matches).
+2. The email is validated as an email and nothing more — `RegisterDto.email` carries only
+   `@IsEmail()`. **No server-side check constrains the domain to `@cubaamazon.com`**; that
+   convention lives entirely in the frontends.
+3. Identity resolution is `email.split('@')[0]`, with `+` and whitespace stripped
+   (`backend/src/middleware/auth.middleware.js`, and the port's shared
+   `extract-phone-from-email.util.ts` — behaviourally identical).
+4. Store phone numbers are **published**: `frontend/src/pages/StoreDetails.jsx:171-233` renders
+   them as click-to-WhatsApp links on every store page.
+
+**The exploit is four steps and needs no privileged access:**
+
+1. Read a target store's phone from its public page — say `5551234`.
+2. Register `5551234@anything.com`. Supabase only requires the *full* email be unique, and the
+   victim's is `5551234@cubaamazon.com`, so this is accepted.
+3. Log in normally and receive a valid Supabase session.
+4. Every seller-guarded route now resolves `req.store` to **the victim's store**.
+
+The attacker can then edit or delete the victim's products, rewrite their store profile, and —
+via `PUT /api/stores/:id/credentials` — change the store owner's **email and password**. That is
+full account takeover, from an unauthenticated start, keyed on a public phone number.
+
+**Not a regression.** Express is if anything looser: it matches with
+`.ilike('phone', '%' + phone + '%')`, a substring match, so a derived phone need only be
+*contained in* a store's phone. The migration tightened that to an exact match (closing the
+substring-collision half) but the underlying heuristic — and this bypass — carried across intact.
+
+**Shape of the fix:** stop deriving identity from a string. Add a real `user_id` column on
+`stores` referencing `auth.users`, populate it at registration from the created user's id, and
+resolve the caller's store by `user_id` from the verified session. The email local part should
+stop being an authorization input entirely.
+
+**Watch for:** this is a schema change plus a backfill of existing rows (matching current stores
+to their auth users by the same phone heuristic, one last time, ideally with manual review of
+collisions). Until the backfill is verified, both paths have to work. Also audit whether any
+seller has *already* been created with a colliding local part — two accounts resolving to one
+store is the signature.
+
+**Interim mitigation if the full fix cannot ship immediately:** enforce the `@cubaamazon.com`
+domain server-side at registration and reject a registration whose derived phone already matches
+an existing store. That closes the trivial path without a migration, but it is a patch on a
+heuristic, not a fix — anyone who can obtain a `@cubaamazon.com` address still inherits the store.
+
+---
+
+## 1. Order price tampering — second-highest financial impact
 
 **What:** `total` and each line item's `price_at_purchase` are taken from the request body and
 written to the database. Nothing ever compares them to the product's actual price.
@@ -167,20 +228,23 @@ filtering them out globally.
 
 ## Suggested order
 
-Revised — an earlier draft of this document put #1 and #2 together and #3 after them. That was
-wrong: #2 has an admin caller (see #2's "second, non-seller caller"), so it cannot be finished
-before #3 exists.
+Revised twice. An earlier draft paired #1 and #2 with #3 after them; that was wrong because #2
+has an admin caller. Then #0 was found, which outranks all of them.
 
-1. **Sequencing decision** (`backend/` vs `backend-nest/` vs both) — blocks everything else.
-2. **#1 — order price tampering.** Genuinely independent: it is fixed entirely server-side by
+1. **#0 — seller account takeover.** Unauthenticated → full takeover of any store, keyed on a
+   public phone number. Do this first, and treat the interim mitigation as same-day work if the
+   schema change needs longer. Note it must land in `backend/` regardless of the sequencing
+   decision below, because that is what serves traffic.
+2. **Sequencing decision** (`backend/` vs `backend-nest/` vs both) — blocks the rest.
+3. **#1 — order price tampering.** Genuinely independent: it is fixed entirely server-side by
    computing totals from product rows, and needs no identity work. Highest financial impact, so
    it should not wait behind the auth build. Do it first.
-3. **#3 — admin auth.** Largest, and now on the critical path: it gates both the admin write
+4. **#3 — admin auth.** Largest, and on the critical path: it gates both the admin write
    endpoints and #2's admin read path.
-4. **#2 — orders IDOR.** The seller half could technically land with #1, but splitting it means
+5. **#2 — orders IDOR.** The seller half could technically land with #1, but splitting it means
    touching the same endpoint twice and shipping an interim state where the admin path is still
    open. Cleaner to do it once, after #3.
-5. **#4 — pending stores in public listings.** Smallest and fully independent; can land any
+6. **#4 — pending stores in public listings.** Smallest and fully independent; can land any
    time after the sequencing decision, including in parallel with the others.
 
 If #2's exposure is judged too severe to wait on #3, the interim option is to lock the seller
