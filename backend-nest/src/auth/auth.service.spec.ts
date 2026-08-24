@@ -66,6 +66,121 @@ describe('AuthService', () => {
       });
     });
 
+    // Finding 1 (Critical): the frontends send lat/lng/price_per_night as
+    // strings (SellerAuth.jsx calls .toString() on coordinates; the
+    // price_per_night input is type="number", which React holds as a
+    // string). Prisma's `lat`/`lng` columns are Float, so an un-coerced
+    // string throws inside the try/catch in Ruling 2 and the store row is
+    // silently never created. This mirrors Express's
+    // `lat ? parseFloat(lat) : null` at every one of its six call sites.
+    it('coerces string-typed lat/lng/price_per_night to numbers for hostal registration', async () => {
+      const user = { id: 'u1', email: '5551234@cubaamazon.com' };
+      const createUser = jest
+        .fn()
+        .mockResolvedValue({ data: { user }, error: null });
+      const settingsFindUnique = jest
+        .fn()
+        .mockResolvedValue({ key: 'auto_approve_sellers', value: 'false' });
+      const storeCreate = jest.fn().mockResolvedValue({});
+      const service = makeService({
+        createUser,
+        settingsFindUnique,
+        storeCreate,
+      });
+
+      await service.register({
+        email: '5551234@cubaamazon.com',
+        password: 'secret123',
+        full_name: 'Juan Pérez',
+        store_name: 'Hostal Juan',
+        store_type: 'hostal',
+        province: 'La Habana',
+        municipality: 'Plaza de la Revolución',
+        address: 'Calle 23 #456',
+        lat: '23.1136',
+        lng: '-82.3666',
+        price_per_night: '35',
+      });
+
+      const createArgs = storeCreate.mock.calls[0][0].data;
+      expect(createArgs.lat).toBe(23.1136);
+      expect(createArgs.lng).toBe(-82.3666);
+      expect(createArgs.price_per_night).toBe(35);
+      expect(createArgs.province).toBe('La Habana');
+      expect(createArgs.municipality).toBe('Plaza de la Revolución');
+      expect(createArgs.address).toBe('Calle 23 #456');
+      expect(createArgs.zelle_info.lat).toBe(23.1136);
+      expect(createArgs.zelle_info.lng).toBe(-82.3666);
+      expect(createArgs.zelle_info.price_per_night).toBe(35);
+    });
+
+    // Express's `lat ? parseFloat(lat) : null` treats an empty string as
+    // falsy, so it becomes null. The rejected `@Type(() => Number)` fix
+    // would have turned '' into 0 instead (Number('') === 0) — this test is
+    // the regression guard for that.
+    it('treats an empty-string lat/lng/price_per_night as null, not 0, for hostal registration', async () => {
+      const user = { id: 'u1', email: '5551234@cubaamazon.com' };
+      const createUser = jest
+        .fn()
+        .mockResolvedValue({ data: { user }, error: null });
+      const settingsFindUnique = jest
+        .fn()
+        .mockResolvedValue({ key: 'auto_approve_sellers', value: 'false' });
+      const storeCreate = jest.fn().mockResolvedValue({});
+      const service = makeService({
+        createUser,
+        settingsFindUnique,
+        storeCreate,
+      });
+
+      await service.register({
+        email: '5551234@cubaamazon.com',
+        password: 'secret123',
+        full_name: 'Juan Pérez',
+        store_name: 'Hostal Juan',
+        store_type: 'hostal',
+        lat: '',
+        lng: '',
+        price_per_night: '',
+      });
+
+      const createArgs = storeCreate.mock.calls[0][0].data;
+      expect(createArgs.lat).toBeNull();
+      expect(createArgs.lng).toBeNull();
+      expect(createArgs.price_per_night).toBeNull();
+      expect(createArgs.zelle_info.lat).toBeNull();
+      expect(createArgs.zelle_info.lng).toBeNull();
+      expect(createArgs.zelle_info.price_per_night).toBeNull();
+    });
+
+    // Finding 3: every other test omits `phone`, covering only the
+    // derived-from-email path. This covers the explicit override branch.
+    it('strips non-digit characters from an explicit dto.phone override', async () => {
+      const user = { id: 'u1', email: '5551234@cubaamazon.com' };
+      const createUser = jest
+        .fn()
+        .mockResolvedValue({ data: { user }, error: null });
+      const settingsFindUnique = jest
+        .fn()
+        .mockResolvedValue({ key: 'auto_approve_sellers', value: 'false' });
+      const storeCreate = jest.fn().mockResolvedValue({});
+      const service = makeService({
+        createUser,
+        settingsFindUnique,
+        storeCreate,
+      });
+
+      await service.register({
+        email: '5551234@cubaamazon.com',
+        password: 'secret123',
+        full_name: 'Juan Pérez',
+        store_name: 'Cafetería Juan',
+        phone: '555-1234',
+      });
+
+      expect(storeCreate.mock.calls[0][0].data.phone).toBe('5551234');
+    });
+
     it('marks the store approved when auto_approve_sellers is "true"', async () => {
       const user = { id: 'u1', email: '5551234@cubaamazon.com' };
       const createUser = jest

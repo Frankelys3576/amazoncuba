@@ -12,6 +12,19 @@ import { generateSlug } from './slug.util';
 const extractPhoneFromEmail = (email: string): string =>
   email.split('@')[0].replace(/\+/g, '').replace(/\s/g, '');
 
+// Mirrors Express's `value ? parseFloat(value) : null` at every one of its
+// six lat/lng/price_per_night call sites. The frontends send these as
+// strings (SellerAuth.jsx .toString()s coordinates; price_per_night comes
+// from an <input type="number">, which React holds as a string), and
+// Prisma's lat/lng columns are Float — an un-coerced string throws inside
+// the try/catch below and silently drops the store row.
+// Falsy-in/null-out is intentional and matches Express exactly, including
+// the 0 -> null quirk: do not "improve" this with Number(), which turns ''
+// into 0 instead of null.
+const toFloatOrNull = (
+  value: string | number | null | undefined,
+): number | null => (value ? parseFloat(String(value)) : null);
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -55,9 +68,9 @@ export class AuthService {
         province: dto.province || null,
         municipality: dto.municipality || null,
         address: dto.address || null,
-        lat: dto.lat ?? null,
-        lng: dto.lng ?? null,
-        price_per_night: dto.price_per_night ?? null,
+        lat: toFloatOrNull(dto.lat),
+        lng: toFloatOrNull(dto.lng),
+        price_per_night: toFloatOrNull(dto.price_per_night),
       };
 
       try {
@@ -86,9 +99,9 @@ export class AuthService {
                   province: dto.province || null,
                   municipality: dto.municipality || null,
                   address: dto.address || null,
-                  lat: dto.lat ?? null,
-                  lng: dto.lng ?? null,
-                  price_per_night: dto.price_per_night ?? null,
+                  lat: toFloatOrNull(dto.lat),
+                  lng: toFloatOrNull(dto.lng),
+                  price_per_night: toFloatOrNull(dto.price_per_night),
                 }
               : {}),
           },

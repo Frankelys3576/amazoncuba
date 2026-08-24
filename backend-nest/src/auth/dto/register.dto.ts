@@ -44,14 +44,19 @@ export class RegisterDto {
   @IsString({ message: 'La dirección debe ser texto' })
   address?: string;
 
+  // The frontends send these as strings (coordinates are .toString()'d,
+  // price_per_night comes from an <input type="number">, which React holds
+  // as a string) — AuthService coerces them with parseFloat, mirroring
+  // Express. No format validation here: the goal is an honest declared
+  // type, not a new constraint that would reject the current payloads.
   @IsOptional()
-  lat?: number;
+  lat?: string | number;
 
   @IsOptional()
-  lng?: number;
+  lng?: string | number;
 
   @IsOptional()
-  price_per_night?: number;
+  price_per_night?: string | number;
 
   @IsOptional()
   @IsString({ message: 'La descripción debe ser texto' })
