@@ -22,8 +22,9 @@ begin;
 -- 0. Pre-flight: refuse to run if something outside this migration's
 --    awareness depends on the nine tables in a way this migration would
 --    silently break: a dependent view/matview, a foreign key reaching in
---    from a tenth table, an RLS policy on one of the nine, or a unique
---    constraint/index sitting on a column section D renames. Each of
+--    from a tenth table, an RLS policy on one of the nine, a unique
+--    constraint/index sitting on a column section D renames, or a trigger
+--    on one of the nine. Each of
 --    these commits cleanly with no engine-level error if left unchecked --
 --    silent damage, not a crash -- so they're checked here, loudly,
 --    before a single column is touched.
@@ -102,6 +103,7 @@ declare
   f record;
   pol record;
   idx record;
+  trg record;
 begin
   -- a) a view or matview that reads any of the nine tables silently
   --    starts reading legacy_id / legacy_*_id after section D's renames --
@@ -242,6 +244,32 @@ begin
   loop
     raise exception 'pre-flight: % % on % covers %.%, which section D renames to legacy_% -- it would follow the rename and silently start enforcing/indexing the legacy column instead (for a unique constraint that means duplicates it used to reject now succeed, because the legacy column is null on every new row). Drop it, run this migration, recreate it on the new column.',
       idx.kind, idx.objname, idx.tbl, idx.tbl, idx.col, idx.col;
+  end loop;
+
+  -- f) a trigger on any of the nine survives this migration untouched, but
+  --    its function body was written against bigint ids. Anything that
+  --    casts or stores an id as bigint -- an audit table with a bigint
+  --    column is the obvious shape -- starts failing at the NEXT write,
+  --    which is after this transaction commits, so nothing in the cutover
+  --    checklist sees it: the migration passes, verify_integrity passes,
+  --    and the first person to save a product gets the error. Reproduced on
+  --    postgres:17 with an after-insert trigger writing new.id into a
+  --    bigint audit column: the migration committed clean and the next
+  --    insert raised 'column "product_id" is of type bigint but expression
+  --    is of type uuid'.
+  --
+  --    tgisinternal = false excludes the triggers Postgres creates to
+  --    enforce foreign keys, which section C drops and section E recreates
+  --    correctly; those are not a hazard and would otherwise make this
+  --    check fire on every run.
+  for trg in
+    select tgname, tgrelid::regclass as tbl
+    from pg_trigger
+    where tgrelid = any(nine)
+      and tgisinternal = false
+  loop
+    raise exception 'pre-flight: trigger % on % survives this migration untouched, but its function was written when the ids were bigint -- if it casts, compares or stores an id, it breaks at the first write AFTER this transaction commits, where nothing in the cutover checklist would see it. Review it (and drop/recreate it around this migration) before running.',
+      trg.tgname, trg.tbl;
   end loop;
 end $$;
 
