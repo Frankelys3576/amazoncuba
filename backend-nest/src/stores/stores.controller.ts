@@ -31,6 +31,7 @@ export class StoresController {
   }
 
   @Get(':id/stats')
+  @UseGuards(SellerAuthGuard, StoreOwnershipGuard)
   getStats(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.storesService.getStats(id);
   }
