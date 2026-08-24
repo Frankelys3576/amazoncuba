@@ -38,7 +38,56 @@ begin;
 --    role key, which bypasses RLS -- but this migration cannot see
 --    whether a policy exists on production, and if one does, section D's
 --    renames corrupt it permanently and silently.)
+--
+--    This section also SNAPSHOTS every foreign key on the nine tables
+--    before section C drops them, so section E can put back exactly what
+--    was there rather than a hardcoded guess -- see the snapshot's own
+--    comment below.
 -- ---------------------------------------------------------------
+
+-- Snapshot of the nine tables' foreign keys, taken before anything is
+-- dropped. Section C discovers and drops every fk by name but records
+-- nothing about what it dropped; section E replays this table.
+--
+-- What is at stake is the ON DELETE / ON UPDATE actions. schema.prisma
+-- cannot express them and this file cannot see production's pg_constraint,
+-- so a hardcoded `add constraint ... references ...` in section E silently
+-- rewrites every fk to NO ACTION -- and legacy_id rollback restores keys,
+-- not referential actions, so the loss is permanent. Reproduced on a
+-- postgres:17 rebuild of the pre-migration schema: ON DELETE CASCADE on
+-- product_views/product_reviews.product_id (which is the only reason
+-- product.controller.js's deleteProduct can succeed today -- it deletes
+-- order_items and the product, never the views or reviews), ON DELETE
+-- CASCADE on products.store_id and order_items.order_id, ON DELETE SET
+-- NULL on products.store_category_id and ON UPDATE CASCADE on
+-- products.category_id were all downgraded to NO ACTION by the hardcoded
+-- version, with no error, and deleting a viewed product then failed with
+-- "violates foreign key constraint product_views_product_id_fkey".
+--
+-- `on commit drop`: this file is one transaction, so the snapshot is
+-- cleaned up by the same commit that finishes the migration, and can never
+-- survive to confuse a later run.
+create temp table _uuid_v7_fk_snapshot on commit drop as
+select
+  c.conrelid                  as tbl_oid,
+  c.conname::text             as conname,
+  pg_get_constraintdef(c.oid) as condef,
+  c.confdeltype               as confdeltype,
+  c.confupdtype               as confupdtype,
+  (select array_agg(a.attname::text order by k.ord)
+     from unnest(c.conkey) with ordinality as k(attnum, ord)
+     join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum)
+                              as child_cols
+from pg_constraint c
+where c.contype = 'f'
+  and c.conrelid = any (array[
+    'public.categories'::regclass, 'public.stores'::regclass,
+    'public.products'::regclass, 'public.orders'::regclass,
+    'public.order_items'::regclass, 'public.platform_settings'::regclass,
+    'public.store_categories'::regclass, 'public.product_views'::regclass,
+    'public.product_reviews'::regclass
+  ]);
+
 do $$
 declare
   nine regclass[] := array[
@@ -98,6 +147,37 @@ begin
   loop
     raise exception 'pre-flight: policy % on % would silently repoint to legacy_id/legacy_*_id after section D''s renames, with no error',
       pol.polname, pol.tbl;
+  end loop;
+
+  -- d) section E now recreates only what the snapshot above captured. That
+  --    is the point -- it preserves whatever production really has, under
+  --    whatever name -- but it also means an fk that is MISSING from
+  --    production would no longer be created by section E, where the old
+  --    hardcoded version would have created it. Check the eight
+  --    (table, column) pairs this migration knows about are all present, so
+  --    that divergence is a loud stop here rather than a constraint that
+  --    quietly ceases to exist. Matched by column, not by constraint name,
+  --    so a differently-named fk in production is preserved rather than
+  --    renamed.
+  for f in
+    select * from (values
+      ('public.products'::regclass,         'category_id'),
+      ('public.products'::regclass,         'store_id'),
+      ('public.products'::regclass,         'store_category_id'),
+      ('public.order_items'::regclass,      'order_id'),
+      ('public.order_items'::regclass,      'product_id'),
+      ('public.product_views'::regclass,    'product_id'),
+      ('public.product_reviews'::regclass,  'product_id'),
+      ('public.store_categories'::regclass, 'store_id')
+    ) as expected(child_table, child_col)
+    where not exists (
+      select 1 from _uuid_v7_fk_snapshot s
+      where s.tbl_oid = expected.child_table
+        and expected.child_col = any(s.child_cols)
+    )
+  loop
+    raise exception 'pre-flight: no foreign key on %.% -- section E recreates foreign keys from the section 0 snapshot, so this one would not exist after the migration either. Add it (or remove the pair from this check) before running.',
+      f.child_table, f.child_col;
   end loop;
 end $$;
 
@@ -287,14 +367,49 @@ alter table public.store_categories  alter column id set not null, alter column 
 alter table public.product_views   add primary key (id);
 alter table public.product_reviews add primary key (id);
 
-alter table public.products         add constraint products_category_id_fkey       foreign key (category_id)       references public.categories(id);
-alter table public.products         add constraint products_store_id_fkey          foreign key (store_id)          references public.stores(id);
-alter table public.products         add constraint products_store_category_id_fkey foreign key (store_category_id) references public.store_categories(id);
-alter table public.order_items      add constraint order_items_order_id_fkey       foreign key (order_id)          references public.orders(id);
-alter table public.order_items      add constraint order_items_product_id_fkey     foreign key (product_id)        references public.products(id);
-alter table public.product_views    add constraint product_views_product_id_fkey   foreign key (product_id)        references public.products(id);
-alter table public.product_reviews  add constraint product_reviews_product_id_fkey foreign key (product_id)        references public.products(id);
-alter table public.store_categories add constraint store_categories_store_id_fkey  foreign key (store_id)          references public.stores(id);
+-- The foreign keys are re-added from section 0's snapshot -- name, columns,
+-- referenced table and, critically, the ON DELETE / ON UPDATE actions
+-- exactly as production had them. Nothing about them is hardcoded here.
+--
+-- Replaying pg_get_constraintdef's text across section D's renames is safe
+-- because that text names COLUMNS, not types or attnums: a captured
+-- "FOREIGN KEY (store_id) REFERENCES stores(id)" re-resolves against the
+-- new uuid store_id / id, which by this point are the columns holding
+-- those names. Verified empirically on postgres:17 against a rebuild of
+-- the pre-migration schema, including under `set search_path to
+-- pg_catalog` -- pg_get_constraintdef schema-qualifies the referenced
+-- table itself when it has to, and the target table is rendered via
+-- regclass, the same way section C renders it for the drop.
+--
+-- The `raise notice` is deliberate: a non-default referential action being
+-- carried across is exactly the thing a human running the cutover should
+-- see on their screen, because it is the thing that was silently lost
+-- before and the thing legacy_id rollback cannot restore.
+do $$
+declare
+  r record;
+  acts text;
+  code_name text[] := array['a','NO ACTION','r','RESTRICT','c','CASCADE','n','SET NULL','d','SET DEFAULT'];
+  i int;
+begin
+  for r in select * from _uuid_v7_fk_snapshot order by tbl_oid::regclass::text, conname loop
+    execute format('alter table %s add constraint %I %s', r.tbl_oid::regclass, r.conname, r.condef);
+
+    if r.confdeltype <> 'a' or r.confupdtype <> 'a' then
+      acts := '';
+      for i in 1 .. array_length(code_name, 1) by 2 loop
+        if r.confdeltype = code_name[i] and r.confdeltype <> 'a' then
+          acts := acts || ' ON DELETE ' || code_name[i + 1];
+        end if;
+        if r.confupdtype = code_name[i] and r.confupdtype <> 'a' then
+          acts := acts || ' ON UPDATE ' || code_name[i + 1];
+        end if;
+      end loop;
+      raise notice 'section E: preserved non-default referential action on % (%):%',
+        r.conname, r.tbl_oid::regclass, acts;
+    end if;
+  end loop;
+end $$;
 
 -- stores_slug_key / stores_store_number_key (contype 'u') are not touched
 -- by section C's loop -- it only targets contype in ('f','p') -- and,
