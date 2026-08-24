@@ -26,6 +26,22 @@ describe('formatProduct', () => {
     expect(formatProduct(product as any).store_slug).toBe(9);
   });
 
+  // IMPORTANT 3 (symmetry): Express selects the joined store as `stores`
+  // (product.controller.js: '*, stores(accepts_zelle, name, phone, slug,
+  // has_delivery)'). The Prisma relation is named `store`, so this pins the
+  // response actually carries the `stores` key, not the raw relation name.
+  it("keys the joined store as `stores` (Express's alias), not the Prisma relation name `store`", () => {
+    const product = {
+      id: 1,
+      store: { id: 9, accepts_zelle: true, has_delivery: false, name: 'Cafetería Juan', phone: '5551234', slug: 'cafeteria-juan' },
+    };
+
+    const result = formatProduct(product as any) as any;
+
+    expect(result.stores).toMatchObject({ id: 9, name: 'Cafetería Juan' });
+    expect(result.store).toBeUndefined();
+  });
+
   it('handles a product with no joined store (store_id was null)', () => {
     const product = { id: 1, store: null };
 

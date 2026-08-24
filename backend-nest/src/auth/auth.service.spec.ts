@@ -301,6 +301,46 @@ describe('AuthService', () => {
       expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
+
+    // M1: reading platform_settings happens after the Supabase Auth user has
+    // already been created. Without a catch here, a DB blip on that read
+    // would 500 the whole request and orphan that auth user — Express
+    // swallows this failure and falls back to isAutoApprove = false
+    // (auth.controller.js:29-44).
+    it('swallows a platform_settings read failure, falls back to autoApproved: false, and still returns 201 success', async () => {
+      const user = { id: 'u1', email: '5551234@cubaamazon.com' };
+      const createUser = jest
+        .fn()
+        .mockResolvedValue({ data: { user }, error: null });
+      const settingsFindUnique = jest
+        .fn()
+        .mockRejectedValue(new Error('connection terminated unexpectedly'));
+      const storeCreate = jest.fn().mockResolvedValue({});
+      const consoleErrorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined);
+      const service = makeService({
+        createUser,
+        settingsFindUnique,
+        storeCreate,
+      });
+
+      const result = await service.register({
+        email: '5551234@cubaamazon.com',
+        password: 'secret123',
+        full_name: 'Juan Pérez',
+        store_name: 'Cafetería Juan',
+      });
+
+      expect(result).toEqual({
+        message: 'Usuario y tienda registrados exitosamente',
+        user,
+        autoApproved: false,
+      });
+      expect(storeCreate.mock.calls[0][0].data.status).toBe('pending');
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe('login', () => {

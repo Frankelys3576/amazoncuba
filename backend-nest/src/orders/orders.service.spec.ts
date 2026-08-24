@@ -44,7 +44,7 @@ describe('OrdersService', () => {
         expect.objectContaining({ where: { id: { in: [1] } } }),
       );
       expect(result[0].order_items).toHaveLength(1);
-      expect(result[0].order_items[0].product!.store_id).toBe(7);
+      expect(result[0].order_items[0].products!.store_id).toBe(7);
     });
 
     it('returns an empty array without querying orders when the store has no matching order_items', async () => {
@@ -100,7 +100,7 @@ describe('OrdersService', () => {
       const result = await service.findAll({ storeId: '7' });
 
       expect(result[0].order_items).toHaveLength(1);
-      expect(result[0].order_items[0].product!.store_id).toBe(BigInt(7));
+      expect(result[0].order_items[0].products!.store_id).toBe(BigInt(7));
     });
 
     it('intersects the ids query param with the store-scoped order ids', async () => {
@@ -193,12 +193,12 @@ describe('OrdersService', () => {
       expect(typeof item.price_at_purchase).toBe('number');
       expect(item.price_at_purchase).toBe(20);
 
-      expect(typeof item.product!.price).toBe('number');
-      expect(item.product!.price).toBe(20);
-      expect(typeof item.product!.price_usd).toBe('number');
-      expect(item.product!.price_usd).toBe(0.8);
-      expect(typeof item.product!.rating_avg).toBe('number');
-      expect(item.product!.rating_avg).toBe(4.5);
+      expect(typeof item.products!.price).toBe('number');
+      expect(item.products!.price).toBe(20);
+      expect(typeof item.products!.price_usd).toBe('number');
+      expect(item.products!.price_usd).toBe(0.8);
+      expect(typeof item.products!.rating_avg).toBe('number');
+      expect(item.products!.rating_avg).toBe(4.5);
 
       const json = JSON.stringify(result);
       expect(json).not.toMatch(
@@ -234,8 +234,8 @@ describe('OrdersService', () => {
 
       const result = await service.findAll({});
 
-      expect(result[0].order_items[0].product!.price_usd).toBeNull();
-      expect(result[0].order_items[0].product!.rating_avg).toBeNull();
+      expect(result[0].order_items[0].products!.price_usd).toBeNull();
+      expect(result[0].order_items[0].products!.rating_avg).toBeNull();
     });
 
     it('leaves order_items[].product null when the product relation is null', async () => {
@@ -261,7 +261,41 @@ describe('OrdersService', () => {
 
       const result = await service.findAll({});
 
-      expect(result[0].order_items[0].product).toBeNull();
+      expect(result[0].order_items[0].products).toBeNull();
+    });
+
+    // IMPORTANT 3: Express's nested select aliases the joined product row
+    // as `products` (order.controller.js: '*, order_items(*, products(*))'),
+    // and seller-frontend/src/SellerOrders.jsx:30 reads item.products.name
+    // — falling back to `Producto {id}` whenever that key is missing. The
+    // Prisma relation is named `product`, so this pins the response actually
+    // carries the `products` key Express used and NOT the raw relation name.
+    it("keys the joined product as `products` (Express's alias), not the Prisma relation name `product`", async () => {
+      const prisma = {
+        order: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              id: 1,
+              total: new Prisma.Decimal(40),
+              order_items: [
+                {
+                  product_id: 1,
+                  quantity: 2,
+                  price_at_purchase: new Prisma.Decimal(20),
+                  product: { id: 1, name: 'Café', price: new Prisma.Decimal(5) },
+                },
+              ],
+            },
+          ]),
+        },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      const result = await service.findAll({});
+      const [item] = result[0].order_items;
+
+      expect((item as any).products).toMatchObject({ id: 1, name: 'Café' });
+      expect((item as any).product).toBeUndefined();
     });
   });
 

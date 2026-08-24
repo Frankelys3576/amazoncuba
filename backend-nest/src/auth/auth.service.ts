@@ -8,9 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { generateSlug } from './slug.util';
-
-const extractPhoneFromEmail = (email: string): string =>
-  email.split('@')[0].replace(/\+/g, '').replace(/\s/g, '');
+import { extractPhoneFromEmail } from './extract-phone-from-email.util';
 
 // Mirrors Express's `value ? parseFloat(value) : null` at every one of its
 // six lat/lng/price_per_night call sites. The frontends send these as
@@ -49,10 +47,25 @@ export class AuthService {
       );
     }
 
-    const autoApproveSetting = await this.prisma.platformSetting.findUnique({
-      where: { key: 'auto_approve_sellers' },
-    });
-    const isAutoApprove = autoApproveSetting?.value === 'true';
+    // M1: without this try/catch, a DB blip reading platform_settings here
+    // — after the Supabase Auth user above has already been created — would
+    // 500 the whole request and orphan that auth user. Express swallows this
+    // read failure and falls back to isAutoApprove = false
+    // (auth.controller.js:29-44); mirror that here with the same
+    // swallow-and-log semantics already used for the store.create() call
+    // immediately below (Ruling 2).
+    let isAutoApprove = false;
+    try {
+      const autoApproveSetting = await this.prisma.platformSetting.findUnique({
+        where: { key: 'auto_approve_sellers' },
+      });
+      isAutoApprove = autoApproveSetting?.value === 'true';
+    } catch (settingsError) {
+      console.error(
+        'Error reading auto_approve_sellers setting:',
+        settingsError,
+      );
+    }
 
     if (dto.store_name) {
       const phoneMatch = extractPhoneFromEmail(dto.email);

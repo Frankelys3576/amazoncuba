@@ -26,12 +26,23 @@ export function formatOrder(order: OrderWithItems) {
   return {
     ...order,
     total: toPlainNumber(order.total) as number,
-    order_items: order.order_items.map((item) => ({
-      ...item,
-      price_at_purchase: toPlainNumber(item.price_at_purchase) as number,
-      product: item.product
-        ? coerceDecimalFields(item.product, PRODUCT_DECIMAL_FIELDS)
-        : item.product,
-    })),
+    order_items: order.order_items.map((item) => {
+      // IMPORTANT 3: Express's nested select aliases the joined product as
+      // `products` (order.controller.js:37: '*, order_items(*, products(*))'),
+      // and seller-frontend/src/SellerOrders.jsx:30 reads item.products.name.
+      // Prisma's relation is named `product` (schema.prisma), so the key
+      // must be renamed on the way out — leaving it as `product` means every
+      // line item silently renders as "Producto {id}" in the seller
+      // dashboard. Rename, don't just add: Express never returns a
+      // `product` key here.
+      const { product, ...rest } = item;
+      return {
+        ...rest,
+        price_at_purchase: toPlainNumber(item.price_at_purchase) as number,
+        products: product
+          ? coerceDecimalFields(product, PRODUCT_DECIMAL_FIELDS)
+          : product,
+      };
+    }),
   };
 }

@@ -65,8 +65,11 @@ export class OrdersService {
       const scopedStoreId = storeId;
       return formatted.map((order) => ({
         ...order,
+        // formatOrder (IMPORTANT 3) renames each item's joined product from
+        // Prisma's `product` key to Express's `products` alias, so this
+        // scoping filter must read the post-rename key too.
         order_items: order.order_items.filter(
-          (item) => Number(item.product?.store_id) === scopedStoreId,
+          (item) => Number((item as { products?: { store_id?: unknown } }).products?.store_id) === scopedStoreId,
         ),
       }));
     }

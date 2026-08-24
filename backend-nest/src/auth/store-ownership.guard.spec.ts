@@ -19,7 +19,7 @@ describe('StoreOwnershipGuard', () => {
     } as any;
     sellerAuthGuard.handleRequest(
       null,
-      { user, store },
+      { user, store } as any,
       null,
       authContext,
       undefined,

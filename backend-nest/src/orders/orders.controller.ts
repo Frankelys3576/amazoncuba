@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -13,6 +12,7 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { SpanishParseIntPipe } from '../common/spanish-parse-int.pipe';
 
 @Controller('api/orders')
 export class OrdersController {
@@ -32,7 +32,7 @@ export class OrdersController {
 
   // Express: bare res.json(...) = 200 (order.controller.js:122) = Nest default.
   @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateOrderDto) {
+  update(@Param('id', SpanishParseIntPipe) id: number, @Body() dto: UpdateOrderDto) {
     return this.ordersService.update(id, dto.status);
   }
 }

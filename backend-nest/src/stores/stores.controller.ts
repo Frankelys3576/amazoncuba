@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { StoresService } from './stores.service';
+import { SpanishParseIntPipe } from '../common/spanish-parse-int.pipe';
 import { UpdateStoreStatusDto } from './dto/update-store-status.dto';
 import { UpdateZelleInfoDto } from './dto/update-zelle-info.dto';
 import { UpdateStoreProfileDto } from './dto/update-store-profile.dto';
@@ -23,29 +24,29 @@ export class StoresController {
   }
 
   @Get(':id/admin-details')
-  getAdminDetails(@Param('id', ParseIntPipe) id: number) {
+  getAdminDetails(@Param('id', SpanishParseIntPipe) id: number) {
     return this.storesService.getAdminDetails(id);
   }
 
   @Get(':id/stats')
-  getStats(@Param('id', ParseIntPipe) id: number) {
+  getStats(@Param('id', SpanishParseIntPipe) id: number) {
     return this.storesService.getStats(id);
   }
 
   @Put(':id/status')
-  updateStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateStoreStatusDto) {
+  updateStatus(@Param('id', SpanishParseIntPipe) id: number, @Body() dto: UpdateStoreStatusDto) {
     return this.storesService.updateStatus(id, dto.status);
   }
 
   @Put(':id/zelle')
-  updateZelleInfo(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateZelleInfoDto) {
+  updateZelleInfo(@Param('id', SpanishParseIntPipe) id: number, @Body() dto: UpdateZelleInfoDto) {
     return this.storesService.updateZelleInfo(id, dto);
   }
 
   @Put(':id/credentials')
   @UseGuards(SellerAuthGuard, StoreOwnershipGuard)
   updateCredentials(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', SpanishParseIntPipe) id: number,
     @Req() req: RequestWithStore,
     @Body() dto: UpdateStoreCredentialsDto,
   ) {
@@ -54,7 +55,7 @@ export class StoresController {
 
   @Put(':id')
   @UseGuards(SellerAuthGuard, StoreOwnershipGuard)
-  updateProfile(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateStoreProfileDto) {
+  updateProfile(@Param('id', SpanishParseIntPipe) id: number, @Body() dto: UpdateStoreProfileDto) {
     return this.storesService.updateProfile(id, dto);
   }
 }

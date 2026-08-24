@@ -7,9 +7,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-http-bearer';
 import { SupabaseService } from '../supabase/supabase.service';
 import { PrismaService } from '../prisma/prisma.service';
-
-const extractPhoneFromEmail = (email: string): string =>
-  email.split('@')[0].replace(/\+/g, '').replace(/\s/g, '');
+import { extractPhoneFromEmail } from './extract-phone-from-email.util';
 
 @Injectable()
 export class SellerAuthStrategy extends PassportStrategy(Strategy, 'bearer') {

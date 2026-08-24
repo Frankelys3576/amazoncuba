@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { StoresService } from './stores.service';
 
@@ -71,6 +71,52 @@ describe('StoresService', () => {
         message: 'Credenciales actualizadas exitosamente',
         phone: '535559999',
       });
+    });
+
+    // IMPORTANT 5: a Supabase Auth outage is not the caller's bad request.
+    // Express returns 500 here (store.controller.js:332-335) — the exact
+    // inverse of the upload module's own ruling that a Supabase failure is a
+    // 500, not a 400.
+    it('throws InternalServerErrorException (not BadRequestException) when Supabase Auth fails to update the user', async () => {
+      const updateUserById = jest
+        .fn()
+        .mockResolvedValue({ error: { message: 'auth outage' } });
+      const supabase = { client: { auth: { admin: { updateUserById } } } } as any;
+      const prisma = makePrisma({});
+      const service = new StoresService(prisma, supabase);
+
+      await expect(
+        service.updateCredentials(
+          7,
+          { user: { id: 'u1' }, store: { id: 7, phone: '5551234' } } as any,
+          { password: 'newpass1' },
+        ),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    });
+  });
+
+  // IMPORTANT 7: SellerAuthStrategy matches store phone by exact equality
+  // against the digits-only phone derived from the caller's email. If a
+  // seller saves a phone with symbols/spaces through their own profile form
+  // (updateProfile) while updateCredentials normalizes to digits-only, the
+  // two diverge and every guarded endpoint 403s for that seller from then on.
+  describe('updateProfile: phone normalization (IMPORTANT 7)', () => {
+    it('strips non-digit characters from phone before writing it, matching updateCredentials', async () => {
+      const update = jest.fn().mockResolvedValue({ id: 7, zelle_info: {} });
+      const prisma = makePrisma({
+        findUnique: jest.fn().mockResolvedValue({ id: 7, zelle_info: {} }),
+        update,
+      });
+      const service = new StoresService(prisma, {} as any);
+
+      await service.updateProfile(7, { phone: '+53 5551234' } as any);
+
+      expect(update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 7 },
+          data: expect.objectContaining({ phone: '535551234' }),
+        }),
+      );
     });
   });
 

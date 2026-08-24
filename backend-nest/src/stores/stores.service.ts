@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -103,7 +108,6 @@ export class StoresService {
     for (const field of [
       'description',
       'slogan',
-      'phone',
       'logo_url',
       'banner_url',
       'is_open',
@@ -113,6 +117,15 @@ export class StoresService {
       'store_type',
     ] as const) {
       if (dto[field] !== undefined) updates[field] = dto[field];
+    }
+    // IMPORTANT 7: normalize digits the same way updateCredentials does
+    // (line ~187 below). SellerAuthStrategy now matches store phone by exact
+    // equality against the phone derived from the caller's email — a raw
+    // '+53 5551234' saved verbatim here would never again exact-match the
+    // digits-only phone the strategy derives, locking the seller out of
+    // every guarded endpoint via their own profile form.
+    if (dto.phone !== undefined) {
+      updates.phone = dto.phone.replace(/[^0-9]/g, '');
     }
 
     const zelleFields = [
@@ -198,7 +211,14 @@ export class StoresService {
       req.user.id,
       updates,
     );
-    if (error) throw new BadRequestException('Error al actualizar las credenciales en Auth');
+    // IMPORTANT 5: a Supabase Auth outage is not the caller's bad request —
+    // Express returns 500 here (store.controller.js:332-335), the exact
+    // inverse of the upload module's own 500-on-Supabase-failure ruling.
+    if (error) {
+      throw new InternalServerErrorException(
+        'Error al actualizar las credenciales en Auth',
+      );
+    }
 
     if (cleanPhone) {
       await this.prisma.store.update({ where: { id }, data: { phone: cleanPhone } });

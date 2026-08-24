@@ -153,24 +153,25 @@ describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard ch
       });
   });
 
-  it("4. no Authorization header returns 401 with passport's default envelope (not the strategy's Spanish message)", () => {
-    // Verified real behavior (differs from the brief's assumption): with no
-    // Authorization header, passport-http-bearer's Strategy has no token to
-    // hand to SellerAuthStrategy.validate() at all, so it calls fail()
-    // directly and validate() never runs — the custom 'Token inválido o
-    // expirado' UnauthorizedException thrown inside validate() is never
-    // reached. SellerAuthGuard.handleRequest then sees err=null, user=false
-    // and throws a bare `new UnauthorizedException()`, which the global
-    // filter renders with Nest's default message. Confirmed by direct probe:
-    // no header -> 401 {"error":"Unauthorized"}. Case 4b below shows the
-    // Spanish message IS produced by the real chain once a token is present
-    // (even if invalid), because that's what actually reaches validate().
+  it("4. no Authorization header returns 401 with the Spanish 'Token no proporcionado' message (IMPORTANT 6)", () => {
+    // With no Authorization header, passport-http-bearer's Strategy has no
+    // token to hand to SellerAuthStrategy.validate() at all, so it calls
+    // fail() directly and validate() never runs — the custom 'Token inválido
+    // o expirado' UnauthorizedException thrown inside validate() is never
+    // reached. SellerAuthGuard.handleRequest then sees err=null, user=false.
+    // It used to throw a bare `new UnauthorizedException()` there, which the
+    // global filter rendered with Nest's default "Unauthorized" message —
+    // Express's auth.middleware.js:14-16 returns "Token no proporcionado"
+    // for this exact case, so the guard now throws with that message
+    // explicitly. Case 4b below shows the strategy's own Spanish message IS
+    // produced by the real chain once a token is present (even if invalid),
+    // because that's what actually reaches validate().
     return request(app.getHttpServer())
       .put('/api/stores/1')
       .send({ name: 'Nueva Cafetería' })
       .expect(401)
       .expect((res) => {
-        expect(res.body.error).toBe('Unauthorized');
+        expect(res.body.error).toBe('Token no proporcionado');
       });
   });
 
