@@ -21,15 +21,23 @@ begin;
 -- ---------------------------------------------------------------
 -- 0. Pre-flight: refuse to run if something outside this migration's
 --    awareness depends on the nine tables in a way this migration would
---    silently break. Each of the following commits cleanly with no
---    engine-level error if left unchecked -- silent damage, not a crash --
---    so they're checked here, loudly, before a single column is touched.
+--    silently break: a dependent view/matview, a foreign key reaching in
+--    from a tenth table, or an RLS policy on one of the nine. Each of
+--    these commits cleanly with no engine-level error if left unchecked --
+--    silent damage, not a crash -- so they're checked here, loudly,
+--    before a single column is touched.
 --
 --    The nine-table inventory this file works from was confirmed against
 --    PostgREST's OpenAPI listing, which is weaker than it looks:
 --    PostgREST omits relations with no grants to anon/authenticated, so
 --    an ungranted table or view would never have appeared there. This
 --    block checks the actual catalog instead of trusting that listing.
+--    (RLS is provably inert in this system today -- none of the three
+--    frontends carries @supabase/supabase-js, they all go through the
+--    Express API, and backend/src/config/supabase.js uses the service
+--    role key, which bypasses RLS -- but this migration cannot see
+--    whether a policy exists on production, and if one does, section D's
+--    renames corrupt it permanently and silently.)
 -- ---------------------------------------------------------------
 do $$
 declare
@@ -42,6 +50,7 @@ declare
   ];
   v record;
   f record;
+  pol record;
 begin
   -- a) a view or matview that reads any of the nine tables silently
   --    starts reading legacy_id / legacy_*_id after section D's renames --
@@ -72,6 +81,23 @@ begin
   loop
     raise exception 'pre-flight: foreign key % on % references one of this migration''s nine tables from outside its scope -- section C would cascade-drop it and it would never be recreated',
       f.conname, f.child_table;
+  end loop;
+
+  -- c) a row-level security policy on any of the nine tables reads its
+  --    USING/WITH CHECK expression against whatever column currently has
+  --    that name -- it isn't rewritten by `rename column`. After section
+  --    D, a policy written against `id` silently starts filtering on
+  --    legacy_id (or, for the fk columns, legacy_*_id) instead. Not
+  --    detectable after the fact from this file's comments alone -- the
+  --    corruption is in the policy's stored expression, not anywhere this
+  --    migration writes to.
+  for pol in
+    select polname, polrelid::regclass as tbl
+    from pg_policy
+    where polrelid = any(nine)
+  loop
+    raise exception 'pre-flight: policy % on % would silently repoint to legacy_id/legacy_*_id after section D''s renames, with no error',
+      pol.polname, pol.tbl;
   end loop;
 end $$;
 
