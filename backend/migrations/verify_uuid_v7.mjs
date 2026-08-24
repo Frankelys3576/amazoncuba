@@ -1,6 +1,8 @@
 // Asserts the generator actually produces RFC 9562 v7 values.
 // Usage: node backend/migrations/verify_uuid_v7.mjs
-// Requires an RPC wrapper; see Step 4 for how these values are obtained.
+// Requires public.uuid_generate_v7() to already exist and PostgREST's schema
+// cache to have been reloaded — both done by 001_uuid_v7_function.sql, which
+// issues `notify pgrst, 'reload schema';` as its last statement.
 import fs from 'node:fs';
 
 const env = Object.fromEntries(
@@ -57,12 +59,34 @@ if (prefixes[prefixes.length - 1] <= prefixes[0]) {
 // 4. no collisions, including within the same millisecond
 if (new Set(ids).size !== ids.length) fail(`collision: ${ids.length - new Set(ids).size} duplicate(s) in 200`);
 
-// 5. the timestamp prefix must decode to approximately now
-const ms = parseInt(ids[0].replace(/-/g, '').slice(0, 12), 16);
-const drift = Math.abs(Date.now() - ms);
-if (drift > 60000) fail(`timestamp prefix decodes to ${new Date(ms).toISOString()}, ${drift}ms from now`);
+// 5. the timestamp prefix must decode to approximately now — checked at both
+// ends of the run, not just the first id.
+let maxDrift = 0;
+for (const id of [ids[0], ids[ids.length - 1]]) {
+  const ms = parseInt(id.replace(/-/g, '').slice(0, 12), 16);
+  const drift = Math.abs(Date.now() - ms);
+  maxDrift = Math.max(maxDrift, drift);
+  if (drift > 60000) fail(`timestamp prefix decodes to ${new Date(ms).toISOString()}, ${drift}ms from now (${id})`);
+}
+
+// 6. the bits NOT forced by the version/variant writes must still vary.
+// A wrong cast-truncation direction or substring offset would clobber them
+// into constants while every other assertion above still passed: e.g. if
+// octet 6 came out constant 0x70 and octet 8 constant 0x80, versions and
+// variants would still read correctly, prefixes would still climb, and 200
+// distinct timestamps would still guarantee no collisions. De-dashed hex
+// index 13 is octet 6's low nibble (the one bit-group the version write is
+// documented to leave random); octet 8's free bits are its low 6 bits, taken
+// as an integer mask (`& 0x3f`) rather than by hex-char slicing, since a
+// naive slice pulls in octet 9 too and would mask a clobbered octet 8 behind
+// octet 9's always-random bits.
+const hex = ids.map(id => id.replace(/-/g, ''));
+const octet6LowNibbles = new Set(hex.map(h => h[13]));
+const octet8Low6Bits = new Set(hex.map(h => parseInt(h.slice(16, 18), 16) & 0x3f));
+if (octet6LowNibbles.size < 8) fail(`octet 6 low nibble has only ${octet6LowNibbles.size} distinct values in 200 (of 16 possible) — version write may be clobbering random bits`);
+if (octet8Low6Bits.size < 16) fail(`octet 8 low 6 bits have only ${octet8Low6Bits.size} distinct values in 200 (of 64 possible) — variant write may be clobbering random bits`);
 
 console.log(failures === 0
-  ? `PASS: 200 ids, version 7, RFC variant, monotonic, no collisions, timestamp within ${drift}ms`
+  ? `PASS: 200 ids, version 7, RFC variant, prefix non-decreasing, no collisions, timestamp within ${maxDrift}ms, tail bits vary`
   : `${failures} assertion(s) failed`);
 process.exit(failures === 0 ? 0 : 1);
