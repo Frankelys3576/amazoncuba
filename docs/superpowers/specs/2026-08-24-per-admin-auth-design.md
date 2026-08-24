@@ -72,10 +72,11 @@ Verifies the bearer token via `supabase.auth.getUser(token)`, then checks
 | Invalid or expired token | 401 | `Token inválido o expirado` |
 | Valid token, role is not `admin` | 403 | `No tienes permisos de administrador` |
 
-It replaces `requireAdmin` at the six existing sites: `GET/PUT/DELETE /api/users`,
-`POST /api/settings`, and `PUT /api/stores/:id/status`, `PUT /api/stores/:id/zelle`,
-`GET /api/stores/:id/admin-details`. The protected surface does not change — only
-how the caller proves identity.
+It replaces `requireAdmin` at all **seven** existing sites: `GET /api/users`,
+`PUT /api/users/:id`, `DELETE /api/users/:id`, `POST /api/settings`,
+`GET /api/stores/:id/admin-details`, `PUT /api/stores/:id/status`, and
+`PUT /api/stores/:id/zelle`. The protected surface does not change — only how the
+caller proves identity.
 
 `GET /api/orders` keeps its existing three-way authorization; only the admin leg
 swaps from key to token.
@@ -92,7 +93,22 @@ left `req.store` silently undefined earlier in this project and survived five
 clean reviews, because the test hand-built the request shape. A direct guard does
 not re-enter that shape.
 
-Applied to the Nest equivalents of the same routes.
+**NestJS needs more than the guard, because it never received the lockdown at
+all.** That change was Express-only, so `backend-nest` is still missing every
+authorization the lockdown added. Bringing it to parity means three things, not
+one:
+
+1. `AdminGuard` on the seven admin routes — all of which exist in Nest
+   (`users.controller.ts` `@Get()`/`@Delete(':id')`/`@Put(':id')`,
+   `settings.controller.ts` `@Post()`, `stores.controller.ts`
+   `@Get(':id/admin-details')`/`@Put(':id/status')`/`@Put(':id/zelle')`).
+2. Seller authentication plus ownership on `@Get(':id/stats')`.
+3. The three-way authorization on the orders list route, mirroring
+   `authorizeOrdersQuery`.
+
+Leaving 2 and 3 out would ship holes scheduled to open on the day Nest is
+deployed — the same failure mode as the deleted `BigInt` shim, where two
+individually-correct changes combined into a broken backend.
 
 ### Admin frontend
 
@@ -130,7 +146,8 @@ password regardless.
 `backend/smoke_admin_auth.mjs`:
 
 - no token → 401 on every admin route;
-- **a valid seller token → 403** on every admin route (a seller must never pass);
+- **a valid seller token → 403** on every admin route, all seven (a seller must
+  never pass);
 - admin token → 200;
 - the routes that must stay public still respond 200;
 - the three `GET /api/orders` callers behave as before, with the admin leg now
@@ -138,6 +155,13 @@ password regardless.
 - **a normal user who calls `supabase.auth.updateUser({ data: { role: 'admin' } })`
   — which writes `user_metadata` — gains no admin access.** This encodes the
   footgun so it cannot quietly reappear.
+
+The script must separate two modes, because not all of these are safe everywhere.
+The self-promotion check needs a throwaway user account, so it runs **only against
+the local stack**. Against production the script runs a read-only subset: the
+denial assertions (which are rejected before reaching any controller), the public
+routes, and `GET` with a valid admin token. Creating accounts in production to
+prove a security property is not an acceptable trade.
 
 NestJS gets unit tests for `AdminGuard` and e2e coverage of a protected route.
 Because Nest's suite mocks Prisma and Supabase, at least one check must run
@@ -151,7 +175,7 @@ to protect:
 
 1. Run `set_admin_role.js` against the production project for your account.
 2. Deploy `backend/` and `admin-frontend/` together.
-3. Verify with `smoke_admin_auth.mjs` against production.
+3. Verify with `smoke_admin_auth.mjs` against production, in its read-only mode.
 4. Unset `ADMIN_API_KEY` in Vercel.
 
 ## Out of scope
