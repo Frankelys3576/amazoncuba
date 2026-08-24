@@ -55,4 +55,36 @@ describe('StoreCategoriesService', () => {
     });
     expect(result).toEqual(updated);
   });
+
+  // Parity fix: Express's deleteStoreCategory (storeCategory.controller.js:
+  // 67-80) deletes by id + store_id and unconditionally returns 200 with the
+  // success message — it never checks whether a row matched. Unlike
+  // update(), remove() must NOT 404 on a nonexistent category.
+  it('returns the success message even when the category does not exist, matching Express', async () => {
+    const prisma = {
+      storeCategory: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    } as any;
+    const service = new StoreCategoriesService(prisma);
+
+    const result = await service.remove(7, 999);
+
+    expect(prisma.storeCategory.deleteMany).toHaveBeenCalledWith({
+      where: { id: 999, store_id: 7 },
+    });
+    expect(result).toEqual({ message: 'Category deleted successfully' });
+  });
+
+  it('deletes an existing category scoped to the store and returns the success message', async () => {
+    const prisma = {
+      storeCategory: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    } as any;
+    const service = new StoreCategoriesService(prisma);
+
+    const result = await service.remove(7, 1);
+
+    expect(prisma.storeCategory.deleteMany).toHaveBeenCalledWith({
+      where: { id: 1, store_id: 7 },
+    });
+    expect(result).toEqual({ message: 'Category deleted successfully' });
+  });
 });

@@ -43,12 +43,14 @@ export class StoreCategoriesService {
   }
 
   async remove(storeId: number, categoryId: number) {
-    const existing = await this.prisma.storeCategory.findFirst({
+    // Mirrors Express's deleteStoreCategory (storeCategory.controller.js:67-80),
+    // which deletes by id + store_id and unconditionally returns 200 with the
+    // success message — it never checks whether a row actually matched.
+    // Unlike update(), remove() does NOT 404 on a nonexistent category; that
+    // asymmetry with Express is deliberate, not an oversight.
+    await this.prisma.storeCategory.deleteMany({
       where: { id: categoryId, store_id: storeId },
     });
-    if (!existing) throw new NotFoundException('Category not found');
-
-    await this.prisma.storeCategory.delete({ where: { id: categoryId } });
     return { message: 'Category deleted successfully' };
   }
 }

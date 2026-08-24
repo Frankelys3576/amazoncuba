@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { formatStore } from './store-format.util';
 
 describe('formatStore', () => {
@@ -49,5 +50,64 @@ describe('formatStore', () => {
 
   it('returns falsy input unchanged', () => {
     expect(formatStore(null as any)).toBeNull();
+  });
+
+  // Regression: schema.prisma types price_per_night as `Decimal?`, so at
+  // runtime store.price_per_night is a Prisma.Decimal instance, never a
+  // plain JS number. A plain object literal fixture (`price_per_night: 40`)
+  // doesn't exercise that, so these tests build real Prisma.Decimal values
+  // the way the generated client actually returns them.
+  describe('price_per_night with a real Prisma.Decimal direct column', () => {
+    it('returns a plain JS number, not a Decimal/string, for a non-null Decimal', () => {
+      const store = {
+        id: 1,
+        price_per_night: new Prisma.Decimal(40),
+        zelle_info: {},
+      };
+
+      const result = formatStore(store as any);
+
+      expect(typeof result.price_per_night).toBe('number');
+      expect(result.price_per_night).toBe(40);
+      expect(JSON.stringify({ price_per_night: result.price_per_night })).toBe(
+        '{"price_per_night":40}',
+      );
+    });
+
+    it('falls back to zelle_info.price_per_night when the direct column is Decimal(0), matching Express falsy-0 semantics', () => {
+      const store = {
+        id: 1,
+        price_per_night: new Prisma.Decimal(0),
+        zelle_info: { price_per_night: 25 },
+      };
+
+      const result = formatStore(store as any);
+
+      expect(result.price_per_night).toBe(25);
+    });
+
+    it('falls back to zelle_info.price_per_night when the direct column is null', () => {
+      const store = {
+        id: 1,
+        price_per_night: null,
+        zelle_info: { price_per_night: 25 },
+      };
+
+      const result = formatStore(store as any);
+
+      expect(result.price_per_night).toBe(25);
+    });
+
+    it('returns null, not 0, when both the direct column and zelle_info are null/absent', () => {
+      const store = {
+        id: 1,
+        price_per_night: null,
+        zelle_info: {},
+      };
+
+      const result = formatStore(store as any);
+
+      expect(result.price_per_night).toBeNull();
+    });
   });
 });
