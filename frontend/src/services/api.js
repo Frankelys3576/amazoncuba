@@ -162,6 +162,18 @@ export const getStoreCategories = async (storeId) => {
     return [];
   }
 };
+
+export const getCategories = async () => {
+  try {
+    const response = await fetch(`${API_URL}/categories`);
+    if (!response.ok) throw new Error('Error al obtener categorías');
+    return await response.json();
+  } catch (error) {
+    console.error('API getCategories error:', error);
+    return [];
+  }
+};
+
 export const getSettings = async () => {
   try {
     const response = await fetch(`${API_URL}/settings`);

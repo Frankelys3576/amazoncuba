@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import DealProductCard from '../components/DealProductCard';
-import { getProducts } from '../services/api';
+import { getProducts, getCategories } from '../services/api';
 import './DailyDeals.css';
+
+// Los botones de filtro están rotulados "Electrónica" y "Hogar"; las
+// categorías vienen de la API con su nombre tal cual está en la base de
+// datos. Comparamos sin acentos ni mayúsculas para no depender de eso.
+const normalizeName = (name) =>
+  (name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+// Si la categoría no existe en la base de datos no hay nada que mostrar:
+// sin esta guarda, comparar contra `undefined` devolvería los productos que
+// no tienen categoría asignada.
+const filterByCategory = (products, categoryId) =>
+  categoryId ? products.filter(p => p.category_id === categoryId) : [];
 
 const DailyDeals = () => {
   const [deals, setDeals] = useState([]);
   const [allDeals, setAllDeals] = useState([]);
+  const [categoryIds, setCategoryIds] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
 
@@ -14,12 +31,29 @@ const DailyDeals = () => {
       // In a real app we would hit a specific /api/deals endpoint
       // For now we get all products and select some random ones to act as deals
       try {
-        const allProducts = await getProducts();
-        
-        // Let's pick 12 products deterministically based on their ID 
-        // to act as our "daily deals" so they don't change on every refresh
-        const selectedDeals = allProducts.filter(p => p.id % 4 === 0).slice(0, 12);
-        
+        const [allProducts, categories] = await Promise.all([
+          getProducts(),
+          getCategories()
+        ]);
+
+        // Escogemos 12 productos de forma determinista a partir de su id,
+        // para que las ofertas no cambien en cada recarga. Los ids son UUID
+        // v7 (cadenas): `p.id % 4` daba NaN y la página no mostraba ninguna
+        // oferta, así que usamos el último dígito hexadecimal del uuid, que
+        // sigue siendo estable por producto.
+        const selectedDeals = allProducts
+          .filter(p => typeof p.id === 'string' && parseInt(p.id.slice(-1), 16) % 4 === 0)
+          .slice(0, 12);
+
+        // Los filtros por categoría comparaban category_id con 1 y 4, los
+        // ids enteros que existían antes de la migración a UUID. Ahora se
+        // resuelven por nombre, que es lo que muestran los botones.
+        setCategoryIds(
+          Object.fromEntries(
+            categories.map(cat => [normalizeName(cat.name), cat.id])
+          )
+        );
+
         setAllDeals(selectedDeals);
         setDeals(selectedDeals);
       } catch (error) {
@@ -37,9 +71,9 @@ const DailyDeals = () => {
     if (filter === 'all') {
       setDeals(allDeals);
     } else if (filter === 'electronica') {
-      setDeals(allDeals.filter(p => p.category_id === 1)); // 1 is Electrónica
+      setDeals(filterByCategory(allDeals, categoryIds.electronica));
     } else if (filter === 'hogar') {
-      setDeals(allDeals.filter(p => p.category_id === 4)); // 4 is Hogar
+      setDeals(filterByCategory(allDeals, categoryIds.hogar));
     } else if (filter === 'menos50') {
       // Usar precio base (p.price) descontado o solo el p.price base
       // DealProductCard le aplica descuento entre 15 y 40% a p.price
