@@ -13,13 +13,13 @@ const normalizeName = (name) =>
     .toLowerCase()
     .trim();
 
-// Si la categoría no existe en la base de datos no hay nada que mostrar:
-// sin esta guarda, comparar contra `undefined` devolvería los productos que
-// no tienen categoría asignada.
 // Último dígito hexadecimal del id, sea un entero o un UUID v7. Se usa para
 // escoger ofertas de forma estable por producto.
 const dealDigit = (id) => parseInt(String(id).replace(/-/g, '').slice(-1), 16);
 
+// Si la categoría no existe en la base de datos no hay nada que mostrar:
+// sin esta guarda, comparar contra `undefined` devolvería los productos que
+// no tienen categoría asignada.
 const filterByCategory = (products, categoryId) =>
   categoryId ? products.filter(p => p.category_id === categoryId) : [];
 
