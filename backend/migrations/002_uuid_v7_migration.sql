@@ -19,6 +19,63 @@
 begin;
 
 -- ---------------------------------------------------------------
+-- 0. Pre-flight: refuse to run if something outside this migration's
+--    awareness depends on the nine tables in a way this migration would
+--    silently break. Each of the following commits cleanly with no
+--    engine-level error if left unchecked -- silent damage, not a crash --
+--    so they're checked here, loudly, before a single column is touched.
+--
+--    The nine-table inventory this file works from was confirmed against
+--    PostgREST's OpenAPI listing, which is weaker than it looks:
+--    PostgREST omits relations with no grants to anon/authenticated, so
+--    an ungranted table or view would never have appeared there. This
+--    block checks the actual catalog instead of trusting that listing.
+-- ---------------------------------------------------------------
+do $$
+declare
+  nine regclass[] := array[
+    'public.categories'::regclass, 'public.stores'::regclass,
+    'public.products'::regclass, 'public.orders'::regclass,
+    'public.order_items'::regclass, 'public.platform_settings'::regclass,
+    'public.store_categories'::regclass, 'public.product_views'::regclass,
+    'public.product_reviews'::regclass
+  ];
+  v record;
+  f record;
+begin
+  -- a) a view or matview that reads any of the nine tables silently
+  --    starts reading legacy_id / legacy_*_id after section D's renames --
+  --    no error, just permanently stale bigint-shaped output.
+  for v in
+    select distinct dependee.oid::regclass as obj, dependee.relkind
+    from pg_depend
+    join pg_rewrite  on pg_depend.objid = pg_rewrite.oid
+    join pg_class as dependee  on pg_rewrite.ev_class = dependee.oid
+    join pg_class as dependent on pg_depend.refobjid = dependent.oid
+    where dependent.oid = any(nine)
+      and dependee.oid <> dependent.oid  -- exclude the tables' own rewrite rules
+      and dependee.relkind in ('v','m')
+  loop
+    raise exception 'pre-flight: % % depends on one of this migration''s nine tables -- after section D renames its columns, this object would silently start reading legacy_id/legacy_*_id instead of id, with no error',
+      case v.relkind when 'm' then 'materialized view' else 'view' end, v.obj;
+  end loop;
+
+  -- b) a foreign key from a table OUTSIDE the nine into a table INSIDE the
+  --    nine gets cascade-dropped by section C (which only knows to
+  --    recreate the fks this migration is aware of) and never recreated.
+  for f in
+    select conrelid::regclass as child_table, conname
+    from pg_constraint
+    where contype = 'f'
+      and confrelid = any(nine)
+      and not (conrelid = any(nine))
+  loop
+    raise exception 'pre-flight: foreign key % on % references one of this migration''s nine tables from outside its scope -- section C would cascade-drop it and it would never be recreated',
+      f.conname, f.child_table;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------
 -- A. new uuid primary keys on the seven bigint-keyed tables
 -- ---------------------------------------------------------------
 alter table public.categories        add column new_id uuid;
@@ -90,23 +147,36 @@ end $$;
 --    Names are discovered rather than assumed, because they were created
 --    by Supabase's UI and by ad-hoc SQL over time.
 --
+--    The table set is matched by oid, via regclass literals cast from
+--    explicit 'public.x' strings, not by comparing conrelid::regclass::text
+--    against bare table names. That text form is search_path-dependent --
+--    regclass renders schema-qualified whenever 'public' isn't resolvable
+--    unqualified on the executing role's search_path -- so a text-based
+--    membership test against bare names can silently match nothing
+--    depending on who runs this. Reproduced empirically on postgres:17
+--    (this project's version) with `set search_path to pg_catalog`: the
+--    text-based version dropped zero constraints here, and the migration
+--    then failed much later and misleadingly, at section E's `add primary
+--    key`, with "multiple primary keys for table ...". Fails safe (full
+--    rollback, no data touched) either way, but points at the wrong
+--    section for whoever is debugging it under time pressure.
+--
 --    The `for r in select ...` cursor snapshots the full 'f'/'p' constraint
 --    list once, before any drops happen. Every primary key in this set has
 --    at least one foreign key elsewhere in the same set pointing at it
 --    (e.g. stores_pkey <- products_store_id_fkey), and pg_constraint's scan
 --    order here is whatever Postgres finds convenient -- not guaranteed to
 --    put a table's own fk's ahead of a pk it references. Verified
---    empirically against postgres:17 (this project's version) that the
---    natural order puts stores/categories/etc.'s own primary keys *before*
---    other tables' foreign keys referencing them: dropping such a pk with
---    cascade drops the referencing fk immediately, but that fk's row is
---    still queued in this cursor -- so the loop later tries to drop it a
---    second time and Postgres raises "constraint ... does not exist",
---    aborting the whole transaction. The `if exists` guard below re-checks
---    each constraint immediately before dropping it and skips anything an
---    earlier iteration's cascade already removed. Confirmed against a
---    9-table reproduction of this exact schema (all fk's/pk's cleared, no
---    error) before relying on it here.
+--    empirically that the natural order puts stores/categories/etc.'s own
+--    primary keys *before* other tables' foreign keys referencing them:
+--    dropping such a pk with cascade drops the referencing fk immediately,
+--    but that fk's row is still queued in this cursor -- so the loop later
+--    tries to drop it a second time and Postgres raises "constraint ...
+--    does not exist", aborting the whole transaction. The `if exists`
+--    guard below re-checks each constraint immediately before dropping it
+--    and skips anything an earlier iteration's cascade already removed.
+--    Confirmed against a 9-table reproduction of this exact schema (all
+--    fk's/pk's cleared, no error) before relying on it here.
 --
 --    contype is restricted to ('f','p') -- unique constraints (contype
 --    'u'), such as stores_slug_key and stores_store_number_key, are never
@@ -115,16 +185,21 @@ end $$;
 --    see the guarded re-add in section E.
 -- ---------------------------------------------------------------
 do $$
-declare r record;
+declare
+  r record;
+  nine regclass[] := array[
+    'public.categories'::regclass, 'public.stores'::regclass,
+    'public.products'::regclass, 'public.orders'::regclass,
+    'public.order_items'::regclass, 'public.platform_settings'::regclass,
+    'public.store_categories'::regclass, 'public.product_views'::regclass,
+    'public.product_reviews'::regclass
+  ];
 begin
   for r in
     select conrelid::regclass as tbl, conname
     from pg_constraint
     where contype in ('f','p')
-      and connamespace = 'public'::regnamespace
-      and conrelid::regclass::text in
-        ('categories','stores','products','orders','order_items',
-         'platform_settings','store_categories','product_views','product_reviews')
+      and conrelid = any(nine)
   loop
     if exists (select 1 from pg_constraint where conname = r.conname and conrelid = r.tbl::oid) then
       execute format('alter table %s drop constraint %I cascade', r.tbl, r.conname);
@@ -202,20 +277,33 @@ alter table public.store_categories add constraint store_categories_store_id_fke
 -- dropped (only dependent fks do). So these two almost certainly still
 -- exist at this point, and an unconditional `add constraint ... unique`
 -- here would raise "constraint already exists" and abort the whole
--- transaction. Guarded so this statement is correct either way: it backs
--- up the assumption that they were dropped without depending on it.
+-- transaction.
+--
+-- The guard checks both pg_constraint AND pg_class (via to_regclass), not
+-- pg_constraint alone: if slug/store_number uniqueness is enforced in
+-- production by a bare UNIQUE INDEX named stores_slug_key with no backing
+-- named constraint -- which schema.prisma's `@unique` cannot distinguish
+-- from a real constraint -- pg_constraint finds nothing, this guard would
+-- wrongly conclude it's safe to proceed, and `add constraint ... unique`
+-- would itself fail while creating its backing index of that same name
+-- ("relation ... already exists"), aborting the transaction. That is NOT
+-- a harmless redundant index; it's the same abort this guard exists to
+-- prevent, just from the other catalog. to_regclass checks pg_class
+-- directly, which covers a relation of any kind under that name --
+-- table, index, view -- so it catches this case too. Reproduced
+-- empirically against postgres:17.
 do $$
 begin
   if not exists (
     select 1 from pg_constraint
     where conname = 'stores_slug_key' and conrelid = 'public.stores'::regclass
-  ) then
+  ) and to_regclass('public.stores_slug_key') is null then
     alter table public.stores add constraint stores_slug_key unique (slug);
   end if;
   if not exists (
     select 1 from pg_constraint
     where conname = 'stores_store_number_key' and conrelid = 'public.stores'::regclass
-  ) then
+  ) and to_regclass('public.stores_store_number_key') is null then
     alter table public.stores add constraint stores_store_number_key unique (store_number);
   end if;
 end $$;
@@ -255,9 +343,13 @@ where replace(replace(split_part(u.email, '@', 1), '+', ''), ' ', '') = s.phone
 --    would raise "already exists" and abort the whole transaction --
 --    after every earlier section already succeeded, the worst place to
 --    fail. Tradeoff, taken deliberately: if a same-named index already
---    exists with a *different* definition, this silently keeps the old
---    one instead of aborting. A suboptimal index is a performance
---    question to clean up later; an aborted migration here is an outage.
+--    exists, this silently keeps it instead of aborting -- and in the
+--    realistic version of that scenario, the old index (built before
+--    section D's renames) is now sitting on legacy_store_id, not
+--    store_id, so the outcome is no index at all on the new uuid column,
+--    not a differently-shaped index coexisting with it. A missing index
+--    is a performance question to clean up later; an aborted migration
+--    here is an outage.
 -- ---------------------------------------------------------------
 create index if not exists products_store_id_idx          on public.products(store_id);
 create index if not exists products_category_id_idx       on public.products(category_id);
