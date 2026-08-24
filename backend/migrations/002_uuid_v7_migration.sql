@@ -22,7 +22,8 @@ begin;
 -- 0. Pre-flight: refuse to run if something outside this migration's
 --    awareness depends on the nine tables in a way this migration would
 --    silently break: a dependent view/matview, a foreign key reaching in
---    from a tenth table, or an RLS policy on one of the nine. Each of
+--    from a tenth table, an RLS policy on one of the nine, or a unique
+--    constraint/index sitting on a column section D renames. Each of
 --    these commits cleanly with no engine-level error if left unchecked --
 --    silent damage, not a crash -- so they're checked here, loudly,
 --    before a single column is touched.
@@ -100,6 +101,7 @@ declare
   v record;
   f record;
   pol record;
+  idx record;
 begin
   -- a) a view or matview that reads any of the nine tables silently
   --    starts reading legacy_id / legacy_*_id after section D's renames --
@@ -178,6 +180,68 @@ begin
   loop
     raise exception 'pre-flight: no foreign key on %.% -- section E recreates foreign keys from the section 0 snapshot, so this one would not exist after the migration either. Add it (or remove the pair from this check) before running.',
       f.child_table, f.child_col;
+  end loop;
+
+  -- e) a unique constraint, exclusion constraint or plain index whose
+  --    columns include one section D renames follows the rename and
+  --    silently repoints at the legacy_* column. For a unique constraint
+  --    that is worse than "no longer enforced": rows written after this
+  --    migration have legacy_* = null, nulls are distinct under a unique
+  --    index, so a duplicate that used to be rejected now succeeds.
+  --    Reproduced on postgres:17 -- UNIQUE (store_id, name) on
+  --    store_categories became a unique index on (legacy_store_id, name),
+  --    the migration committed with no error and no signal, and the same
+  --    (store, name) pair then inserted twice.
+  --
+  --    The index arm goes through pg_depend rather than pg_index.indkey
+  --    because indkey records 0 for an expression column and nothing at all
+  --    for a WHERE predicate, so an index on (store_id::text), or a partial
+  --    index with `where store_id is not null`, would be missed -- both of
+  --    which repoint just as silently. pg_depend carries one row per column
+  --    the index actually references, expressions and predicates included
+  --    (verified empirically: both cases above show up there and neither
+  --    shows up in indkey). Primary keys and constraint-backed indexes are
+  --    not index-arm business -- section C drops and section E restores the
+  --    pks, and unique/exclusion constraints are the constraint arm's job.
+  for idx in
+    with renamed(tbl, col) as (values
+      ('public.categories'::regclass,        'id'),
+      ('public.stores'::regclass,            'id'),
+      ('public.products'::regclass,          'id'),
+      ('public.products'::regclass,          'category_id'),
+      ('public.products'::regclass,          'store_id'),
+      ('public.products'::regclass,          'store_category_id'),
+      ('public.orders'::regclass,            'id'),
+      ('public.order_items'::regclass,       'id'),
+      ('public.order_items'::regclass,       'order_id'),
+      ('public.order_items'::regclass,       'product_id'),
+      ('public.platform_settings'::regclass, 'id'),
+      ('public.store_categories'::regclass,  'id'),
+      ('public.store_categories'::regclass,  'store_id'),
+      ('public.product_views'::regclass,     'product_id'),
+      ('public.product_reviews'::regclass,   'product_id')
+    )
+    select case c.contype when 'u' then 'unique constraint' else 'exclusion constraint' end as kind,
+           c.conname::text as objname, c.conrelid::regclass as tbl, r.col
+    from pg_constraint c
+    join renamed r      on r.tbl = c.conrelid
+    join pg_attribute a on a.attrelid = c.conrelid and a.attname = r.col
+    where c.contype in ('u','x')
+      and a.attnum = any(c.conkey)
+    union all
+    select 'index', ci.relname::text, i.indrelid::regclass, r.col
+    from pg_index i
+    join pg_class ci    on ci.oid = i.indexrelid
+    join renamed r      on r.tbl = i.indrelid
+    join pg_attribute a on a.attrelid = i.indrelid and a.attname = r.col
+    join pg_depend d    on d.classid    = 'pg_class'::regclass and d.objid    = i.indexrelid
+                       and d.refclassid = 'pg_class'::regclass and d.refobjid = i.indrelid
+                       and d.refobjsubid = a.attnum
+    where not i.indisprimary
+      and not exists (select 1 from pg_constraint c2 where c2.conindid = i.indexrelid)
+  loop
+    raise exception 'pre-flight: % % on % covers %.%, which section D renames to legacy_% -- it would follow the rename and silently start enforcing/indexing the legacy column instead (for a unique constraint that means duplicates it used to reject now succeed, because the legacy column is null on every new row). Drop it, run this migration, recreate it on the new column.',
+      idx.kind, idx.objname, idx.tbl, idx.tbl, idx.col, idx.col;
   end loop;
 end $$;
 
