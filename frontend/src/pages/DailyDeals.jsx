@@ -16,6 +16,10 @@ const normalizeName = (name) =>
 // Si la categoría no existe en la base de datos no hay nada que mostrar:
 // sin esta guarda, comparar contra `undefined` devolvería los productos que
 // no tienen categoría asignada.
+// Último dígito hexadecimal del id, sea un entero o un UUID v7. Se usa para
+// escoger ofertas de forma estable por producto.
+const dealDigit = (id) => parseInt(String(id).replace(/-/g, '').slice(-1), 16);
+
 const filterByCategory = (products, categoryId) =>
   categoryId ? products.filter(p => p.category_id === categoryId) : [];
 
@@ -37,12 +41,14 @@ const DailyDeals = () => {
         ]);
 
         // Escogemos 12 productos de forma determinista a partir de su id,
-        // para que las ofertas no cambien en cada recarga. Los ids son UUID
-        // v7 (cadenas): `p.id % 4` daba NaN y la página no mostraba ninguna
-        // oferta, así que usamos el último dígito hexadecimal del uuid, que
-        // sigue siendo estable por producto.
+        // para que las ofertas no cambien en cada recarga. `p.id % 4` daba
+        // NaN con los UUID v7 y la página se quedaba sin ofertas, así que
+        // usamos el último dígito hexadecimal. Funciona igual con los ids
+        // enteros de antes de la migración que con los uuid: el frontend y
+        // la base de datos se despliegan por separado, así que esta página
+        // tiene que servir las dos formas mientras dure la ventana.
         const selectedDeals = allProducts
-          .filter(p => typeof p.id === 'string' && parseInt(p.id.slice(-1), 16) % 4 === 0)
+          .filter(p => p.id != null && dealDigit(p.id) % 4 === 0)
           .slice(0, 12);
 
         // Los filtros por categoría comparaban category_id con 1 y 4, los
