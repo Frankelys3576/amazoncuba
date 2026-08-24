@@ -34,14 +34,11 @@ export class ProductsService {
     requireImage?: string;
   }) {
     const where: Record<string, unknown> = {};
-    // Product.store_id/category_id/store_category_id are Prisma BigInt
-    // columns; the generated client's where-filter types accept a plain JS
-    // `number` for BigInt fields (confirmed against node_modules/.prisma/
-    // client/index.d.ts — BigIntFilter's `equals` is `bigint | number`), so
-    // Number(...) here is safe and matches the create/update input types too.
-    if (query.storeId) where.store_id = Number(query.storeId);
-    if (query.category) where.category_id = Number(query.category);
-    if (query.store_category_id) where.store_category_id = Number(query.store_category_id);
+    // Product.store_id/category_id/store_category_id are uuid columns now,
+    // so the query string values are used as-is — no numeric coercion.
+    if (query.storeId) where.store_id = query.storeId;
+    if (query.category) where.category_id = query.category;
+    if (query.store_category_id) where.store_category_id = query.store_category_id;
     if (query.q) where.name = { contains: query.q, mode: 'insensitive' };
     if (query.requireImage) where.image_url = { not: null, notIn: [''] };
 
@@ -72,7 +69,7 @@ export class ProductsService {
     return products.map(formatProduct);
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: STORE_INCLUDE,
@@ -82,7 +79,7 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto, callerStore: Store) {
-    if (String(dto.store_id) !== String(callerStore.id)) {
+    if (dto.store_id !== callerStore.id) {
       throw new ForbiddenException('No tienes permiso para crear productos en esta tienda');
     }
 
@@ -95,10 +92,10 @@ export class ProductsService {
     return coerceDecimalFields(product, DECIMAL_FIELDS);
   }
 
-  async update(id: number, dto: UpdateProductDto, callerStore: Store) {
+  async update(id: string, dto: UpdateProductDto, callerStore: Store) {
     const existing = await this.prisma.product.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Producto no encontrado');
-    if (String(existing.store_id) !== String(callerStore.id)) {
+    if (existing.store_id !== callerStore.id) {
       throw new ForbiddenException('No tienes permiso para editar este producto');
     }
 
@@ -109,10 +106,10 @@ export class ProductsService {
     return coerceDecimalFields(product, DECIMAL_FIELDS);
   }
 
-  async remove(id: number, callerStore: Store) {
+  async remove(id: string, callerStore: Store) {
     const existing = await this.prisma.product.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Producto no encontrado');
-    if (String(existing.store_id) !== String(callerStore.id)) {
+    if (existing.store_id !== callerStore.id) {
       throw new ForbiddenException('No tienes permiso para eliminar este producto');
     }
 
@@ -124,19 +121,19 @@ export class ProductsService {
     };
   }
 
-  async registerView(id: number) {
+  async registerView(id: string) {
     await this.prisma.productView.create({ data: { product_id: id } });
     return { message: 'View registered' };
   }
 
-  findReviews(id: number) {
+  findReviews(id: string) {
     return this.prisma.productReview.findMany({
       where: { product_id: id },
       orderBy: { created_at: 'desc' },
     });
   }
 
-  addReview(id: number, dto: CreateProductReviewDto) {
+  addReview(id: string, dto: CreateProductReviewDto) {
     return this.prisma.productReview.create({
       data: { product_id: id, ...dto },
     });

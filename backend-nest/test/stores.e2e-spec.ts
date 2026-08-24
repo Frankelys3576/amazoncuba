@@ -23,10 +23,13 @@ import { SupabaseService } from '../src/supabase/supabase.service';
 // instead of passing green against a stub that hand-assigns req.store.
 describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard chain', () => {
   let app: INestApplication;
-  let storesById: Record<number, any>;
+  let storesById: Record<string, any>;
   let updateUserById: jest.Mock;
 
-  const VALID_TOKEN = 'valid-token'; // resolves to a user whose phone matches store 1
+  const STORE_ID = '11111111-1111-1111-1111-111111111111';
+  const OTHER_STORE_ID = '22222222-2222-2222-2222-222222222222';
+
+  const VALID_TOKEN = 'valid-token'; // resolves to a user who owns STORE_ID (user_id 'u1')
   const ORPHAN_TOKEN = 'orphan-token'; // resolves to a user with no matching store
 
   // Maps Bearer tokens (as received by SupabaseService.client.auth.getUser)
@@ -38,7 +41,9 @@ describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard ch
   };
 
   beforeEach(async () => {
-    storesById = { 1: { id: 1, phone: '5551234', zelle_info: {} } };
+    storesById = {
+      [STORE_ID]: { id: STORE_ID, user_id: 'u1', phone: '5551234', zelle_info: {} },
+    };
     updateUserById = jest.fn().mockResolvedValue({ error: null });
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -48,17 +53,22 @@ describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard ch
       .useValue({
         store: {
           // Used by SellerAuthStrategy.validate() to resolve the caller's
-          // store from the phone number extracted from their email.
-          findFirst: jest.fn(({ where }: any) => {
-            const found = Object.values(storesById).find(
-              (s) => s.phone === where.phone,
-            );
-            return Promise.resolve(found ?? null);
+          // store by the Supabase user id that owns it (mirrors the
+          // production `where: { user_id }` lookup — see
+          // seller-auth.strategy.ts).
+          findFirst: jest.fn(),
+          // Serves both SellerAuthStrategy's `where: { user_id }` lookup and
+          // StoresService.updateProfile()'s `where: { id }` lookup of the
+          // pre-update row.
+          findUnique: jest.fn(({ where }: any) => {
+            const stores = Object.values(storesById);
+            if (where.user_id !== undefined) {
+              return Promise.resolve(
+                stores.find((s) => s.user_id === where.user_id) ?? null,
+              );
+            }
+            return Promise.resolve(storesById[where.id] ?? null);
           }),
-          // Used by StoresService.updateProfile() to load the pre-update row.
-          findUnique: jest.fn(({ where }: any) =>
-            Promise.resolve(storesById[where.id] ?? null),
-          ),
           update: jest.fn(({ where, data }: any) => {
             const existing = storesById[where.id];
             const updated = { ...existing, ...data };
@@ -99,9 +109,9 @@ describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard ch
     await app.close();
   });
 
-  it('1. PUT /api/stores/1 as the owner (real chain) returns 200', () => {
+  it('1. PUT /api/stores/:id as the owner (real chain) returns 200', () => {
     return request(app.getHttpServer())
-      .put('/api/stores/1')
+      .put(`/api/stores/${STORE_ID}`)
       .set('Authorization', `Bearer ${VALID_TOKEN}`)
       .send({ name: 'Nueva Cafetería' })
       .expect(200)
@@ -110,9 +120,9 @@ describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard ch
       });
   });
 
-  it('2. PUT /api/stores/2 as store 1 returns 403 via the real StoreOwnershipGuard', () => {
+  it('2. PUT /api/stores/:id for a different store returns 403 via the real StoreOwnershipGuard', () => {
     return request(app.getHttpServer())
-      .put('/api/stores/2')
+      .put(`/api/stores/${OTHER_STORE_ID}`)
       .set('Authorization', `Bearer ${VALID_TOKEN}`)
       .send({ name: 'Nueva Cafetería' })
       .expect(403)
@@ -134,7 +144,7 @@ describe('Stores ownership (e2e) — real SellerAuthGuard/StoreOwnershipGuard ch
     // assertion fails loudly (500, since `req.store.phone` throws) instead
     // of silently passing.
     return request(app.getHttpServer())
-      .put('/api/stores/1/credentials')
+      .put(`/api/stores/${STORE_ID}/credentials`)
       .set('Authorization', `Bearer ${VALID_TOKEN}`)
       .send({ password: 'newpassword123' })
       .expect(200)

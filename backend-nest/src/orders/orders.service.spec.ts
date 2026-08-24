@@ -3,6 +3,17 @@ import { Prisma } from '@prisma/client';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
+  // Readable stand-ins for real uuid v7 order/product/store ids — the
+  // service's own uuid-format filter on query.ids requires ids that
+  // actually look like uuids.
+  const ORDER_1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const ORDER_2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  const ORDER_3 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  const PRODUCT_1 = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  const PRODUCT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  const STORE_7 = '77777777-7777-7777-7777-777777777777';
+  const STORE_9 = '99999999-9999-9999-9999-999999999999';
+
   describe('findAll', () => {
     // Named risk: Express filters twice — first narrowing which orders come
     // back (order.controller.js:13-33), then filtering order_items *within*
@@ -10,26 +21,26 @@ describe('OrdersService', () => {
     // order that spans multiple stores only sees their own line items.
     // Dropping the second filter leaks another store's line items.
     it("scopes both the order list and each order's items to the given store", async () => {
-      const orderItem = { order_id: 1, product: { store_id: 7 } };
+      const orderItem = { order_id: ORDER_1, product: { store_id: STORE_7 } };
       const prisma = {
         orderItem: { findMany: jest.fn().mockResolvedValue([orderItem]) },
         order: {
           findMany: jest.fn().mockResolvedValue([
             {
-              id: 1,
+              id: ORDER_1,
               total: new Prisma.Decimal(40),
               order_items: [
                 {
-                  product_id: 1,
+                  product_id: PRODUCT_1,
                   quantity: 2,
                   price_at_purchase: new Prisma.Decimal(20),
-                  product: { store_id: 7, price: new Prisma.Decimal(20) },
+                  product: { store_id: STORE_7, price: new Prisma.Decimal(20) },
                 },
                 {
-                  product_id: 2,
+                  product_id: PRODUCT_2,
                   quantity: 1,
                   price_at_purchase: new Prisma.Decimal(20),
-                  product: { store_id: 9, price: new Prisma.Decimal(20) },
+                  product: { store_id: STORE_9, price: new Prisma.Decimal(20) },
                 },
               ],
             },
@@ -38,13 +49,13 @@ describe('OrdersService', () => {
       } as any;
       const service = new OrdersService(prisma);
 
-      const result = await service.findAll({ storeId: '7' });
+      const result = await service.findAll({ storeId: STORE_7 });
 
       expect(prisma.order.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: { in: [1] } } }),
+        expect.objectContaining({ where: { id: { in: [ORDER_1] } } }),
       );
       expect(result[0].order_items).toHaveLength(1);
-      expect(result[0].order_items[0].products!.store_id).toBe(7);
+      expect(result[0].order_items[0].products!.store_id).toBe(STORE_7);
     });
 
     it('returns an empty array without querying orders when the store has no matching order_items', async () => {
@@ -54,53 +65,10 @@ describe('OrdersService', () => {
       } as any;
       const service = new OrdersService(prisma);
 
-      const result = await service.findAll({ storeId: '7' });
+      const result = await service.findAll({ storeId: STORE_7 });
 
       expect(result).toEqual([]);
       expect(prisma.order.findMany).not.toHaveBeenCalled();
-    });
-
-    // Prisma's Order.id/OrderItem.order_id/Product.store_id are all BigInt
-    // columns, so at runtime they come back as JS `bigint`, not `number`.
-    // A strict `===` between a bigint and the `Number(query.storeId)` used
-    // to build `storeId` is *always* false — silently emptying every
-    // order's order_items instead of throwing. This regression test uses
-    // real `bigint` values (as the generated client actually returns) to
-    // catch that trap.
-    it('scopes order_items to the store even when Prisma returns store_id as a bigint', async () => {
-      const prisma = {
-        orderItem: {
-          findMany: jest.fn().mockResolvedValue([{ order_id: BigInt(1) }]),
-        },
-        order: {
-          findMany: jest.fn().mockResolvedValue([
-            {
-              id: 1,
-              total: new Prisma.Decimal(40),
-              order_items: [
-                {
-                  product_id: 1,
-                  quantity: 2,
-                  price_at_purchase: new Prisma.Decimal(20),
-                  product: { store_id: BigInt(7) },
-                },
-                {
-                  product_id: 2,
-                  quantity: 1,
-                  price_at_purchase: new Prisma.Decimal(20),
-                  product: { store_id: BigInt(9) },
-                },
-              ],
-            },
-          ]),
-        },
-      } as any;
-      const service = new OrdersService(prisma);
-
-      const result = await service.findAll({ storeId: '7' });
-
-      expect(result[0].order_items).toHaveLength(1);
-      expect(result[0].order_items[0].products!.store_id).toBe(BigInt(7));
     });
 
     it('intersects the ids query param with the store-scoped order ids', async () => {
@@ -108,29 +76,29 @@ describe('OrdersService', () => {
         orderItem: {
           findMany: jest
             .fn()
-            .mockResolvedValue([{ order_id: 1 }, { order_id: 2 }]),
+            .mockResolvedValue([{ order_id: ORDER_1 }, { order_id: ORDER_2 }]),
         },
         order: { findMany: jest.fn().mockResolvedValue([]) },
       } as any;
       const service = new OrdersService(prisma);
 
-      await service.findAll({ storeId: '7', ids: '2,3' });
+      await service.findAll({ storeId: STORE_7, ids: `${ORDER_2},${ORDER_3}` });
 
       expect(prisma.order.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: { in: [2] } } }),
+        expect.objectContaining({ where: { id: { in: [ORDER_2] } } }),
       );
     });
 
-    it('filters orders by the ids query param when no storeId is given', async () => {
+    it('filters orders by the ids query param when no storeId is given, dropping non-uuid entries', async () => {
       const prisma = {
         order: { findMany: jest.fn().mockResolvedValue([]) },
       } as any;
       const service = new OrdersService(prisma);
 
-      await service.findAll({ ids: '5,abc,9' });
+      await service.findAll({ ids: `${ORDER_1},abc,${ORDER_2}` });
 
       expect(prisma.order.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: { in: [5, 9] } } }),
+        expect.objectContaining({ where: { id: { in: [ORDER_1, ORDER_2] } } }),
       );
     });
 
@@ -410,7 +378,7 @@ describe('OrdersService', () => {
       } as any;
       const service = new OrdersService(prisma);
 
-      await expect(service.update(999, 'shipped')).rejects.toBeInstanceOf(
+      await expect(service.update('99999999-9999-9999-9999-999999999999', 'shipped')).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -422,7 +390,7 @@ describe('OrdersService', () => {
       } as any;
       const service = new OrdersService(prisma);
 
-      await expect(service.update(1, 'shipped')).rejects.toBe(dbError);
+      await expect(service.update('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'shipped')).rejects.toBe(dbError);
     });
 
     it('coerces the Decimal total on the returned order to a plain number', async () => {
@@ -437,7 +405,7 @@ describe('OrdersService', () => {
       } as any;
       const service = new OrdersService(prisma);
 
-      const result = await service.update(1, 'shipped');
+      const result = await service.update('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'shipped');
 
       expect(typeof result.total).toBe('number');
       expect(result.total).toBe(40);

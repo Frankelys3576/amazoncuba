@@ -10,33 +10,40 @@ import { formatOrder } from './order-format.util';
 // present on findAll(), which uses formatOrder instead.
 const ORDER_DECIMAL_FIELDS = ['total'] as const;
 
+// Matches the same shape SpanishParseUuidPipe validates route ids against.
+// query.ids is an unauthenticated, unvalidated query param (used for
+// customer order tracking) -- anything that isn't uuid-shaped is dropped
+// here rather than handed to Prisma, where it would raise a Postgres
+// "invalid input syntax for type uuid" error instead of just being ignored.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: { storeId?: string; ids?: string }) {
-    let orderIds: number[] = query.ids
-      ? query.ids
-          .split(',')
-          .map((id) => parseInt(id, 10))
-          .filter((id) => !isNaN(id))
+    let orderIds: string[] = query.ids
+      ? query.ids.split(',').filter((id) => UUID.test(id))
       : [];
 
     // Named risk, filter 1: narrow which orders are returned at all, by
     // finding order_items whose product belongs to this store
     // (order.controller.js:13-33). If no orders match, return [] early
     // without ever querying `orders`.
-    let storeId: number | undefined;
+    let storeId: string | undefined;
     if (query.storeId) {
-      storeId = Number(query.storeId);
+      storeId = query.storeId;
       const items = await this.prisma.orderItem.findMany({
         where: { product: { store_id: storeId } },
         select: { order_id: true },
       });
-      // order_id is a Prisma BigInt column — comes back as a JS `bigint` at
-      // runtime, not `number`. Number(...) it before comparing against the
-      // plain-number ids parsed from `orderIds`/`query.ids`.
-      const storeOrderIds = [...new Set(items.map((i) => Number(i.order_id)))];
+      const storeOrderIds = [
+        ...new Set(
+          items
+            .map((i) => i.order_id)
+            .filter((id): id is string => id !== null),
+        ),
+      ];
 
       orderIds =
         orderIds.length > 0
@@ -58,9 +65,7 @@ export class OrdersService {
     // returned order down to this store's own line items
     // (order.controller.js:49-55), so a seller viewing an order that spans
     // multiple stores only sees their own items. Dropping this leaks other
-    // stores' line items. product.store_id is also a Prisma BigInt column,
-    // so Number(...) it before the `===` — a bare bigint/number `===` is
-    // always false and would silently empty every order's order_items.
+    // stores' line items.
     if (storeId !== undefined) {
       const scopedStoreId = storeId;
       return formatted.map((order) => ({
@@ -69,7 +74,7 @@ export class OrdersService {
         // Prisma's `product` key to Express's `products` alias, so this
         // scoping filter must read the post-rename key too.
         order_items: order.order_items.filter(
-          (item) => Number((item as { products?: { store_id?: unknown } }).products?.store_id) === scopedStoreId,
+          (item) => (item as { products?: { store_id?: unknown } }).products?.store_id === scopedStoreId,
         ),
       }));
     }
@@ -108,7 +113,7 @@ export class OrdersService {
     };
   }
 
-  async update(id: number, status: string) {
+  async update(id: string, status: string) {
     try {
       const order = await this.prisma.order.update({
         where: { id },

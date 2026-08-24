@@ -5,13 +5,15 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
-  @IsNumber({}, { message: 'El producto debe ser un número' })
-  product_id: number;
+  // Product ids are uuid v7 strings post-migration.
+  @IsUUID(undefined, { message: 'El producto debe ser un identificador UUID' })
+  product_id: string;
 
   @IsNumber({}, { message: 'La cantidad debe ser un número' })
   quantity: number;

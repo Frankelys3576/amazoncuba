@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import './common/bigint';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { SupabaseModule } from './supabase/supabase.module';

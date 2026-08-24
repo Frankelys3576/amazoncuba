@@ -1,10 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-// M4: the BigInt.prototype.toJSON shim used to live inline here, imported
-// only for its side effect and never exercised by any test (main.ts's
-// `handler` isn't invoked in the test suite). It now lives in
-// src/common/bigint.ts, imported by AppModule below — every e2e spec
-// instantiates AppModule, so the shim is load-bearing in CI too.
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 

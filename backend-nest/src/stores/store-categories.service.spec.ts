@@ -3,14 +3,14 @@ import { StoreCategoriesService } from './store-categories.service';
 
 describe('StoreCategoriesService', () => {
   it('creates a category scoped to the given store', async () => {
-    const created = { id: 1, store_id: 7, name: 'Bebidas', image_url: null };
+    const created = { id: '1', store_id: '7', name: 'Bebidas', image_url: null };
     const prisma = { storeCategory: { create: jest.fn().mockResolvedValue(created), findFirst: jest.fn(), update: jest.fn(), delete: jest.fn() } } as any;
     const service = new StoreCategoriesService(prisma);
 
-    const result = await service.create(7, { name: 'Bebidas' });
+    const result = await service.create('7', { name: 'Bebidas' });
 
     expect(prisma.storeCategory.create).toHaveBeenCalledWith({
-      data: { store_id: 7, name: 'Bebidas', image_url: undefined },
+      data: { store_id: '7', name: 'Bebidas', image_url: undefined },
     });
     expect(result).toEqual(created);
   });
@@ -19,7 +19,7 @@ describe('StoreCategoriesService', () => {
     const prisma = { storeCategory: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() } } as any;
     const service = new StoreCategoriesService(prisma);
 
-    await expect(service.update(7, 99, { name: 'X' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.update('7', '99', { name: 'X' })).rejects.toBeInstanceOf(NotFoundException);
   });
 
   // Parity fix: Express's updateStoreCategory 400s on an empty body *before*
@@ -32,13 +32,13 @@ describe('StoreCategoriesService', () => {
     const prisma = { storeCategory: { findFirst: jest.fn(), update: jest.fn() } } as any;
     const service = new StoreCategoriesService(prisma);
 
-    await expect(service.update(7, 1, {})).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.update('7', '1', {})).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.storeCategory.findFirst).not.toHaveBeenCalled();
   });
 
   it('updates only the provided fields once the category is confirmed to belong to the store', async () => {
-    const existing = { id: 1, store_id: 7, name: 'Old', image_url: null };
-    const updated = { id: 1, store_id: 7, name: 'New', image_url: null };
+    const existing = { id: '1', store_id: '7', name: 'Old', image_url: null };
+    const updated = { id: '1', store_id: '7', name: 'New', image_url: null };
     const prisma = {
       storeCategory: {
         findFirst: jest.fn().mockResolvedValue(existing),
@@ -47,10 +47,10 @@ describe('StoreCategoriesService', () => {
     } as any;
     const service = new StoreCategoriesService(prisma);
 
-    const result = await service.update(7, 1, { name: 'New' });
+    const result = await service.update('7', '1', { name: 'New' });
 
     expect(prisma.storeCategory.update).toHaveBeenCalledWith({
-      where: { id: 1 },
+      where: { id: '1' },
       data: { name: 'New' },
     });
     expect(result).toEqual(updated);
@@ -66,10 +66,10 @@ describe('StoreCategoriesService', () => {
     } as any;
     const service = new StoreCategoriesService(prisma);
 
-    const result = await service.remove(7, 999);
+    const result = await service.remove('7', '999');
 
     expect(prisma.storeCategory.deleteMany).toHaveBeenCalledWith({
-      where: { id: 999, store_id: 7 },
+      where: { id: '999', store_id: '7' },
     });
     expect(result).toEqual({ message: 'Category deleted successfully' });
   });
@@ -80,10 +80,10 @@ describe('StoreCategoriesService', () => {
     } as any;
     const service = new StoreCategoriesService(prisma);
 
-    const result = await service.remove(7, 1);
+    const result = await service.remove('7', '1');
 
     expect(prisma.storeCategory.deleteMany).toHaveBeenCalledWith({
-      where: { id: 1, store_id: 7 },
+      where: { id: '1', store_id: '7' },
     });
     expect(result).toEqual({ message: 'Category deleted successfully' });
   });

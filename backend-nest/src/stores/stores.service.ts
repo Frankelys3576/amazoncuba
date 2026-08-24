@@ -61,16 +61,18 @@ export class StoresService {
   }
 
   async findOne(idOrSlug: string) {
-    const isNumeric = /^\d+$/.test(idOrSlug);
-    const store = isNumeric
-      ? await this.prisma.store.findUnique({ where: { id: Number(idOrSlug) } })
+    // Store ids are uuid v7 strings post-migration; a slug never matches
+    // that shape, so this replaces the old isNumeric-vs-slug check.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    const store = isUuid
+      ? await this.prisma.store.findUnique({ where: { id: idOrSlug } })
       : await this.prisma.store.findFirst({ where: { slug: idOrSlug } });
 
     if (!store) throw new NotFoundException('Tienda no encontrada');
     return formatStore(store);
   }
 
-  async updateStatus(id: number, status: string) {
+  async updateStatus(id: string, status: string) {
     try {
       const store = await this.prisma.store.update({ where: { id }, data: { status } });
       return formatStore(store);
@@ -79,7 +81,7 @@ export class StoresService {
     }
   }
 
-  async updateZelleInfo(id: number, dto: UpdateZelleInfoDto) {
+  async updateZelleInfo(id: string, dto: UpdateZelleInfoDto) {
     try {
       const store = await this.prisma.store.update({
         where: { id },
@@ -97,7 +99,7 @@ export class StoresService {
     }
   }
 
-  async updateProfile(id: number, dto: UpdateStoreProfileDto) {
+  async updateProfile(id: string, dto: UpdateStoreProfileDto) {
     const existing = await this.prisma.store.findUnique({ where: { id } });
     const updates: Record<string, unknown> = {};
 
@@ -158,7 +160,7 @@ export class StoresService {
     }
   }
 
-  async getStats(id: number) {
+  async getStats(id: string) {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startOfMonth = new Date();
@@ -178,7 +180,7 @@ export class StoresService {
     return { viewsToday, viewsThisMonth, viewsTotal };
   }
 
-  async getAdminDetails(id: number) {
+  async getAdminDetails(id: string) {
     const store = await this.prisma.store.findUnique({ where: { id } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
 
@@ -192,7 +194,7 @@ export class StoresService {
     return { store: formatStore(store), activeProductsCount, totalSalesCount };
   }
 
-  async updateCredentials(id: number, req: RequestWithStore, dto: UpdateStoreCredentialsDto) {
+  async updateCredentials(id: string, req: RequestWithStore, dto: UpdateStoreCredentialsDto) {
     const updates: { email?: string; password?: string } = {};
     let cleanPhone: string | null = null;
 
