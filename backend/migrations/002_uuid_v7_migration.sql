@@ -245,15 +245,28 @@ where replace(replace(split_part(u.email, '@', 1), '+', ''), ' ', '') = s.phone
 
 -- ---------------------------------------------------------------
 -- G. indexes on the new foreign keys
+--
+--    `if not exists`: pg_indexes lives in pg_catalog, which isn't exposed
+--    over PostgREST, so there's no way to enumerate production's existing
+--    index names with the access available for this task. This database
+--    has been maintained through loose .sql files and ad-hoc scripts for a
+--    long time, so a hand-made index already named e.g.
+--    products_store_id_idx is plausible; without the guard, `create index`
+--    would raise "already exists" and abort the whole transaction --
+--    after every earlier section already succeeded, the worst place to
+--    fail. Tradeoff, taken deliberately: if a same-named index already
+--    exists with a *different* definition, this silently keeps the old
+--    one instead of aborting. A suboptimal index is a performance
+--    question to clean up later; an aborted migration here is an outage.
 -- ---------------------------------------------------------------
-create index products_store_id_idx          on public.products(store_id);
-create index products_category_id_idx       on public.products(category_id);
-create index products_store_category_id_idx on public.products(store_category_id);
-create index order_items_order_id_idx       on public.order_items(order_id);
-create index order_items_product_id_idx     on public.order_items(product_id);
-create index product_views_product_id_idx   on public.product_views(product_id);
-create index product_reviews_product_id_idx on public.product_reviews(product_id);
-create index store_categories_store_id_idx  on public.store_categories(store_id);
+create index if not exists products_store_id_idx          on public.products(store_id);
+create index if not exists products_category_id_idx       on public.products(category_id);
+create index if not exists products_store_category_id_idx on public.products(store_category_id);
+create index if not exists order_items_order_id_idx       on public.order_items(order_id);
+create index if not exists order_items_product_id_idx     on public.order_items(product_id);
+create index if not exists product_views_product_id_idx   on public.product_views(product_id);
+create index if not exists product_reviews_product_id_idx on public.product_reviews(product_id);
+create index if not exists store_categories_store_id_idx  on public.store_categories(store_id);
 
 -- PostgREST caches its schema; every table here changed shape (columns
 -- renamed, stores gained user_id). Without this, the API keeps serving the
