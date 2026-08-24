@@ -66,8 +66,9 @@ const register = async (req, res) => {
         price_per_night: price_per_night ? parseFloat(price_per_night) : null
       };
 
-      const storeData = { 
-        name: store_name, 
+      const storeData = {
+        user_id: data.user.id,
+        name: store_name,
         slug: slug,
         description: description || (store_type === 'hostal' ? `Hostal de ${full_name}` : `Nueva tienda de ${full_name}`),
         status: isAutoApprove ? 'approved' : 'pending',
@@ -118,23 +119,17 @@ const login = async (req, res) => {
 
     if (error) throw error;
 
-    // Buscar la tienda asociada a este usuario (por teléfono, extraído del email, normalizado)
-    let phoneMatch = email.split('@')[0];
-    if (phoneMatch) {
-      phoneMatch = phoneMatch.replace(/\+/g, '').replace(/\s/g, '');
-    }
-    
+    // Buscar la tienda asociada a este usuario por user_id
     let store = null;
     try {
       const { data: storeData } = await supabase
         .from('stores')
         .select('*')
-        .ilike('phone', `%${phoneMatch}%`)
-        .limit(1)
-        .single();
+        .eq('user_id', data.user.id)
+        .maybeSingle();
       store = storeData;
     } catch (err) {
-      console.error('No store found for user', phoneMatch);
+      console.error('No store found for user', data.user.id);
     }
 
     // Devolvemos el token de sesión y los datos del usuario al frontend
