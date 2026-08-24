@@ -1,10 +1,10 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class UpdateSettingDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'La clave debe ser texto' })
+  @IsNotEmpty({ message: 'La clave es requerida' })
   key: string;
 
-  @IsString()
+  @IsString({ message: 'El valor debe ser texto' })
   value: string;
 }

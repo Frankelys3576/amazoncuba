@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { SettingsService } from './settings.service';
 
 describe('SettingsService', () => {
@@ -28,5 +29,20 @@ describe('SettingsService', () => {
       where: { key: 'site_name' },
       data: { value: 'Nueva Tienda', updated_at: expect.any(Date) },
     });
+  });
+
+  it('update resolves with an empty-data success response when the key does not exist', async () => {
+    const notFoundError = new Prisma.PrismaClientKnownRequestError('No record was found for an update.', {
+      code: 'P2025',
+      clientVersion: '5.0.0',
+    });
+    const prisma = {
+      platformSetting: { findMany: jest.fn(), update: jest.fn().mockRejectedValue(notFoundError) },
+    } as any;
+    const service = new SettingsService(prisma);
+
+    const result = await service.update({ key: 'does_not_exist', value: 'x' });
+
+    expect(result).toEqual({ message: 'Setting updated successfully', data: [] });
   });
 });
