@@ -5,12 +5,23 @@ const getOrders = async (req, res) => {
     const { storeId, ids } = req.query;
 
     let orderIds = [];
-    
+    const idsProvided = Boolean(ids);
+
     if (ids) {
       orderIds = ids
         .split(',')
         .map((id) => id.trim())
         .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+    }
+
+    // If the caller explicitly asked for specific order ids but none of them
+    // were valid uuids, they must get nothing back -- never fall through to
+    // the unfiltered query below. Without this, an unauthenticated
+    // `GET /api/orders?ids=garbage` (no storeId) would return every order on
+    // the platform, PII (customer_name/email/phone/address) included. Do not
+    // "simplify" this away.
+    if (idsProvided && orderIds.length === 0 && !storeId) {
+      return res.json([]);
     }
 
     if (storeId) {
