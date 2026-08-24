@@ -71,7 +71,7 @@ point, no mixed-type intermediate state, and finding #0 closes with it.
 
 ## Schema
 
-Row counts are small enough that each phase is a single transaction: 36 stores, 105 products, 106
+Row counts are small enough for the whole migration to be a single transaction: 36 stores, 105 products, 106
 product_reviews, 97 product_views, 91 store_categories, 11 categories, 7 order_items, 5 orders,
 2 platform_settings — **460 rows total**.
 
@@ -109,7 +109,7 @@ project.
 
 ## Backfill
 
-One-time, phase 1, run once. The rule is **doubly unambiguous**: exactly one account matches the
+One-time, run once as part of the migration. The rule is **doubly unambiguous**: exactly one account matches the
 store, and that account matches exactly one store.
 
 ```sql
@@ -135,7 +135,7 @@ Expected from the audit: roughly 25 of 36 mapped, 11 left null.
 ### Accepted consequence
 
 Stores that do not map get `user_id = null` and therefore **have no seller access at all** after
-phase 1. The audit identified these categories:
+the migration. The audit identified these categories:
 
 - Six `rejected` seed/test stores — no action needed.
 - Two pairs where the same person holds both a legacy-domain and a current-domain account — the
@@ -195,11 +195,11 @@ The one hazard is **stale values from before the migration**, handled at cutover
 
 ## Cutover
 
-Per phase, in a short maintenance window:
+In a short maintenance window:
 
 1. Full Supabase backup.
 2. Dry run against a Supabase branch or restored copy; record row counts and FK integrity.
-3. Apply the phase in a single transaction.
+3. Apply the migration in a single transaction.
 4. Post-migration verification script: row count per table matches pre-migration, every foreign key
    resolves, no orphans.
 5. **Invalidate all Supabase auth sessions**, so every seller logs in fresh and
@@ -258,7 +258,7 @@ Verification is therefore:
 - Backfill only doubly-unambiguous matches; leave the rest null rather than guessing an owner.
 - Assign owners by SQL runbook, not an endpoint, until finding #3 exists.
 - Retain `legacy_id` columns; drop them in a later cleanup.
-- Force re-login at phase 1 cutover rather than adding self-healing frontend code.
+- Force re-login at cutover rather than adding self-healing frontend code.
 
 ## Related
 
