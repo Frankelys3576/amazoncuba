@@ -56,7 +56,7 @@ const login = async (email, password) => {
     body: JSON.stringify({ email, password }),
   });
   const j = await r.json().catch(() => ({}));
-  return { token: j?.session?.access_token ?? null, id: j?.user?.id ?? null };
+  return { token: j?.session?.access_token ?? null, id: j?.user?.id ?? null, storeId: j?.store?.id ?? null };
 };
 
 const admin = await login(process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD);
@@ -76,6 +76,11 @@ for (const [method, path] of ADMIN_ROUTES) {
 // que fallaba cerrado pero nunca se ejecutó: lo comprobamos aquí.
 check(await call('GET', '/api/users', { rawAuthHeader: 'Bearer' }) === 401,
   'GET /api/users con "Authorization: Bearer" (sin token) responde 401, no 200');
+// Un token sintácticamente válido pero inventado nunca coincide con una
+// sesión real: debe fallar en supabase.auth.getUser() (401), no llegar a la
+// comprobación de rol (403).
+check(await call('GET', '/api/users', { token: 'not-a-real-token' }) === 401,
+  'GET /api/users con un token inválido responde 401, no 403');
 
 console.log('\n-- con token de VENDEDOR: las siete rechazan con 403 --');
 for (const [method, path] of ADMIN_ROUTES) {
@@ -170,8 +175,22 @@ if (MODE === 'local') {
     }
     check(updateStatus === 403, 'PUT /api/users/<id-de-administrador> con nueva contraseña responde 403 (bloqueo de auto-modificación)');
   }
+
+  console.log('\n-- aislamiento de vendedor: pedidos y estadísticas de otra tienda --');
+  if (!sellerToken || !seller.storeId) {
+    check(false, 'no hay token/tienda de vendedor: no se puede probar el aislamiento de vendedor');
+  } else {
+    check(await call('GET', `/api/orders?storeId=${seller.storeId}`, { token: sellerToken }) === 200,
+      'el vendedor ve los pedidos de SU tienda');
+    check(await call('GET', `/api/orders?storeId=${FAKE}`, { token: sellerToken }) === 403,
+      'el vendedor NO ve los pedidos de otra tienda');
+    check(await call('GET', `/api/stores/${seller.storeId}/stats`, { token: sellerToken }) === 200,
+      'el vendedor ve las estadísticas de SU tienda');
+    check(await call('GET', `/api/stores/${FAKE}/stats`, { token: sellerToken }) === 403,
+      'el vendedor NO ve las estadísticas de otra tienda');
+  }
 } else {
-  console.log('\n(MODE=production: no se comprueba autoascenso ni el bloqueo de la propia cuenta de administrador)');
+  console.log('\n(MODE=production: no se comprueban autoascenso, bloqueo de la propia cuenta de administrador, ni aislamiento de vendedor)');
 }
 
 console.log(failures === 0 ? '\nPASS' : `\nFAIL: ${failures} comprobación(es)`);
