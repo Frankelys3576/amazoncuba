@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { SupabaseService } from '../src/supabase/supabase.service';
 import { SellerAuthGuard } from '../src/auth/seller-auth.guard';
 
 // Auth is not what's under test here (Task 13's stores.e2e-spec.ts is the
@@ -23,6 +24,21 @@ describe('Products (e2e)', () => {
         product: {
           findMany: jest.fn().mockResolvedValue([]),
           create: jest.fn().mockResolvedValue({ id: 1, store_id: 1 }),
+        },
+      })
+      // No route exercised here touches Supabase today, but a real
+      // SupabaseService would otherwise construct a live client (env vars
+      // are present in .env, so createClient succeeds silently). Stubbing
+      // it defensively means a future edit that adds a Supabase call to
+      // ProductsController/ProductsService fails fast against this stub
+      // instead of silently attempting a real network call.
+      .overrideProvider(SupabaseService)
+      .useValue({
+        client: {
+          auth: {
+            getUser: jest.fn(),
+            admin: { updateUserById: jest.fn(), createUser: jest.fn() },
+          },
         },
       })
       .overrideGuard(SellerAuthGuard)
