@@ -111,6 +111,36 @@ decide whether the migration worked.
 
 ---
 
+## Rulings made during the final review round
+
+**15. Fixed in two sequential dispatches rather than in parallel.**
+The file sets were disjoint (migrations vs NestJS vs frontends), but two agents committing in one
+worktree race on the git index regardless.
+*Cost if wrong:* wall-clock only.
+
+**16. ⛑ ACCEPTED that `verify_integrity.mjs` hardcodes the eight FK constraint names** while the
+migration now preserves whatever names production actually uses. If production named one differently,
+the checker reports `ERROR` on a healthy database. We cannot enumerate production's real constraint
+names from here — `pg_constraint` is not reachable through PostgREST — so the alternative was no check
+at all. A false alarm gets investigated by a human standing at the console; a missing check is how C1
+would have shipped silently. Cutover step 3b now captures the real names so they can be compared.
+
+**17. ⛑ ACCEPTED that Express will serve the `legacy_*` columns to clients; filed as follow-up.**
+Express spreads raw rows, so the new columns ride along; NestJS now strips them, so the two backends
+disagree where they previously agreed. Not a crash (PostgREST returns bigint as a JSON number) and not
+an exposure — `legacy_id` *is* the integer id that was public until cutover. It is rollback
+scaffolding leaking into the API. Fixing it means touching every Express controller, which is more
+than this branch should carry.
+
+**18. ACCEPTED a gap in the migration's pre-flight.** Section 0 does not catch a foreign key whose
+*referenced* column is renamed while its *child* column is not — a self-referential
+`categories.parent_id` is the realistic shape. No such FK exists in the nine tables' known graph, and
+section E aborts loudly with a type mismatch and rolls back completely, so it is safe. But it breaks
+the pre-flight's "stop before a single column is touched" promise.
+*Cost if wrong:* one aborted cutover attempt that rolls back cleanly.
+
+---
+
 ## Deferred, with reasons
 
 - `::bigint` rounds half-up, so a generated timestamp can be up to 0.5 ms ahead of `clock_timestamp()`.
