@@ -88,6 +88,57 @@ domain server-side at registration and reject a registration whose derived phone
 an existing store. That closes the trivial path without a migration, but it is a patch on a
 heuristic, not a fix — anyone who can obtain a `@cubaamazon.com` address still inherits the store.
 
+**Note on the interim mitigation, from the audit below:** the domain check alone is not enough.
+Several stores hold a *username* in the `phone` column rather than a number, so a legitimate
+owner's real-world email is what resolves them. Forcing `@cubaamazon.com` would lock those owners
+out while still leaving the collision surface open. The mitigation has to handle non-numeric
+`phone` values explicitly.
+
+### Production audit — run 2026-08-24
+
+Run against production with the service-role key, read-only. 36 stores, 17 auth accounts. The
+script is not committed (its output contains account emails); it is reproducible from the
+definitions here — derive `email.split('@')[0]` with `+` and whitespace stripped, then compare
+against `stores.phone` both exactly (backend-nest) and as a substring (Express, live).
+
+**No evidence of exploitation.** Every anomaly has an innocent explanation: a legacy
+`@phone.<domain>` email convention that was later changed, and stores whose `phone` column holds a
+username, whose owners therefore registered with their ordinary personal email.
+
+**But the flaw is demonstrably reachable, by accident, today:**
+
+- **One store has `phone` set to the literal string `admin`.** Every account named `admin@` at any
+  domain resolves to it. Two already do, differing only in TLD. No attacker was involved — this is
+  the vulnerability occurring spontaneously.
+- **One seller's account matches two stores at once** under Express's substring lookup: their own
+  store, and a second store whose phone is the same number carrying a `53` country-code prefix.
+  Express selects with `.limit(1)` and **no `ORDER BY`**, so which store that seller receives is
+  arbitrary. The colliding store is currently `rejected` test data, so present impact is
+  negligible — but the mechanism is live, and country-code prefixing makes the collision class
+  ordinary rather than exotic.
+
+**Cutover risk, now quantified.** Eight of 36 stores have no auth account matching their `phone`
+exactly, so they would receive 403 from `backend-nest`'s exact match where Express's substring
+match currently finds them. Six of the eight are `rejected` seed data. **Two approved, real stores
+would lose seller login:**
+
+| Store | `phone` shape | Why it fails exact match |
+|---|---|---|
+| (id 31) | `"NN NNNNNNNN"` | embedded space |
+| (id 32) | `"Wa.me//+NNNNNNNNNN"` | a WhatsApp URL, not a number |
+
+Store 32 works today *only* because the substring match finds the digits inside the URL.
+
+**This is a two-row data fix, not a code change** — normalise those two `phone` values before any
+frontend is cut over to `backend-nest`, and the exact-match hardening ships without locking anyone
+out. It also closes the long-standing question raised during the migration about whether legacy
+non-digit phone data would break the tightened lookup: it would, for exactly two live stores.
+
+**What the audit means for the `user_id` backfill.** The mapping is small and bounded — 36 stores,
+17 accounts — but three stores map ambiguously (the `admin` store, and the two sides of the
+country-code collision) and need a human decision rather than an automated rule. Budget an
+afternoon of careful mapping with review, not a migration project.
+
 ---
 
 ## 1. Order price tampering — second-highest financial impact
