@@ -32,10 +32,26 @@ for (const id of ids) {
   if (!'89ab'.includes(variant)) fail(`variant nibble is ${variant}, expected 8/9/a/b (${id})`);
 }
 
-// 3. lexicographic order must match generation order (time-ordered property)
-const sorted = [...ids].sort();
-if (JSON.stringify(sorted) !== JSON.stringify(ids)) {
-  fail('ids do not sort in generation order — the time prefix is wrong or not big-endian');
+// 3. the 48-bit timestamp prefix must be non-decreasing across calls — NOT a
+// strict full-id sort. UUIDv7 only guarantees ordering at millisecond
+// granularity; the remaining 74 bits are random, so two ids minted in the
+// same millisecond can sort arbitrarily relative to each other. Asserting
+// the full ids sort in strict generation order would therefore fail against
+// a *correct* implementation whenever two of these 200 calls land in the
+// same millisecond. Checking that the prefix itself never decreases still
+// catches a wrong-endianness or wrong-octet timestamp (the prefix would jump
+// around instead of climbing), and the final strict-increase check below
+// guards against a constant/missing timestamp (flat is allowed between two
+// same-ms ids, but not across all 200 sequential HTTP calls, which should
+// span more than one millisecond).
+const prefixes = ids.map(id => parseInt(id.replace(/-/g, '').slice(0, 12), 16));
+for (let i = 1; i < prefixes.length; i++) {
+  if (prefixes[i] < prefixes[i - 1]) {
+    fail(`timestamp prefix decreased at index ${i}: ${prefixes[i]} < ${prefixes[i - 1]} — not big-endian or wrong octets (${ids[i - 1]} -> ${ids[i]})`);
+  }
+}
+if (prefixes[prefixes.length - 1] <= prefixes[0]) {
+  fail('timestamp prefix never increased across 200 calls — timestamp may be constant or missing');
 }
 
 // 4. no collisions, including within the same millisecond
