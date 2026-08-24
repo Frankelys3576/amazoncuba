@@ -47,4 +47,22 @@ describe('SellerAuthStrategy', () => {
       ForbiddenException,
     );
   });
+
+  it('looks up the store by an exact phone match, not a substring match', async () => {
+    // Regression test for a substring-match authorization bypass: a `contains`
+    // lookup would let a user whose derived phone is a substring of another
+    // store's phone (e.g. "1234" inside "5551234") resolve to that OTHER
+    // store, granting them guarded write access to it. Must be exact equality.
+    const user = { id: 'u1', email: '1234@cubaamazon.com' };
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const strategy = makeStrategy(
+      jest.fn().mockResolvedValue({ data: { user }, error: null }),
+      findFirst,
+    );
+
+    await expect(strategy.validate('valid-token')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(findFirst).toHaveBeenCalledWith({ where: { phone: '1234' } });
+  });
 });

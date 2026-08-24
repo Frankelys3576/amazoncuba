@@ -32,7 +32,7 @@ export class SellerAuthStrategy extends PassportStrategy(Strategy, 'bearer') {
 
     const phone = extractPhoneFromEmail(user.email);
     const store = await this.prisma.store.findFirst({
-      where: { phone: { contains: phone } },
+      where: { phone },
     });
 
     if (!store) {
