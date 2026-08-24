@@ -158,9 +158,16 @@ export const updateZelleConfig = async (id, zelleData) => {
   }
 };
 
-export const getOrders = async () => {
+export const getOrders = async (params = {}) => {
   try {
-    const response = await fetch(`${API_URL}/orders`);
+    const query = new URLSearchParams();
+    if (params.storeId) query.append('storeId', params.storeId);
+    if (params.ids) query.append('ids', params.ids);
+
+    const queryString = query.toString();
+    const url = queryString ? `${API_URL}/orders?${queryString}` : `${API_URL}/orders`;
+
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Error al obtener órdenes');
     return await response.json();
   } catch (error) {
