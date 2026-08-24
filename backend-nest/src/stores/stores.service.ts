@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { formatStore } from './store-format.util';
+import { coerceDecimalFields } from '../common/decimal.util';
 import { generateSlug } from '../auth/slug.util';
 import { UpdateStoreProfileDto } from './dto/update-store-profile.dto';
 import { UpdateStoreCredentialsDto } from './dto/update-store-credentials.dto';
@@ -75,10 +76,17 @@ export class StoresService {
 
   async updateZelleInfo(id: number, dto: UpdateZelleInfoDto) {
     try {
-      return await this.prisma.store.update({
+      const store = await this.prisma.store.update({
         where: { id },
         data: dto as Prisma.StoreUpdateInput,
       });
+      // Finding 2 (Task 11 review, ruled in scope for this Task 10 method
+      // too): this intentionally returns the raw row, not formatStore(store)
+      // — Express also returns the raw Supabase row here (store.controller.js
+      // updateZelleInfo -> res.json(data[0])), and formatStore would add
+      // province/municipality/gallery defaults Express never returns from
+      // this endpoint. Only the Decimal column is coerced.
+      return coerceDecimalFields(store, ['price_per_night'] as const);
     } catch (error) {
       return rethrowAsNotFound(error);
     }

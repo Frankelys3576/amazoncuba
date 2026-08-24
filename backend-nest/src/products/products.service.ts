@@ -5,6 +5,14 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { formatProduct } from './product-format.util';
+import { coerceDecimalFields } from '../common/decimal.util';
+
+// price/price_usd/rating_avg are Decimal/Decimal? columns on `products`.
+// Applied to raw create/update/delete row responses (see Finding 2), which
+// intentionally do NOT go through `formatProduct` — Express returns the
+// bare Supabase row on these routes too, and running the full formatter
+// here would add store_name/store_slug/etc fields Express never returns.
+const DECIMAL_FIELDS = ['price', 'price_usd', 'rating_avg'] as const;
 
 const STORE_INCLUDE = {
   store: {
@@ -54,7 +62,11 @@ export class ProductsService {
     const products = await this.prisma.product.findMany({
       where,
       include: STORE_INCLUDE,
-      orderBy: [{ is_featured: 'desc' }, { created_at: 'desc' }],
+      // Finding 1: Express opts in explicitly to `nullsFirst: false` (i.e.
+      // NULLS LAST) on this column (product.controller.js:33). Prisma's
+      // bare 'desc' falls through to Postgres's native DESC default, which
+      // is NULLS FIRST — the opposite — so this must be spelled out.
+      orderBy: [{ is_featured: { sort: 'desc', nulls: 'last' } }, { created_at: 'desc' }],
     });
 
     return products.map(formatProduct);
@@ -77,9 +89,10 @@ export class ProductsService {
     const delivery_locations = dto.delivery_locations || [`${dto.province}:${dto.municipality}`];
     const currency = dto.currency || 'USD';
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: { ...dto, currency, delivery_locations },
     });
+    return coerceDecimalFields(product, DECIMAL_FIELDS);
   }
 
   async update(id: number, dto: UpdateProductDto, callerStore: Store) {
@@ -92,7 +105,8 @@ export class ProductsService {
     const data: Record<string, unknown> = { ...dto };
     if (data.currency === null) data.currency = 'USD';
 
-    return this.prisma.product.update({ where: { id }, data });
+    const product = await this.prisma.product.update({ where: { id }, data });
+    return coerceDecimalFields(product, DECIMAL_FIELDS);
   }
 
   async remove(id: number, callerStore: Store) {
@@ -104,7 +118,10 @@ export class ProductsService {
 
     await this.prisma.orderItem.deleteMany({ where: { product_id: id } });
     const product = await this.prisma.product.delete({ where: { id } });
-    return { message: 'Producto eliminado correctamente', product };
+    return {
+      message: 'Producto eliminado correctamente',
+      product: coerceDecimalFields(product, DECIMAL_FIELDS),
+    };
   }
 
   async registerView(id: number) {

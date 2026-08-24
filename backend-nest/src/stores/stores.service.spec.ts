@@ -145,4 +145,56 @@ describe('StoresService', () => {
       });
     });
   });
+
+  // Finding 2 (Task 11 review, ruled in scope for Task 10 too):
+  // updateZelleInfo returns the raw prisma.store.update() row (no
+  // formatStore pass), so price_per_night comes back as a real
+  // Prisma.Decimal instance unless explicitly coerced. Express returns the
+  // equivalent raw Supabase row too, but PostgREST serializes Postgres
+  // `numeric` as a JSON number, so a raw Decimal here is a real divergence.
+  describe('Finding 2: Decimal coercion on updateZelleInfo', () => {
+    it('coerces price_per_night to a plain number on the returned row', async () => {
+      const update = jest.fn().mockResolvedValue({
+        id: 1,
+        price_per_night: new Prisma.Decimal(75.5),
+      });
+      const prisma = makePrisma({ update });
+      const service = new StoresService(prisma, {} as any);
+
+      const result = await service.updateZelleInfo(1, { accepts_zelle: true });
+
+      expect(typeof result.price_per_night).toBe('number');
+      expect(result.price_per_night).toBe(75.5);
+      expect(JSON.stringify(result)).not.toMatch(/"price_per_night":"/);
+    });
+
+    it('leaves price_per_night null, not 0, when the column is null', async () => {
+      const update = jest.fn().mockResolvedValue({ id: 1, price_per_night: null });
+      const prisma = makePrisma({ update });
+      const service = new StoresService(prisma, {} as any);
+
+      const result = await service.updateZelleInfo(1, { accepts_zelle: true });
+
+      expect(result.price_per_night).toBeNull();
+    });
+
+    it('does not add store_name/store_slug/etc fields (must not route through formatStore)', async () => {
+      const update = jest.fn().mockResolvedValue({
+        id: 1,
+        name: 'Casa X',
+        province: null,
+        zelle_info: {},
+        price_per_night: new Prisma.Decimal(10),
+      });
+      const prisma = makePrisma({ update });
+      const service = new StoresService(prisma, {} as any);
+
+      const result = await service.updateZelleInfo(1, { accepts_zelle: true });
+
+      // formatStore would coerce `province: null` to `''` and add a
+      // `gallery` field; updateZelleInfo must not pick up that shape.
+      expect(result.province).toBeNull();
+      expect(result).not.toHaveProperty('gallery');
+    });
+  });
 });
