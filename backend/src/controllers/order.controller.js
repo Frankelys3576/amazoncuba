@@ -7,7 +7,10 @@ const getOrders = async (req, res) => {
     let orderIds = [];
     
     if (ids) {
-      orderIds = ids.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      orderIds = ids
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
     }
 
     if (storeId) {
