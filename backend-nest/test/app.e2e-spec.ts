@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { SupabaseService } from '../src/supabase/supabase.service';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -21,6 +22,17 @@ describe('AppController (e2e)', () => {
       imports: [AppModule],
     })
       .overrideProvider(PrismaService)
+      .useValue({})
+      // Same reasoning as PrismaService above, for the other external
+      // boundary: the real SupabaseService constructor calls
+      // createClient(supabaseUrl, supabaseKey), which throws
+      // "supabaseUrl is required" when SUPABASE_URL is unset. Without this
+      // override the suite passes only on a machine that happens to have a
+      // .env with Supabase credentials, and fails on a clean clone or in
+      // CI. GET /api/health touches Supabase no more than it touches
+      // Prisma, but SupabaseModule is @Global() and wired into AppModule,
+      // so bootstrapping alone constructs it.
+      .overrideProvider(SupabaseService)
       .useValue({})
       .compile();
 
