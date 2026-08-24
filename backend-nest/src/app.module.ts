@@ -4,9 +4,16 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SettingsModule } from './settings/settings.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [PrismaModule, SupabaseModule, CategoriesModule, SettingsModule],
+  imports: [
+    PrismaModule,
+    SupabaseModule,
+    CategoriesModule,
+    SettingsModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [],
 })
