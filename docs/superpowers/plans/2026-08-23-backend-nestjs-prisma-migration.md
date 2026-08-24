@@ -703,6 +703,24 @@ describe('SellerAuthStrategy', () => {
       ForbiddenException,
     );
   });
+
+  it('looks up the store by an exact phone match, not a substring match', async () => {
+    // Regression test for a substring-match authorization bypass: a `contains`
+    // lookup would let a user whose derived phone is a substring of another
+    // store's phone (e.g. "1234" inside "5551234") resolve to that OTHER
+    // store, granting them guarded write access to it. Must be exact equality.
+    const user = { id: 'u1', email: '1234@cubaamazon.com' };
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const strategy = makeStrategy(
+      jest.fn().mockResolvedValue({ data: { user }, error: null }),
+      findFirst,
+    );
+
+    await expect(strategy.validate('valid-token')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(findFirst).toHaveBeenCalledWith({ where: { phone: '1234' } });
+  });
 });
 ```
 
@@ -744,8 +762,14 @@ export class SellerAuthStrategy extends PassportStrategy(Strategy, 'bearer') {
     }
 
     const phone = extractPhoneFromEmail(user.email);
+    // Exact match, not `contains`: a substring match would let a user whose
+    // derived phone happens to be a substring of another store's phone
+    // resolve to that OTHER store, granting guarded write access to it.
+    // Safe as an exact match because both sides are written from the same
+    // normalized digit string (registration stores digits-only, and the
+    // login/credentials email local-part IS that same digit string).
     const store = await this.prisma.store.findFirst({
-      where: { phone: { contains: phone } },
+      where: { phone },
     });
 
     if (!store) {
@@ -1810,8 +1834,11 @@ export class AuthService {
     if (error) throw new UnauthorizedException('Credenciales inválidas');
 
     const phone = extractPhoneFromEmail(dto.email);
+    // Exact match, not `contains` — see the same note in SellerAuthStrategy
+    // (Task 4): a substring match is an authorization bypass (a short phone
+    // could match inside a longer, unrelated store's phone).
     const store = await this.prisma.store.findFirst({
-      where: { phone: { contains: phone } },
+      where: { phone },
     });
 
     return {
