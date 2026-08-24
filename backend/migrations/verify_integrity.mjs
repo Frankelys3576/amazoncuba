@@ -28,11 +28,18 @@ const fail = (m) => { console.error('FAIL:', m); failures++; };
 // through Range until it has collected as many rows as Content-Range says
 // exist, so a truncated single response can never masquerade as the full
 // table.
-// tolerateErrorCodes: PostgREST error codes (e.g. '42703' undefined column)
-// that should be swallowed as "not applicable yet" rather than a real
-// failure — used for the user_id ownership check, which is expected to 404
-// before the migration adds the column. Any other non-OK response is a
-// genuine failure and gates the exit code.
+//
+// Return value contract (callers must check for both sentinels):
+//   - array   -> success, full row set.
+//   - null    -> a genuine failure (bad HTTP status, or the paged fetch
+//                couldn't reconcile against Content-Range's reported total).
+//                fail() has already been called; callers must NOT print a
+//                numeric count derived from this — that would silently
+//                misrepresent a failure as data in the before/after diff.
+//   - undefined -> the request failed with an error code the caller opted
+//                into tolerating via `tolerateErrorCodes` (e.g. '42703'
+//                undefined column, before the migration adds it). This is
+//                an *expected* absence, not a failure — no fail() call.
 async function fetchAll(path, { tolerateErrorCodes = [] } = {}) {
   const rows = [];
   const pageSize = 1000;
@@ -45,9 +52,9 @@ async function fetchAll(path, { tolerateErrorCodes = [] } = {}) {
       const body = await r.text();
       let code;
       try { code = JSON.parse(body).code; } catch { /* not JSON */ }
-      if (tolerateErrorCodes.includes(code)) return null;
+      if (tolerateErrorCodes.includes(code)) return undefined;
       fail(`GET ${path} -> ${r.status} ${body}`);
-      return rows;
+      return null;
     }
     const batch = await r.json();
     rows.push(...batch);
@@ -56,6 +63,7 @@ async function fetchAll(path, { tolerateErrorCodes = [] } = {}) {
     if (batch.length === 0 || rows.length >= total) {
       if (Number.isFinite(total) && rows.length !== total) {
         fail(`${path} returned ${rows.length} rows but Content-Range reported total ${total}`);
+        return null;
       }
       return rows;
     }
@@ -63,9 +71,25 @@ async function fetchAll(path, { tolerateErrorCodes = [] } = {}) {
   }
 }
 
+// Same success/failure contract as fetchAll: returns the count as a string
+// on success, or null on a genuine failure (bad HTTP status, or a missing/
+// unparseable Content-Range header) after calling fail(). Never returns a
+// value that looks like a count but isn't — a failed count silently folded
+// into TOTAL, or printed as "0"/"?" without failing the run, would let the
+// script print PASS while a real problem (e.g. an RLS change, an outage,
+// an auth failure) went unnoticed.
 const count = async (t) => {
   const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${t}?select=id`, { headers: { ...H, Prefer: 'count=exact', Range: '0-0' } });
-  return (r.headers.get('content-range') || '?/?').split('/')[1];
+  if (!r.ok) {
+    fail(`GET ${t}?select=id (count) -> ${r.status} ${await r.text()}`);
+    return null;
+  }
+  const range = r.headers.get('content-range');
+  if (!range || !range.includes('/')) {
+    fail(`GET ${t}?select=id (count) -> missing/unparseable Content-Range header: ${JSON.stringify(range)}`);
+    return null;
+  }
+  return range.split('/')[1];
 };
 
 const TABLES = ['stores', 'products', 'orders', 'order_items', 'categories', 'store_categories', 'platform_settings', 'product_views', 'product_reviews'];
@@ -74,8 +98,8 @@ console.log('== row counts ==');
 let total = 0;
 for (const t of TABLES) {
   const c = await count(t);
-  total += Number(c) || 0;
-  console.log(`${t.padEnd(20)} ${c}`);
+  console.log(`${t.padEnd(20)} ${c === null ? 'ERROR' : c}`);
+  if (c !== null) total += Number(c) || 0;
 }
 console.log(`${'TOTAL'.padEnd(20)} ${total}`);
 
@@ -100,27 +124,48 @@ let orphanTotal = 0;
 for (const [child, col, parent] of CHECKS) {
   const kids = await fetchAll(`${child}?select=${col}&${col}=not.is.null`);
   const parentRows = await fetchAll(`${parent}?select=id`);
+  const label = (child + '.' + col).padEnd(34);
+  // A failed child or parent fetch already called fail() inside fetchAll.
+  // Printing a numeric count here would be actively misleading: "0" reads as
+  // "no orphans" when it may mean "the child fetch failed", and an empty
+  // parent set (from a failed parent fetch) would make every real child id
+  // look orphaned. The before/after diff is the primary way a human judges
+  // whether this migration preserved data, so a wrong number here is worse
+  // than an admittedly ugly one.
+  if (kids === null || parentRows === null) {
+    console.log(`${label} ERROR`);
+    continue;
+  }
   const parentIds = new Set(parentRows.map(r => String(r.id)));
   const orphans = kids.filter(k => !parentIds.has(String(k[col])));
-  console.log(`${(child + '.' + col).padEnd(34)} ${orphans.length}`);
+  console.log(`${label} ${orphans.length}`);
   if (orphans.length > 0) {
     orphanTotal += orphans.length;
     fail(`${child}.${col}: ${orphans.length} orphan(s) referencing missing ${parent}.id, e.g. ${orphans.slice(0, 5).map(o => o[col]).join(', ')}`);
   }
 }
 
-// Ownership, meaningful only after the migration adds the column. Before the
-// migration, stores.user_id doesn't exist yet (PostgREST error 42703) — that
-// is the expected pre-migration state, not a failure, so it's tolerated and
-// the section is simply omitted.
+// Ownership, meaningful only after the migration adds the column. Four
+// distinct outcomes, each printed explicitly so the section never silently
+// vanishes from stdout (this is what a human reads to decide whether to run
+// the owner-assignment runbook — a missing section is worse than a wrong-
+// looking one, because it hides that anything needed deciding at all):
+//   - fetch failed for a real reason (null)              -> say so, point at FAIL above.
+//   - stores.user_id doesn't exist yet (tolerated 42703, undefined) -> expected pre-migration state.
+//   - stores table legitimately has zero rows            -> say so explicitly.
+//   - normal case                                        -> the actual ownership summary.
 const stores = await fetchAll('stores?select=id,status,user_id', { tolerateErrorCodes: ['42703'] });
-if (stores && stores.length && 'user_id' in stores[0]) {
+if (stores === null) {
+  console.log('\n== ownership ==\n(query failed, see FAIL above)');
+} else if (stores === undefined) {
+  console.log('\n== ownership ==\n(stores.user_id column not present — expected before the migration)');
+} else if (stores.length === 0) {
+  console.log('\n== ownership ==\nstores with user_id: 0/0 (no stores found)');
+} else {
   const owned = stores.filter(s => s.user_id).length;
   const unownedApproved = stores.filter(s => !s.user_id && s.status === 'approved').length;
   console.log(`\n== ownership ==\nstores with user_id: ${owned}/${stores.length}`);
   console.log(`APPROVED stores with NO owner (need the runbook): ${unownedApproved}`);
-} else if (stores === null) {
-  console.log('\n== ownership ==\n(stores.user_id column not present — expected before the migration)');
 }
 
 console.log(failures === 0
