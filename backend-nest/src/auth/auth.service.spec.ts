@@ -7,7 +7,7 @@ describe('AuthService', () => {
     settingsFindUnique,
     storeCreate,
     signIn,
-    storeFindFirst,
+    storeFindUnique,
   }: any) => {
     const supabase = {
       client: {
@@ -19,7 +19,7 @@ describe('AuthService', () => {
     } as any;
     const prisma = {
       platformSetting: { findUnique: settingsFindUnique },
-      store: { create: storeCreate, findFirst: storeFindFirst },
+      store: { create: storeCreate, findUnique: storeFindUnique },
     } as any;
     return new AuthService(supabase, prisma);
   };
@@ -59,6 +59,7 @@ describe('AuthService', () => {
       expect(createArgs.data.name).toBe('Cafetería Juan');
       expect(createArgs.data.slug).toBe('cafeteria-juan');
       expect(createArgs.data.status).toBe('pending');
+      expect(createArgs.data.user_id).toBe('u1');
       expect(result).toEqual({
         message: 'Usuario y tienda registrados exitosamente',
         user,
@@ -347,12 +348,12 @@ describe('AuthService', () => {
     it('returns the session, user, and matching store', async () => {
       const user = { id: 'u1', email: '5551234@cubaamazon.com' };
       const session = { access_token: 'tok' };
-      const store = { id: 7, phone: '5551234' };
+      const store = { id: 's1', user_id: 'u1' };
       const signIn = jest
         .fn()
         .mockResolvedValue({ data: { user, session }, error: null });
-      const storeFindFirst = jest.fn().mockResolvedValue(store);
-      const service = makeService({ signIn, storeFindFirst });
+      const storeFindUnique = jest.fn().mockResolvedValue(store);
+      const service = makeService({ signIn, storeFindUnique });
 
       const result = await service.login({
         email: '5551234@cubaamazon.com',
@@ -367,21 +368,23 @@ describe('AuthService', () => {
       });
     });
 
-    it('looks up the store by an exact phone match, not a substring match', async () => {
+    it('resolves the store by the authenticated user id, never by the email', async () => {
       const user = { id: 'u1', email: '1234@cubaamazon.com' };
       const session = { access_token: 'tok' };
       const signIn = jest
         .fn()
         .mockResolvedValue({ data: { user, session }, error: null });
-      const storeFindFirst = jest.fn().mockResolvedValue(null);
-      const service = makeService({ signIn, storeFindFirst });
+      const storeFindUnique = jest.fn().mockResolvedValue(null);
+      const service = makeService({ signIn, storeFindUnique });
 
       await service.login({
         email: '1234@cubaamazon.com',
         password: 'secret123',
       });
 
-      expect(storeFindFirst).toHaveBeenCalledWith({ where: { phone: '1234' } });
+      expect(storeFindUnique).toHaveBeenCalledWith({
+        where: { user_id: 'u1' },
+      });
     });
 
     it('tolerates a missing store and still returns the session/user', async () => {
@@ -390,8 +393,8 @@ describe('AuthService', () => {
       const signIn = jest
         .fn()
         .mockResolvedValue({ data: { user, session }, error: null });
-      const storeFindFirst = jest.fn().mockResolvedValue(null);
-      const service = makeService({ signIn, storeFindFirst });
+      const storeFindUnique = jest.fn().mockResolvedValue(null);
+      const service = makeService({ signIn, storeFindUnique });
 
       const result = await service.login({
         email: '5551234@cubaamazon.com',
@@ -406,7 +409,7 @@ describe('AuthService', () => {
         data: { user: null, session: null },
         error: { message: 'Invalid login credentials' },
       });
-      const service = makeService({ signIn, storeFindFirst: jest.fn() });
+      const service = makeService({ signIn, storeFindUnique: jest.fn() });
 
       await expect(
         service.login({ email: 'nope@cubaamazon.com', password: 'wrong' }),
@@ -429,10 +432,10 @@ describe('AuthService', () => {
       } as any;
       const service = new AuthService({} as any, prisma);
 
-      const result = await service.deleteAccount(7);
+      const result = await service.deleteAccount('s7');
 
       expect(productFindMany).toHaveBeenCalledWith({
-        where: { store_id: 7 },
+        where: { store_id: 's7' },
         select: { id: true },
       });
       expect(orderItemDeleteMany).toHaveBeenCalledWith({
@@ -441,7 +444,7 @@ describe('AuthService', () => {
       expect(productDeleteMany).toHaveBeenCalledWith({
         where: { id: { in: [1, 2] } },
       });
-      expect(storeDelete).toHaveBeenCalledWith({ where: { id: 7 } });
+      expect(storeDelete).toHaveBeenCalledWith({ where: { id: 's7' } });
       expect(result).toEqual({ message: 'Cuenta eliminada exitosamente' });
     });
 
@@ -457,11 +460,11 @@ describe('AuthService', () => {
       } as any;
       const service = new AuthService({} as any, prisma);
 
-      await service.deleteAccount(7);
+      await service.deleteAccount('s7');
 
       expect(orderItemDeleteMany).not.toHaveBeenCalled();
       expect(productDeleteMany).not.toHaveBeenCalled();
-      expect(storeDelete).toHaveBeenCalledWith({ where: { id: 7 } });
+      expect(storeDelete).toHaveBeenCalledWith({ where: { id: 's7' } });
     });
   });
 });

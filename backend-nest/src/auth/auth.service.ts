@@ -8,7 +8,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { generateSlug } from './slug.util';
-import { extractPhoneFromEmail } from './extract-phone-from-email.util';
 
 // Mirrors Express's `value ? parseFloat(value) : null` at every one of its
 // six lat/lng/price_per_night call sites. The frontends send these as
@@ -68,7 +67,15 @@ export class AuthService {
     }
 
     if (dto.store_name) {
-      const phoneMatch = extractPhoneFromEmail(dto.email);
+      // Default the store's contact phone from the email local-part when no
+      // explicit phone is given. This is a business-data default only (the
+      // "¿cuál es tu teléfono?" convenience for sellers who used their phone
+      // number as their email) — it is NOT an authorization mechanism. Store
+      // ownership is decided below via `user_id`, never by this value.
+      const phoneMatch = dto.email
+        .split('@')[0]
+        .replace(/\+/g, '')
+        .replace(/\s/g, '');
       const finalPhone = dto.phone
         ? dto.phone.replace(/[^0-9]/g, '')
         : phoneMatch;
@@ -95,6 +102,7 @@ export class AuthService {
         // which is strictly worse than what Express does.
         await this.prisma.store.create({
           data: {
+            user_id: data.user.id,
             name: dto.store_name,
             slug,
             description:
@@ -140,15 +148,16 @@ export class AuthService {
       });
     if (error) throw new UnauthorizedException('Credenciales inválidas');
 
-    const phone = extractPhoneFromEmail(dto.email);
-    // Exact match, not `contains` — see the same note in SellerAuthStrategy
-    // (Task 4): a substring match is an authorization bypass (a short phone
-    // could match inside a longer, unrelated store's phone).
-    // Prisma's findFirst returns null (rather than throwing) when nothing
+    // Resolve the seller's store by the authenticated user's id, never by
+    // parsing their email — see SellerAuthStrategy.validate for why: email
+    // is unauthenticated attacker-controlled input at registration time, and
+    // store phone numbers are public, so a phone-derived-from-email lookup
+    // lets anyone claim any store by registering `<phone>@anything.com`.
+    // Prisma's findUnique returns null (rather than throwing) when nothing
     // matches, so login tolerates a missing store the same way Express does
     // with its inner try/catch around Supabase's .single() lookup.
-    const store = await this.prisma.store.findFirst({
-      where: { phone },
+    const store = await this.prisma.store.findUnique({
+      where: { user_id: data.user.id },
     });
 
     return {
@@ -159,7 +168,7 @@ export class AuthService {
     };
   }
 
-  async deleteAccount(storeId: number | bigint) {
+  async deleteAccount(storeId: string) {
     const products = await this.prisma.product.findMany({
       where: { store_id: storeId },
       select: { id: true },
