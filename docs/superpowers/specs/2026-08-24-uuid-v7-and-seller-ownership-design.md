@@ -85,7 +85,7 @@ alter table public.stores alter column id set not null;
 -- swap the primary key, rewire dependent foreign keys to the new uuid
 alter table public.stores
   add column user_id uuid references auth.users(id) on delete set null;
-create unique index stores_user_id_key on public.stores(user_id) where user_id is not null;
+alter table public.stores add constraint stores_user_id_key unique (user_id);
 ```
 
 Three deliberate choices on `user_id`:
@@ -96,7 +96,9 @@ Three deliberate choices on `user_id`:
   (finding #3, still open). Under `cascade`, any anonymous caller hitting that endpoint would
   destroy store rows and every product hanging off them. Under `set null` the store survives and
   becomes unowned. This choice can be revisited once #3 lands.
-- **Unique, partial on non-null.** Today's lookup does `.limit(1)`, so "one store per seller" is
+- **Unique.** A plain unique constraint, not a partial index: Postgres treats NULLs as distinct, so
+  unlimited unowned stores are already permitted, and Prisma cannot introspect a partial index as
+  `@unique` — which `findUnique` requires. Today's lookup does `.limit(1)`, so "one store per seller" is
   already the de facto rule — merely unenforced, which is why the collisions in the audit went
   unnoticed. Enforcing it means a future collision fails at write time instead of silently handing
   someone the wrong dashboard. Reversible if multi-store sellers are ever wanted; the audit found
