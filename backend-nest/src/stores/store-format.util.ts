@@ -1,4 +1,5 @@
-import { Prisma, Store } from '@prisma/client';
+import { Store } from '@prisma/client';
+import { toPlainNumber } from '../common/decimal.util';
 
 type ZelleInfo = {
   province?: string | null;
@@ -22,20 +23,6 @@ export type FormattedStore = Omit<
   price_per_night: number | null;
   gallery: string[];
 };
-
-// Prisma types `price_per_night` as `Decimal?`, so at runtime the direct
-// column is a Prisma.Decimal instance (truthy even when it holds 0, and
-// JSON-serializes as a string) rather than the plain JS number PostgREST
-// gave Express. Coerce it to a number *before* the `||` fallback chain so
-// both the JSON response shape and Express's falsy-0-falls-back-to-
-// zelle_info behavior are preserved. null/undefined pass through unchanged
-// so they don't get turned into 0.
-function toPlainNumber(
-  value: Prisma.Decimal | number | null | undefined,
-): number | null {
-  if (value === null || value === undefined) return null;
-  return value instanceof Prisma.Decimal ? value.toNumber() : value;
-}
 
 export function formatStore(store: Store): FormattedStore;
 export function formatStore(store: null | undefined): null;
