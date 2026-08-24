@@ -5,6 +5,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UsersModule } from './users/users.module';
     CategoriesModule,
     SettingsModule,
     UsersModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [],
