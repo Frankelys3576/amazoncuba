@@ -88,19 +88,31 @@ end $$;
 -- ---------------------------------------------------------------
 -- C. drop old foreign-key and primary-key constraints
 --    Names are discovered rather than assumed, because they were created
---    by Supabase's UI and by ad-hoc SQL over time. cascade is required
---    because this loop's iteration order is not guaranteed: if a table's
---    primary key is dropped before another table's foreign key that
---    references it, the fk would otherwise still be there depending on
---    that (now-gone) unique index. cascade lets that fk go with it instead
---    of erroring; it is caught explicitly by this same query on a later
---    iteration regardless, since every table with such an fk is also in
---    the list below. contype is restricted to ('f','p') -- unique
---    constraints (contype 'u'), such as stores_slug_key and
---    stores_store_number_key, are never selected by this loop and do not
---    depend on a table's own primary key, so cascade does not remove them
---    either; verified empirically against postgres:17 (this project's
---    version) before writing section E.
+--    by Supabase's UI and by ad-hoc SQL over time.
+--
+--    The `for r in select ...` cursor snapshots the full 'f'/'p' constraint
+--    list once, before any drops happen. Every primary key in this set has
+--    at least one foreign key elsewhere in the same set pointing at it
+--    (e.g. stores_pkey <- products_store_id_fkey), and pg_constraint's scan
+--    order here is whatever Postgres finds convenient -- not guaranteed to
+--    put a table's own fk's ahead of a pk it references. Verified
+--    empirically against postgres:17 (this project's version) that the
+--    natural order puts stores/categories/etc.'s own primary keys *before*
+--    other tables' foreign keys referencing them: dropping such a pk with
+--    cascade drops the referencing fk immediately, but that fk's row is
+--    still queued in this cursor -- so the loop later tries to drop it a
+--    second time and Postgres raises "constraint ... does not exist",
+--    aborting the whole transaction. The `if exists` guard below re-checks
+--    each constraint immediately before dropping it and skips anything an
+--    earlier iteration's cascade already removed. Confirmed against a
+--    9-table reproduction of this exact schema (all fk's/pk's cleared, no
+--    error) before relying on it here.
+--
+--    contype is restricted to ('f','p') -- unique constraints (contype
+--    'u'), such as stores_slug_key and stores_store_number_key, are never
+--    selected by this loop, and (also verified empirically) do not depend
+--    on a table's own primary key, so cascade does not remove them either;
+--    see the guarded re-add in section E.
 -- ---------------------------------------------------------------
 do $$
 declare r record;
@@ -114,7 +126,9 @@ begin
         ('categories','stores','products','orders','order_items',
          'platform_settings','store_categories','product_views','product_reviews')
   loop
-    execute format('alter table %s drop constraint %I cascade', r.tbl, r.conname);
+    if exists (select 1 from pg_constraint where conname = r.conname and conrelid = r.tbl::oid) then
+      execute format('alter table %s drop constraint %I cascade', r.tbl, r.conname);
+    end if;
   end loop;
 end $$;
 
