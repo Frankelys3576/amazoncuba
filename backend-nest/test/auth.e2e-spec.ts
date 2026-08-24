@@ -67,7 +67,9 @@ describe('Auth (e2e)', () => {
       .send({ email: '5551234@cubaamazon.com', full_name: 'Juan Pérez' })
       .expect(400)
       .expect((res) => {
-        expect(res.body.error).toBeDefined();
+        expect(res.body.error).toBe(
+          'La contraseña es requerida, La contraseña debe ser texto',
+        );
       });
   });
 
