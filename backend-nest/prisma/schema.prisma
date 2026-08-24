@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       BigInt    @id @default(autoincrement())
+  name     String
+  products Product[]
+
+  @@map("categories")
+}
+
+model Store {
+  id               BigInt          @id @default(autoincrement())
+  name             String
+  description      String?
+  logo_url         String?
+  banner_url       String?
+  status           String?         @default("approved")
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  store_type       String?         @default("business") @db.VarChar
+  slogan           String?
+  phone            String?
+  is_open          Boolean?        @default(true)
+  has_delivery     Boolean?        @default(false)
+  slug             String?         @unique
+  opening_time     String?         @default("09:00")
+  closing_time     String?         @default("18:00")
+  accepts_zelle    Boolean?        @default(false)
+  zelle_info       Json?           @default("{}")
+  store_number     String?         @unique
+  province         String?
+  municipality     String?
+  address          String?
+  lat              Float?
+  lng              Float?
+  price_per_night  Decimal?
+  products         Product[]
+  store_categories StoreCategory[]
+
+  @@map("stores")
+}
+
+model Product {
+  id                 BigInt          @id @default(autoincrement())
+  name               String
+  description        String?
+  price              Decimal
+  stock              Int?            @default(0)
+  category_id        BigInt?
+  store_id           BigInt?
+  image_url          String?
+  created_at         DateTime        @default(now()) @db.Timestamptz(6)
+  province           String?
+  municipality       String?
+  image_url_2        String?
+  image_url_3        String?
+  image_url_4        String?
+  image_url_5        String?
+  delivery_locations String[]        @default([])
+  currency           String?         @default("USD") @db.VarChar
+  is_featured        Boolean?        @default(false)
+  rating_avg         Decimal?        @default(0.00)
+  review_count       Int?            @default(0)
+  store_category_id  BigInt?
+  price_usd          Decimal?
+  category           Category?       @relation(fields: [category_id], references: [id])
+  store              Store?          @relation(fields: [store_id], references: [id])
+  store_category     StoreCategory?  @relation(fields: [store_category_id], references: [id])
+  order_items        OrderItem[]
+  product_reviews    ProductReview[]
+  product_views      ProductView[]
+
+  @@map("products")
+}
+
+model Order {
+  id                BigInt      @id @default(autoincrement())
+  customer_name     String
+  customer_email    String
+  customer_address  String?
+  total             Decimal
+  status            String?     @default("pending")
+  created_at        DateTime    @default(now()) @db.Timestamptz(6)
+  customer_phone    String?
+  payment_method    String?     @default("cash_on_delivery")
+  payment_proof_url String?
+  order_items       OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                BigInt   @id @default(autoincrement())
+  order_id          BigInt?
+  product_id        BigInt?
+  quantity          Int
+  price_at_purchase Decimal
+  order             Order?   @relation(fields: [order_id], references: [id])
+  product           Product? @relation(fields: [product_id], references: [id])
+
+  @@map("order_items")
+}
+
+model PlatformSetting {
+  id         BigInt   @id @default(autoincrement())
+  key        String   @unique @db.VarChar
+  value      String
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("platform_settings")
+}
+
+model ProductView {
+  id         String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  product_id BigInt?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  product    Product?  @relation(fields: [product_id], references: [id])
+
+  @@map("product_views")
+}
+
+model ProductReview {
+  id            String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  product_id    BigInt?
+  customer_name String    @db.VarChar
+  rating        Int
+  comment       String?
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  product       Product?  @relation(fields: [product_id], references: [id])
+
+  @@map("product_reviews")
+}
+
+model StoreCategory {
+  id         BigInt    @id @default(autoincrement())
+  store_id   BigInt?
+  name       String
+  image_url  String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  store      Store?    @relation(fields: [store_id], references: [id])
+  products   Product[]
+
+  @@map("store_categories")
+}

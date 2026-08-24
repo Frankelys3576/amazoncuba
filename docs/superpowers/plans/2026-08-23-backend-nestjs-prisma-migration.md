@@ -140,37 +140,50 @@ export class HttpExceptionFilter implements ExceptionFilter {
 }
 ```
 
-- [ ] **Step 6: Wire the filter, CORS, and global ValidationPipe into `main.ts`**
+- [ ] **Step 6: Wire the filter, CORS, global ValidationPipe, and BigInt JSON serialization into `main.ts`**
+
+The real `stores`/`products`/`orders`/etc. tables (confirmed against the live Supabase schema) use `bigint` primary/foreign keys. Prisma Client represents Postgres `bigint` as the JS `BigInt` primitive, and `JSON.stringify` (which Express's `res.json()` — and therefore every Nest controller return value — uses under the hood) throws `TypeError: Do not know how to serialize a BigInt` unless `BigInt.prototype.toJSON` is patched. Do this once, globally, before the app is created, rather than in every service.
 
 Replace `backend-nest/src/main.ts`:
 ```typescript
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors();
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
-  app.useGlobalFilters(new HttpExceptionFilter());
-  const port = process.env.PORT || 5001;
-  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    await app.listen(port);
-    console.log(`🚀 Servidor backend-nest corriendo en el puerto ${port}`);
-  }
-}
-bootstrap();
+// Every bigint id/FK in the DB (stores, products, orders, ...) comes back from
+// Prisma as a JS BigInt; JSON.stringify can't serialize BigInt without this.
+(BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
+  return Number(this);
+};
 
-export default async function handler(req: any, res: any) {
+async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
-  await app.init();
-  const instance = app.getHttpAdapter().getInstance();
+  return app;
+}
+
+// Local/dev: listen on a port like a normal Node server.
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  createApp().then(async (app) => {
+    const port = process.env.PORT || 5001;
+    await app.listen(port);
+    console.log(`🚀 Servidor backend-nest corriendo en el puerto ${port}`);
+  });
+}
+
+// Vercel: reuse one initialized app instance across invocations on the same
+// Fluid Compute worker instead of rebuilding the whole Nest graph per request.
+let cachedApp: INestApplication | undefined;
+
+export default async function handler(req: any, res: any) {
+  if (!cachedApp) {
+    cachedApp = await createApp();
+    await cachedApp.init();
+  }
+  const instance = cachedApp.getHttpAdapter().getInstance();
   return instance(req, res);
 }
 ```
@@ -248,42 +261,178 @@ cd backend-nest && npm install prisma @prisma/client
 npx prisma init
 ```
 
-- [ ] **Step 2: Point Prisma at the live Supabase DB and pull the schema**
+- [ ] **Step 2: Write the schema directly from the live database's real structure**
 
-Set `DATABASE_URL` in `backend-nest/.env` to the same Postgres connection string used to reach the Supabase project's DB (found in the Supabase dashboard's Database settings — this is the direct Postgres connection, distinct from `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` which are the REST/JS-client credentials). Add `DATABASE_URL="postgresql://..."` (placeholder shape only) to `backend-nest/.env.example`.
+No `DATABASE_URL`/DB password was available to run `prisma db pull` against the live Supabase project during planning, so the controller queried the project's actual table structure directly via the Supabase Management API (`list_tables`, `information_schema.columns`) instead of guessing. **Do not run `prisma db pull`** — write `backend-nest/prisma/schema.prisma` with exactly this content, which matches the live `public` schema of the `ihlixbawhtbjxizfpgel` (AMAZONCUBA) Supabase project field-for-field, including the fact that every id/FK is `bigint` (→ Prisma `BigInt`, handled by Task 1's `BigInt.prototype.toJSON` shim) and that `product_views`/`product_reviews` use `uuid` primary keys, not bigint:
 
-Run:
-```bash
-npx prisma db pull
-```
-This overwrites `backend-nest/prisma/schema.prisma` with models introspected from the real tables.
-
-- [ ] **Step 3: Reconcile the introspected schema against known field usage**
-
-`prisma db pull` will name each model after its table (e.g. `model stores { ... }`) and keep every column exactly as it exists in Postgres (snake_case). Rename each model to PascalCase-singular with an explicit `@@map` so Prisma Client reads naturally in TypeScript, e.g.:
 ```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       BigInt    @id @default(autoincrement())
+  name     String
+  products Product[]
+
+  @@map("categories")
+}
+
 model Store {
-  id            Int      @id @default(autoincrement())
-  // ...introspected columns stay snake_case as fields...
-  store_type    String?
-  zelle_info    Json?
+  id               BigInt          @id @default(autoincrement())
+  name             String
+  description      String?
+  logo_url         String?
+  banner_url       String?
+  status           String?         @default("approved")
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  store_type       String?         @default("business") @db.VarChar
+  slogan           String?
+  phone            String?
+  is_open          Boolean?        @default(true)
+  has_delivery     Boolean?        @default(false)
+  slug             String?         @unique
+  opening_time     String?         @default("09:00")
+  closing_time     String?         @default("18:00")
+  accepts_zelle    Boolean?        @default(false)
+  zelle_info       Json?           @default("{}")
+  store_number     String?         @unique
+  province         String?
+  municipality     String?
+  address          String?
+  lat              Float?
+  lng              Float?
+  price_per_night  Decimal?
+  products         Product[]
+  store_categories StoreCategory[]
+
   @@map("stores")
 }
-```
-Do this for every model. Do **not** rename individual columns (`@map`) — keep field names identical to the introspected snake_case so the generated types match the DB 1:1 and later tasks' code (written against these exact field names) is correct.
 
-Cross-check the introspected schema has all of the following, since these are the fields the existing controllers actually read/write (add any Prisma missed, e.g. because a column allows NULL and had no non-null sample rows — introspection can occasionally miss nullable JSON/array columns):
-- `Store`: `id, name, slug, description, status, store_type, phone, store_number, zelle_info (Json), accepts_zelle, has_delivery, is_open, opening_time, closing_time, logo_url, banner_url, slogan, province, municipality, address, lat, lng, price_per_night, created_at`
-- `Product`: `id, name, description, price, price_usd, currency, stock, category_id, store_category_id, image_url, image_url_2, image_url_3, image_url_4, image_url_5, store_id, province, municipality, delivery_locations (String[]), is_featured, created_at`, plus relation fields to `Store` (`store_id`) — introspection should add a `store Store @relation(fields: [store_id], references: [id])` and a matching back-relation on `Store`.
-- `Order`: `id, customer_name, customer_email, customer_address, customer_phone, total, status, payment_method, payment_proof_url, created_at`, relation to `OrderItem[]`.
-- `OrderItem`: `id, order_id, product_id, quantity, price_at_purchase`, relations to `Order` and `Product`.
-- `ProductView`: `id, product_id, created_at`, relation to `Product`.
-- `ProductReview`: `id, product_id, customer_name, rating, comment, created_at`, relation to `Product`.
-- `Category`: `id, name` (plus whatever else introspection finds).
-- `StoreCategory`: `id, store_id, name, image_url, created_at`, relation to `Store`.
-- `PlatformSetting`: `key (@id), value, updated_at`, mapped `@@map("platform_settings")`.
+model Product {
+  id                 BigInt          @id @default(autoincrement())
+  name               String
+  description        String?
+  price              Decimal
+  stock              Int?            @default(0)
+  category_id        BigInt?
+  store_id           BigInt?
+  image_url          String?
+  created_at         DateTime        @default(now()) @db.Timestamptz(6)
+  province           String?
+  municipality       String?
+  image_url_2        String?
+  image_url_3        String?
+  image_url_4        String?
+  image_url_5        String?
+  delivery_locations String[]        @default([])
+  currency           String?         @default("USD") @db.VarChar
+  is_featured        Boolean?        @default(false)
+  rating_avg         Decimal?        @default(0.00)
+  review_count       Int?            @default(0)
+  store_category_id  BigInt?
+  price_usd          Decimal?
+  category           Category?       @relation(fields: [category_id], references: [id])
+  store              Store?          @relation(fields: [store_id], references: [id])
+  store_category     StoreCategory?  @relation(fields: [store_category_id], references: [id])
+  order_items        OrderItem[]
+  product_reviews    ProductReview[]
+  product_views      ProductView[]
+
+  @@map("products")
+}
+
+model Order {
+  id                BigInt      @id @default(autoincrement())
+  customer_name     String
+  customer_email    String
+  customer_address  String?
+  total             Decimal
+  status            String?     @default("pending")
+  created_at        DateTime    @default(now()) @db.Timestamptz(6)
+  customer_phone    String?
+  payment_method    String?     @default("cash_on_delivery")
+  payment_proof_url String?
+  order_items       OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                BigInt   @id @default(autoincrement())
+  order_id          BigInt?
+  product_id        BigInt?
+  quantity          Int
+  price_at_purchase Decimal
+  order             Order?   @relation(fields: [order_id], references: [id])
+  product           Product? @relation(fields: [product_id], references: [id])
+
+  @@map("order_items")
+}
+
+model PlatformSetting {
+  id         BigInt   @id @default(autoincrement())
+  key        String   @unique @db.VarChar
+  value      String
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("platform_settings")
+}
+
+model ProductView {
+  id         String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  product_id BigInt?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  product    Product?  @relation(fields: [product_id], references: [id])
+
+  @@map("product_views")
+}
+
+model ProductReview {
+  id            String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  product_id    BigInt?
+  customer_name String    @db.VarChar
+  rating        Int
+  comment       String?
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  product       Product?  @relation(fields: [product_id], references: [id])
+
+  @@map("product_reviews")
+}
+
+model StoreCategory {
+  id         BigInt    @id @default(autoincrement())
+  store_id   BigInt?
+  name       String
+  image_url  String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  store      Store?    @relation(fields: [store_id], references: [id])
+  products   Product[]
+
+  @@map("store_categories")
+}
+```
+
+Note what's deliberately **not** in `Product`: there are no `store_name`/`store_phone`/`store_slug` columns on the real `products` table (confirmed via `information_schema.columns`) — the original Express `getProducts`/`getProductById` code referenced `item.store_name`/`item.store_phone`/`item.store_slug` defensively, but those were always `undefined` in production since the columns don't exist; it's dead code from a schema that no longer matches. Task 11's `formatProduct` does not carry this dead fallback forward.
 
 Do **not** add a `User`/`auth.users` model — Supabase manages that schema, and this migration keeps talking to it through the Supabase Admin API (see Task 3), not Prisma.
+
+- [ ] **Step 3: Set a placeholder `DATABASE_URL` for local generation**
+
+`prisma generate` only reads `schema.prisma` to produce the client's TypeScript types — it does not need to actually reach the database. Create `backend-nest/.env` (gitignored, never committed) with:
+```
+DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+```
+Add the same key with an empty-shape placeholder to `backend-nest/.env.example`:
+```
+DATABASE_URL="postgresql://user:password@host:5432/postgres"
+```
+The real Supabase connection string is set later, directly in the Vercel project's dashboard, as part of Task 14's deployment step — not before, and never committed to git.
 
 - [ ] **Step 4: Generate the Prisma client**
 
@@ -554,6 +703,24 @@ describe('SellerAuthStrategy', () => {
       ForbiddenException,
     );
   });
+
+  it('looks up the store by an exact phone match, not a substring match', async () => {
+    // Regression test for a substring-match authorization bypass: a `contains`
+    // lookup would let a user whose derived phone is a substring of another
+    // store's phone (e.g. "1234" inside "5551234") resolve to that OTHER
+    // store, granting them guarded write access to it. Must be exact equality.
+    const user = { id: 'u1', email: '1234@cubaamazon.com' };
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const strategy = makeStrategy(
+      jest.fn().mockResolvedValue({ data: { user }, error: null }),
+      findFirst,
+    );
+
+    await expect(strategy.validate('valid-token')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(findFirst).toHaveBeenCalledWith({ where: { phone: '1234' } });
+  });
 });
 ```
 
@@ -595,8 +762,14 @@ export class SellerAuthStrategy extends PassportStrategy(Strategy, 'bearer') {
     }
 
     const phone = extractPhoneFromEmail(user.email);
+    // Exact match, not `contains`: a substring match would let a user whose
+    // derived phone happens to be a substring of another store's phone
+    // resolve to that OTHER store, granting guarded write access to it.
+    // Safe as an exact match because both sides are written from the same
+    // normalized digit string (registration stores digits-only, and the
+    // login/credentials email local-part IS that same digit string).
     const store = await this.prisma.store.findFirst({
-      where: { phone: { contains: phone } },
+      where: { phone },
     });
 
     if (!store) {
@@ -1661,8 +1834,11 @@ export class AuthService {
     if (error) throw new UnauthorizedException('Credenciales inválidas');
 
     const phone = extractPhoneFromEmail(dto.email);
+    // Exact match, not `contains` — see the same note in SellerAuthStrategy
+    // (Task 4): a substring match is an authorization bypass (a short phone
+    // could match inside a longer, unrelated store's phone).
     const store = await this.prisma.store.findFirst({
-      where: { phone: { contains: phone } },
+      where: { phone },
     });
 
     return {
@@ -2482,6 +2658,8 @@ git add -A && git commit -m "add StoresModule (stores CRUD, admin details, stats
 
 - [ ] **Step 1: Write the failing `formatProduct` test**
 
+The real `products` table has no `store_name`/`store_phone`/`store_slug` columns (confirmed against the live schema in Task 2) — the original Express code's `item.store_name || item.stores?.name` fallback always evaluated to the right-hand side in production, since `item.store_name` was always `undefined`. Don't carry that dead fallback into the typed Prisma version; derive these fields from the joined `store` relation only.
+
 Create `backend-nest/src/products/product-format.util.spec.ts`:
 ```typescript
 import { formatProduct } from './product-format.util';
@@ -2490,9 +2668,7 @@ describe('formatProduct', () => {
   it('derives store_accepts_zelle/store_has_delivery/store_name/store_phone/store_slug from the joined store', () => {
     const product = {
       id: 1,
-      store_name: null,
-      store_phone: null,
-      store: { accepts_zelle: true, has_delivery: false, name: 'Cafetería Juan', phone: '5551234', slug: 'cafeteria-juan' },
+      store: { id: 9, accepts_zelle: true, has_delivery: false, name: 'Cafetería Juan', phone: '5551234', slug: 'cafeteria-juan' },
     };
 
     expect(formatProduct(product as any)).toMatchObject({
@@ -2504,17 +2680,25 @@ describe('formatProduct', () => {
     });
   });
 
-  it('prefers the denormalized store_name/store_phone columns when present', () => {
+  it('falls back to the store id as the slug when the store has no slug set', () => {
     const product = {
       id: 1,
-      store_name: 'Legacy Name',
-      store_phone: '5550000',
-      store: { accepts_zelle: false, has_delivery: false, name: 'New Name', phone: '5551234', slug: 'x' },
+      store: { id: 9, accepts_zelle: false, has_delivery: false, name: 'New Name', phone: '5551234', slug: null },
     };
 
-    const result = formatProduct(product as any);
-    expect(result.store_name).toBe('Legacy Name');
-    expect(result.store_phone).toBe('5550000');
+    expect(formatProduct(product as any).store_slug).toBe(9);
+  });
+
+  it('handles a product with no joined store (store_id was null)', () => {
+    const product = { id: 1, store: null };
+
+    expect(formatProduct(product as any)).toMatchObject({
+      store_accepts_zelle: false,
+      store_has_delivery: false,
+      store_name: undefined,
+      store_phone: undefined,
+      store_slug: undefined,
+    });
   });
 });
 ```
@@ -2533,9 +2717,9 @@ export const formatProduct = (product: ProductWithStore) => ({
   ...product,
   store_accepts_zelle: product.store?.accepts_zelle === true,
   store_has_delivery: product.store?.has_delivery === true,
-  store_name: product.store_name || product.store?.name,
-  store_phone: product.store_phone || product.store?.phone,
-  store_slug: product.store_slug || product.store?.slug || product.store?.id,
+  store_name: product.store?.name,
+  store_phone: product.store?.phone,
+  store_slug: product.store?.slug || product.store?.id,
 });
 ```
 
@@ -2950,6 +3134,8 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write the DTOs**
 
+`orders.customer_email` is `NOT NULL` with no default in the real DB (confirmed via `information_schema.columns` in Task 2's introspection) — the original Express `createOrder` never validated this, so a request without it would previously fail with a raw Postgres constraint-violation 500. Require it here instead, so a missing email now produces a clean 400 from the `ValidationPipe`.
+
 Create `backend-nest/src/orders/dto/create-order.dto.ts`:
 ```typescript
 import { IsArray, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
@@ -2963,7 +3149,7 @@ class OrderItemDto {
 
 export class CreateOrderDto {
   @IsString() @IsNotEmpty() customer_name: string;
-  @IsOptional() @IsString() customer_email?: string;
+  @IsString() @IsNotEmpty() customer_email: string;
   @IsOptional() @IsString() customer_address?: string;
   @IsOptional() @IsString() customer_phone?: string;
   @IsNumber() total: number;
