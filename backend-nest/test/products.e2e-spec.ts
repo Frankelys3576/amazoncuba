@@ -103,6 +103,43 @@ describe('Products (e2e)', () => {
       });
   });
 
+  // C2: schema.prisma still carries 15 `BigInt` `legacy_*` columns (the
+  // migration's rollback scaffolding), and formatProduct spreads the whole
+  // row (`...rest`). A row with a genuine bigint on it therefore reaches
+  // res.json(), where JSON.stringify throws "Do not know how to serialize a
+  // BigInt" and this request 500s — unless the global
+  // StripLegacyFieldsInterceptor removed the column first.
+  //
+  // This fixture returns real `bigint`s (`1n`), not `Number`s. Every other
+  // Prisma mock in this suite returns plain `Number`/string fields, which is
+  // exactly why 121/121 stayed green when the previous BigInt regression
+  // test was deleted. Revert the interceptor and this test fails with a 500.
+  it('GET /api/products serializes a row carrying real bigint legacy_* columns, and never returns them', () => {
+    prismaMock.product.findMany.mockResolvedValueOnce([
+      {
+        id: PRODUCT_ID,
+        legacy_id: 1n,
+        store_id: STORE_ID,
+        legacy_store_id: 7n,
+        legacy_category_id: 3n,
+        legacy_store_category_id: null,
+        name: 'Café',
+        price: 5,
+      },
+    ]);
+
+    return request(app.getHttpServer())
+      .get('/api/products')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body[0].id).toBe(PRODUCT_ID);
+        expect(res.body[0].store_id).toBe(STORE_ID);
+        expect(
+          Object.keys(res.body[0]).filter((k) => k.startsWith('legacy_')),
+        ).toEqual([]);
+      });
+  });
+
   // CRITICAL 1: SellerProducts.jsx always sends store_id as a string
   // (localStorage.getItem never gets parsed). Store ids are uuid v7 strings
   // post-migration, so this is now the DTO's native shape (no numeric
