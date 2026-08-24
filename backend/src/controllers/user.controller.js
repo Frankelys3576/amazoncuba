@@ -1,5 +1,25 @@
 const supabase = require('../config/supabase');
 
+// Sólo hay una cuenta de administrador. Si se borra o se le cambia la
+// contraseña desde el propio panel, no queda ninguna otra cuenta capaz de
+// devolver el acceso: la pérdida es definitiva. Por eso las rutas de usuarios
+// se niegan a tocar una cuenta con rol de administrador.
+const rejectIfAdminAccount = async (id, res) => {
+  const { data, error } = await supabase.auth.admin.getUserById(id);
+
+  if (error || !data || !data.user) {
+    res.status(404).json({ error: 'Usuario no encontrado' });
+    return true;
+  }
+
+  if (data.user.app_metadata && data.user.app_metadata.role === 'admin') {
+    res.status(403).json({ error: 'No se puede modificar ni eliminar una cuenta de administrador' });
+    return true;
+  }
+
+  return false;
+};
+
 const getUsers = async (req, res) => {
   try {
     const { data, error } = await supabase.auth.admin.listUsers();
@@ -25,6 +45,7 @@ const getUsers = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+    if (await rejectIfAdminAccount(id, res)) return;
     const { error } = await supabase.auth.admin.deleteUser(id);
     
     if (error) throw error;
@@ -44,6 +65,8 @@ const updateUser = async (req, res) => {
     if (!email && !password) {
       return res.status(400).json({ error: 'Debe proporcionar un nuevo correo o contraseña.' });
     }
+
+    if (await rejectIfAdminAccount(id, res)) return;
 
     const updates = {};
     if (email) updates.email = email;
