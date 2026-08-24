@@ -10,6 +10,36 @@ const getBaseApiUrl = () => {
 
 const API_URL = import.meta.env.VITE_API_URL || getBaseApiUrl();
 
+const adminHeaders = (extra = {}) => ({
+  'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+  ...extra,
+});
+
+// El panel devolvía [] cuando el backend respondía 401/403, así que una sesión
+// caducada era indistinguible de una lista vacía. Ahora se limpia la sesión y
+// se vuelve al login.
+const handleAuthFailure = (response) => {
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('admin_token');
+    window.location.href = '/login';
+    return true;
+  }
+  return false;
+};
+
+export const loginAdmin = async (email, password) => {
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, data };
+};
+
 export const getProducts = async (params = {}) => {
   try {
     const query = new URLSearchParams();
@@ -81,7 +111,10 @@ export const getStoreById = async (id) => {
 
 export const getAdminStoreDetails = async (id) => {
   try {
-    const response = await fetch(`${API_URL}/stores/${id}/admin-details`);
+    const response = await fetch(`${API_URL}/stores/${id}/admin-details`, {
+      headers: adminHeaders()
+    });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) throw new Error('Error al obtener detalles de tienda');
     return await response.json();
   } catch (error) {
@@ -128,11 +161,10 @@ export const updateStoreStatus = async (id, status) => {
   try {
     const response = await fetch(`${API_URL}/stores/${id}/status`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ status })
     });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) throw new Error('Error al actualizar estado de la tienda');
     return await response.json();
   } catch (error) {
@@ -145,11 +177,10 @@ export const updateZelleConfig = async (id, zelleData) => {
   try {
     const response = await fetch(`${API_URL}/stores/${id}/zelle`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(zelleData)
     });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) throw new Error('Error al actualizar configuración de Zelle');
     return await response.json();
   } catch (error) {
@@ -167,7 +198,8 @@ export const getOrders = async (params = {}) => {
     const queryString = query.toString();
     const url = queryString ? `${API_URL}/orders?${queryString}` : `${API_URL}/orders`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: adminHeaders() });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) throw new Error('Error al obtener órdenes');
     return await response.json();
   } catch (error) {
@@ -178,7 +210,8 @@ export const getOrders = async (params = {}) => {
 
 export const getUsers = async () => {
   try {
-    const response = await fetch(`${API_URL}/users`);
+    const response = await fetch(`${API_URL}/users`, { headers: adminHeaders() });
+    if (handleAuthFailure(response)) return [];
     if (!response.ok) throw new Error('Error al obtener usuarios');
     return await response.json();
   } catch (error) {
@@ -190,8 +223,10 @@ export const getUsers = async () => {
 export const deleteUser = async (id) => {
   try {
     const response = await fetch(`${API_URL}/users/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: adminHeaders()
     });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) throw new Error('Error al eliminar usuario');
     return await response.json();
   } catch (error) {
@@ -204,11 +239,10 @@ export const updateUser = async (id, data) => {
   try {
     const response = await fetch(`${API_URL}/users/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(data)
     });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Error al actualizar usuario');
@@ -235,11 +269,10 @@ export const updateSetting = async (key, value) => {
   try {
     const response = await fetch(`${API_URL}/settings`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ key, value })
     });
+    if (handleAuthFailure(response)) return null;
     if (!response.ok) throw new Error('Error al actualizar configuración');
     return await response.json();
   } catch (error) {

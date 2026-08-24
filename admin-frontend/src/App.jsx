@@ -9,7 +9,10 @@ import AdminDirectory from './AdminDirectory';
 import AdminSettings from './AdminSettings';
 import AdminMarketing from './AdminMarketing';
 
-// Simple protection
+// Comodidad de interfaz, NO seguridad: sólo evita pintar un panel al que el
+// backend va a responder 401. El permiso se comprueba en el servidor en cada
+// petición. Antes esto era la ÚNICA comprobación que existía, y el token ni
+// siquiera se enviaba.
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('admin_token');
   return token ? children : <Navigate to="/login" />;
