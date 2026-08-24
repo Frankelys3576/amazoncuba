@@ -106,13 +106,15 @@ describe('StoresService', () => {
     });
   });
 
-  // IMPORTANT 7: SellerAuthStrategy matches store phone by exact equality
-  // against the digits-only phone derived from the caller's email. If a
-  // seller saves a phone with symbols/spaces through their own profile form
-  // (updateProfile) while updateCredentials normalizes to digits-only, the
-  // two diverge and every guarded endpoint 403s for that seller from then on.
-  describe('updateProfile: phone normalization (IMPORTANT 7)', () => {
-    it('strips non-digit characters from phone before writing it, matching updateCredentials', async () => {
+  // I4: the two backends share one database, so updateProfile must write the
+  // phone exactly as Express does — verbatim (store.controller.js:142).
+  // Normalizing here previously, while Express did not, meant the same
+  // request produced different data in the same column depending on which
+  // backend served it. The rationale for normalizing (SellerAuthStrategy
+  // matching a store by its phone) no longer holds: the strategy resolves
+  // the store by user_id.
+  describe('updateProfile: phone is stored verbatim (I4)', () => {
+    it('writes the phone exactly as sent, matching Express', async () => {
       const update = jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} });
       const prisma = makePrisma({
         findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} }),
@@ -125,7 +127,7 @@ describe('StoresService', () => {
       expect(update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: STORE_ID },
-          data: expect.objectContaining({ phone: '535551234' }),
+          data: expect.objectContaining({ phone: '+53 5551234' }),
         }),
       );
     });

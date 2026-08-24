@@ -120,14 +120,26 @@ export class StoresService {
     ] as const) {
       if (dto[field] !== undefined) updates[field] = dto[field];
     }
-    // IMPORTANT 7: normalize digits the same way updateCredentials does
-    // (line ~187 below). SellerAuthStrategy now matches store phone by exact
-    // equality against the phone derived from the caller's email — a raw
-    // '+53 5551234' saved verbatim here would never again exact-match the
-    // digits-only phone the strategy derives, locking the seller out of
-    // every guarded endpoint via their own profile form.
+    // I4: stored verbatim, exactly as Express does
+    // (store.controller.js:142 `if (phone !== undefined) updates.phone =
+    // phone;`). Express serves 100% of production traffic and both backends
+    // write the same `stores` table, so normalizing here would mean the same
+    // PUT /api/stores/:id produced different data depending on which backend
+    // handled it.
+    //
+    // This used to strip non-digits, justified by SellerAuthStrategy
+    // matching a store by exact equality against the phone derived from the
+    // caller's email. That heuristic no longer exists — the strategy
+    // resolves the store by `user_id` (seller-auth.strategy.ts:29-31) — so
+    // the phone's format has no bearing on authentication and there is
+    // nothing left to protect by rewriting the seller's input.
+    //
+    // updateCredentials still normalizes its own `phone`, in both backends,
+    // because there it builds the Supabase Auth login email
+    // (`<digits>@cubaamazon.com`); that is a different value with a
+    // different constraint, not an inconsistency with this line.
     if (dto.phone !== undefined) {
-      updates.phone = dto.phone.replace(/[^0-9]/g, '');
+      updates.phone = dto.phone;
     }
 
     const zelleFields = [
