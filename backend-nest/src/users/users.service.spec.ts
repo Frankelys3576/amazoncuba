@@ -2,9 +2,10 @@ import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
-  const makeSupabase = (overrides: any) => ({
-    client: { auth: { admin: overrides } },
-  }) as any;
+  const makeSupabase = (overrides: any) =>
+    ({
+      client: { auth: { admin: overrides } },
+    }) as any;
 
   it('findAll maps Supabase auth users into the API shape', async () => {
     const supabase = makeSupabase({
@@ -47,5 +48,50 @@ describe('UsersService', () => {
     await expect(service.update('u1', {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('update omits an explicit null email from the Supabase payload, keeping only the password', async () => {
+    const updateUserById = jest
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    const supabase = makeSupabase({ updateUserById });
+    const service = new UsersService(supabase);
+
+    await service.update('u1', {
+      email: null as any,
+      password: 'newpassword',
+    });
+
+    expect(updateUserById).toHaveBeenCalledWith('u1', {
+      password: 'newpassword',
+    });
+  });
+
+  it('update omits an explicit null password from the Supabase payload, keeping only the email', async () => {
+    const updateUserById = jest
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    const supabase = makeSupabase({ updateUserById });
+    const service = new UsersService(supabase);
+
+    await service.update('u1', {
+      email: 'new@cubaamazon.com',
+      password: null as any,
+    });
+
+    expect(updateUserById).toHaveBeenCalledWith('u1', {
+      email: 'new@cubaamazon.com',
+    });
+  });
+
+  it('update throws BadRequestException when both email and password are explicitly null, without calling Supabase', async () => {
+    const updateUserById = jest.fn();
+    const supabase = makeSupabase({ updateUserById });
+    const service = new UsersService(supabase);
+
+    await expect(
+      service.update('u1', { email: null as any, password: null as any }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(updateUserById).not.toHaveBeenCalled();
   });
 });

@@ -35,8 +35,12 @@ export class UsersService {
       );
     }
 
+    const updates: { email?: string; password?: string } = {};
+    if (dto.email) updates.email = dto.email;
+    if (dto.password) updates.password = dto.password;
+
     const { data, error } =
-      await this.supabaseService.client.auth.admin.updateUserById(id, dto);
+      await this.supabaseService.client.auth.admin.updateUserById(id, updates);
     if (error) throw error;
 
     return { message: 'Usuario actualizado correctamente', user: data.user };
