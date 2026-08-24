@@ -16,11 +16,24 @@ const getOrders = async (req, res) => {
 
     // If the caller explicitly asked for specific order ids but none of them
     // were valid uuids, they must get nothing back -- never fall through to
-    // the unfiltered query below. Without this, an unauthenticated
-    // `GET /api/orders?ids=garbage` (no storeId) would return every order on
-    // the platform, PII (customer_name/email/phone/address) included. Do not
-    // "simplify" this away.
-    if (idsProvided && orderIds.length === 0 && !storeId) {
+    // a broader query. Without this, an unauthenticated
+    // `GET /api/orders?ids=garbage` would return every order on the platform,
+    // PII (customer_name/email/phone/address) included. Do not "simplify"
+    // this away, and keep it in sync with orders.service.ts's copy.
+    //
+    // I6: this used to carry an extra `&& !storeId`, so the guard was closed
+    // only for the no-storeId case -- `?storeId=<uuid>&ids=garbage` still
+    // returned every order for that store, PII included, on an
+    // unauthenticated route, while the comment read as though the leak was
+    // shut. Dropped, rather than documented as a caveat: when both params
+    // are supplied and the ids ARE valid, the code below already intersects
+    // them (`orderIds.filter(id => storeOrderIds.includes(id))`), so an
+    // empty valid-id set returning nothing is just the limit case of the
+    // intersection already implemented -- falling through to the whole store
+    // was the anomaly. No client sends both params (frontend's
+    // getOrdersByIds sends ids only, seller-frontend and
+    // admin-frontend/AdminDirectory.jsx send storeId only).
+    if (idsProvided && orderIds.length === 0) {
       return res.json([]);
     }
 

@@ -39,13 +39,22 @@ export class OrdersService {
     // /api/orders?ids=<garbage> is unauthenticated (frontend/src/services/
     // api.js uses it for customer order tracking). If the caller explicitly
     // asked for specific order ids but none of them were valid uuids, they
-    // must get nothing back -- never fall through to the unfiltered query
-    // below. Without this, an unauthenticated GET /api/orders?ids=garbage
-    // (no storeId) would return every order on the platform, PII
+    // must get nothing back -- never fall through to a broader query.
+    // Without this, an unauthenticated GET /api/orders?ids=garbage would
+    // return every order on the platform, PII
     // (customer_name/email/phone/address) included. Do not "simplify" this
     // away, and keep this in sync with order.controller.js's copy -- the two
     // backends must agree on this or the eventual cutover reopens the hole.
-    if (query.ids && orderIds.length === 0 && !query.storeId) {
+    //
+    // I6: this used to carry an extra `&& !query.storeId`, so the guard was
+    // closed only for the no-storeId case -- `?storeId=<uuid>&ids=garbage`
+    // still returned every order for that store, PII included, while the
+    // comment read as though the leak was shut. Dropped in both backends:
+    // when both params are supplied and the ids ARE valid, the store branch
+    // below already intersects them, so an empty valid-id set returning
+    // nothing is the limit case of that intersection -- falling through to
+    // the whole store was the anomaly. No client sends both params.
+    if (query.ids && orderIds.length === 0) {
       return [];
     }
 
