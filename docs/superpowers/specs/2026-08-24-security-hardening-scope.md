@@ -68,16 +68,36 @@ integer store ids.
 
 **Shape of the fix:** derive the store from the authenticated caller instead of trusting a
 query parameter. `backend-nest/` already has the machinery — `SellerAuthGuard` populates
-`req.store` — so there the change is a guard plus reading `req.store.id`. In Express it means
-applying `authenticateSeller` and ignoring `req.query.storeId`.
+`req.store` — so for the *seller* path the change is a guard plus reading `req.store.id`. In
+Express it means applying `authenticateSeller` and ignoring `req.query.storeId`.
+
+**This endpoint has a second, non-seller caller, and it changes the fix.** `admin-frontend`
+consumes it to show a store's orders in the admin directory
+(`admin-frontend/src/AdminDirectory.jsx` calls `getOrders({ storeId: store.id })`). An admin is
+not the store's owner and would have no `req.store`, so "derive the store from the caller"
+breaks that page outright. The endpoint needs two legitimate access paths:
+
+- **seller** — scope forced to their own store, `storeId` from the session, query parameter ignored;
+- **admin** — may pass an explicit `storeId`, but only once there is a verified admin identity
+  to check it against.
+
+The admin half cannot be built before #3 exists. **#3 is therefore a prerequisite for #2, not a
+parallel track** — see Suggested order.
 
 **Watch for:** the port already reproduces Express's two-level filtering (which orders are
 returned, then which line items within each order). Whatever replaces the query parameter must
 keep both levels, or a seller sees other stores' line items on orders that span multiple stores.
+The admin path likely wants the *unfiltered* second level (an admin should see the whole order,
+not one store's slice), so the two paths differ in more than just how the scope is derived.
+
+**Note on how this second caller surfaced:** it was found in uncommitted work in progress on
+`AdminDirectory.jsx` during the migration's merge, not in the migration itself. That work is
+still in flight, so confirm the call shape before building against it — but the dependency it
+reveals holds regardless of whether that particular page ships.
 
 ---
 
-## 3. No server-side admin auth — the root cause behind most findings
+## 3. No server-side admin auth — the root cause, and a prerequisite for #2
 
 **What:** There is no admin authentication anywhere in the system. `admin-frontend` stores a
 hardcoded `'master_token'` string in `localStorage` and no server ever verifies it.
@@ -110,6 +130,13 @@ mechanism.
 so it cannot simply be put behind the seller guard. It likely needs rate limiting and a size/
 type budget rather than authentication.
 
+**Also gates #2.** Beyond the table above, the admin identity built here is what lets
+`GET /api/orders` distinguish "a seller asking for their own orders" from "an admin asking for
+a specific store's orders." Until it exists, #2 can only be half-fixed — the seller path can be
+locked down, but the admin path either stays unauthenticated or the admin directory breaks.
+Scoping #3 should therefore include that read path explicitly, not just the write endpoints in
+the table.
+
 ---
 
 ## 4. Pending stores appear in public listings
@@ -140,11 +167,25 @@ filtering them out globally.
 
 ## Suggested order
 
+Revised — an earlier draft of this document put #1 and #2 together and #3 after them. That was
+wrong: #2 has an admin caller (see #2's "second, non-seller caller"), so it cannot be finished
+before #3 exists.
+
 1. **Sequencing decision** (`backend/` vs `backend-nest/` vs both) — blocks everything else.
-2. **#1 and #2 together.** Both are unauthenticated, both are in orders, and both are fixed by
-   the same shift: derive trust from the server rather than the request body.
-3. **#3.** Largest, and the prerequisite for closing the admin table properly.
-4. **#4.** Smallest and independent; can land any time after the sequencing decision.
+2. **#1 — order price tampering.** Genuinely independent: it is fixed entirely server-side by
+   computing totals from product rows, and needs no identity work. Highest financial impact, so
+   it should not wait behind the auth build. Do it first.
+3. **#3 — admin auth.** Largest, and now on the critical path: it gates both the admin write
+   endpoints and #2's admin read path.
+4. **#2 — orders IDOR.** The seller half could technically land with #1, but splitting it means
+   touching the same endpoint twice and shipping an interim state where the admin path is still
+   open. Cleaner to do it once, after #3.
+5. **#4 — pending stores in public listings.** Smallest and fully independent; can land any
+   time after the sequencing decision, including in parallel with the others.
+
+If #2's exposure is judged too severe to wait on #3, the interim option is to lock the seller
+path immediately and leave the admin path open behind a documented, time-boxed exception —
+but that is a deliberate risk acceptance, not a fix, and it should be recorded as one.
 
 ## Related
 
