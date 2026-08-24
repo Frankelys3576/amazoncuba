@@ -7,6 +7,7 @@ import { UpdateStoreProfileDto } from './dto/update-store-profile.dto';
 import { UpdateStoreCredentialsDto } from './dto/update-store-credentials.dto';
 import { SellerAuthGuard } from '../auth/seller-auth.guard';
 import { StoreOwnershipGuard } from '../auth/store-ownership.guard';
+import { AdminGuard } from '../auth/admin.guard';
 import type { RequestWithStore } from '../auth/request-with-store.interface';
 
 @Controller('api/stores')
@@ -24,6 +25,7 @@ export class StoresController {
   }
 
   @Get(':id/admin-details')
+  @UseGuards(AdminGuard)
   getAdminDetails(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.storesService.getAdminDetails(id);
   }
@@ -34,11 +36,13 @@ export class StoresController {
   }
 
   @Put(':id/status')
+  @UseGuards(AdminGuard)
   updateStatus(@Param('id', SpanishParseUuidPipe) id: string, @Body() dto: UpdateStoreStatusDto) {
     return this.storesService.updateStatus(id, dto.status);
   }
 
   @Put(':id/zelle')
+  @UseGuards(AdminGuard)
   updateZelleInfo(@Param('id', SpanishParseUuidPipe) id: string, @Body() dto: UpdateZelleInfoDto) {
     return this.storesService.updateZelleInfo(id, dto);
   }
