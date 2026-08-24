@@ -89,6 +89,27 @@ describe('OrdersService', () => {
       );
     });
 
+    // The empty-ids-and-no-storeId short circuit must NOT fire once a
+    // storeId is given -- an all-invalid ids list should just fall through
+    // to the normal store-scoped lookup (as if ids had not been supplied at
+    // all), not force an empty result. "Leave the storeId path exactly as
+    // it is" per the fix's scope.
+    it('falls through to the store-scoped order ids when ids is supplied but every entry is invalid and a storeId is given', async () => {
+      const prisma = {
+        orderItem: {
+          findMany: jest.fn().mockResolvedValue([{ order_id: ORDER_1 }]),
+        },
+        order: { findMany: jest.fn().mockResolvedValue([]) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await service.findAll({ storeId: STORE_7, ids: 'not-a-uuid' });
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: [ORDER_1] } } }),
+      );
+    });
+
     it('filters orders by the ids query param when no storeId is given, dropping non-uuid entries', async () => {
       const prisma = {
         order: { findMany: jest.fn().mockResolvedValue([]) },
@@ -100,6 +121,24 @@ describe('OrdersService', () => {
       expect(prisma.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: { in: [ORDER_1, ORDER_2] } } }),
       );
+    });
+
+    // Mirrors the Express fix in order.controller.js (commit 04bc48e):
+    // GET /api/orders?ids=<garbage> is unauthenticated (customer order
+    // tracking). If every id in the list is invalid and no storeId narrows
+    // the query, this must return [] rather than falling through to an
+    // unfiltered order.findMany() -- which would dump every order on the
+    // platform, PII included.
+    it('returns [] without querying orders when ids is supplied but every entry is invalid and no storeId is given', async () => {
+      const prisma = {
+        order: { findMany: jest.fn() },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      const result = await service.findAll({ ids: 'not-a-uuid,also-not-one' });
+
+      expect(result).toEqual([]);
+      expect(prisma.order.findMany).not.toHaveBeenCalled();
     });
 
     it('queries all orders (no where clause) and sorts by created_at desc when no filters are given', async () => {

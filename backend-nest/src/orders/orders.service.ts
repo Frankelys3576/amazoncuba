@@ -26,6 +26,21 @@ export class OrdersService {
       ? query.ids.split(',').filter((id) => UUID.test(id))
       : [];
 
+    // Mirrors the Express fix in commit 04bc48e ("Return empty result for
+    // malformed order ids instead of leaking all orders"). GET
+    // /api/orders?ids=<garbage> is unauthenticated (frontend/src/services/
+    // api.js uses it for customer order tracking). If the caller explicitly
+    // asked for specific order ids but none of them were valid uuids, they
+    // must get nothing back -- never fall through to the unfiltered query
+    // below. Without this, an unauthenticated GET /api/orders?ids=garbage
+    // (no storeId) would return every order on the platform, PII
+    // (customer_name/email/phone/address) included. Do not "simplify" this
+    // away, and keep this in sync with order.controller.js's copy -- the two
+    // backends must agree on this or the eventual cutover reopens the hole.
+    if (query.ids && orderIds.length === 0 && !query.storeId) {
+      return [];
+    }
+
     // Named risk, filter 1: narrow which orders are returned at all, by
     // finding order_items whose product belongs to this store
     // (order.controller.js:13-33). If no orders match, return [] early
