@@ -1,5 +1,9 @@
 const supabase = require('../config/supabase');
 
+// Los ids son UUID v7 desde la migración. Se declara una sola vez para que
+// getOrders (query ?ids=) y updateOrder (:id) validen exactamente igual.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const getOrders = async (req, res) => {
   try {
     const { storeId, ids } = req.query;
@@ -11,7 +15,7 @@ const getOrders = async (req, res) => {
       orderIds = ids
         .split(',')
         .map((id) => id.trim())
-        .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+        .filter((id) => UUID.test(id));
     }
 
     // If the caller explicitly asked for specific order ids but none of them
@@ -133,7 +137,18 @@ const updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
+    // I8: sin esto, un id que no sea uuid llega a PostgREST, que responde
+    // 22P02 ("invalid input syntax for type uuid") y el catch de abajo lo
+    // convierte en un 500. Se valida con la misma expresión que usa
+    // getOrders para ?ids=, siguiendo el estilo del resto del backend
+    // (store.controller.js hace lo mismo en línea para distinguir id de
+    // slug). El mensaje es el mismo que devuelve SpanishParseUuidPipe en
+    // backend-nest, para que ambos backends respondan igual.
+    if (!UUID.test(id)) {
+      return res.status(400).json({ error: 'El identificador debe ser un UUID válido' });
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .update({ status })
