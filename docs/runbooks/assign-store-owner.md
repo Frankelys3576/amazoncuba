@@ -14,8 +14,16 @@ any store's ownership with one HTTP call — a total-compromise vulnerability
 worse than the one this migration closes. Replace this runbook with an admin
 UI once real admin auth (security finding #3) ships.
 
-Run every query below in the Supabase SQL editor for the production project,
-top to bottom, in order.
+Work through the steps below in order, in the Supabase SQL editor for the
+production project. Most steps are a query to run; step 3 is a manual,
+out-of-band action with no SQL of its own.
+
+Before running step 1, confirm you're actually looking at a migrated
+database: if `user_id` doesn't exist yet on `public.stores`, step 1 will
+fail with `column "user_id" does not exist` rather than silently returning
+nothing — if you see that error, this runbook doesn't apply yet, stop and
+check whether `backend/migrations/002_uuid_v7_migration.sql` has been run
+against this environment.
 
 ## Why a store ends up unowned
 
@@ -60,7 +68,9 @@ order by status, name;
 Confirm the store you're being asked about is in this list, and check its
 `status`. If `status = 'rejected'`, stop and confirm with whoever filed the
 request that this store should be resurrected at all — most unowned stores
-are rejected seed data, not locked-out sellers.
+are rejected seed data, not locked-out sellers. A `pending` store is
+handled the same as an `approved` one — pending just means it hasn't been
+reviewed yet, not that it's suspect; don't treat it as a third case.
 
 ## 2. Find a candidate account
 
@@ -93,6 +103,20 @@ call to a number you have independent reason to believe is theirs, a
 message on a WhatsApp thread you were already using with them, etc.) and
 have them confirm the email address on the account you're about to assign.
 Only proceed once you have that confirmation.
+
+**If you cannot reach the seller, or they can't confirm which account is
+theirs: leave `user_id` as `NULL` and stop.** Do not fall back to the
+phone match because it's the only thing you have left, and do not guess.
+The two failure modes here are not symmetric: an unowned store just means
+the seller still can't log in — the same state they're already in, fully
+recoverable the moment identity is confirmed. A *wrongly* owned store hands
+a stranger full control of someone else's business, including the ability
+to change the real owner's email and password and lock them out for good —
+and nobody may notice until the real seller complains again. Waiting costs
+time; guessing can cost the store permanently. Record the request (store
+id, who asked, when, why identity couldn't be confirmed) and escalate to
+whoever owns the seller relationship so it isn't silently dropped — don't
+just let it sit unresolved with no trace that anyone looked at it.
 
 ## 4. Assign the owner
 
