@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { coerceDecimalFields } from '../common/decimal.util';
+import { coerceDecimalFields, toPlainNumber } from '../common/decimal.util';
 import { formatOrder } from './order-format.util';
 
 // orders.total is the only Decimal column on the bare (non-nested) order
@@ -121,34 +121,77 @@ export class OrdersService {
     return formatted;
   }
 
+  // El total y los precios NO se leen del DTO. Antes sí: un cliente podía
+  // enviar total: 0.01 y el pedido se guardaba con ese importe.
   async create(dto: CreateOrderDto) {
+    if (!Array.isArray(dto.items) || dto.items.length === 0) {
+      throw new BadRequestException('El pedido no tiene artículos');
+    }
+
+    const productIds = [...new Set(dto.items.map((item) => item.product_id))];
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, price: true, currency: true },
+    });
+
+    const byId = new Map(products.map((p) => [p.id, p]));
+    if (productIds.some((id) => !byId.has(id))) {
+      throw new BadRequestException('Uno o más productos no existen');
+    }
+
+    // Los importes se calculan por moneda: cada producto lleva la suya y un
+    // carrito puede mezclarlas, así que un único número no significaría nada.
+    const totals: Record<string, number> = {};
+    const lines: { product_id: string; quantity: number; price_at_purchase: number }[] = [];
+
+    for (const item of dto.items) {
+      const product = byId.get(item.product_id)!;
+      const quantity = Number(item.quantity);
+
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        throw new BadRequestException(
+          'La cantidad de cada artículo debe ser un entero positivo',
+        );
+      }
+
+      const unitPrice = toPlainNumber(product.price) as number;
+      const currency = product.currency || 'USD';
+
+      totals[currency] = (totals[currency] || 0) + unitPrice * quantity;
+      lines.push({ product_id: product.id, quantity, price_at_purchase: unitPrice });
+    }
+
+    // orders.total es NOT NULL y se conserva por compatibilidad: es la suma
+    // sin distinguir moneda, exactamente lo que se guardaba antes. El dato
+    // bueno es `totals`; los frontales deben leer ese.
+    const legacyTotal = Object.values(totals).reduce((sum, value) => sum + value, 0);
+
     const order = await this.prisma.order.create({
       data: {
         customer_name: dto.customer_name,
         customer_email: dto.customer_email,
         customer_address: dto.customer_address,
         customer_phone: dto.customer_phone,
-        total: dto.total,
+        total: legacyTotal,
         status: 'pending',
         payment_method: dto.payment_method || 'cash_on_delivery',
         payment_proof_url: dto.payment_proof_url,
       },
     });
 
-    if (dto.items && dto.items.length > 0) {
-      await this.prisma.orderItem.createMany({
-        data: dto.items.map((item) => ({
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price_at_purchase: item.price,
-        })),
-      });
-    }
+    await this.prisma.orderItem.createMany({
+      data: lines.map((line) => ({
+        order_id: order.id,
+        product_id: line.product_id,
+        quantity: line.quantity,
+        price_at_purchase: line.price_at_purchase,
+      })),
+    });
 
     return {
       message: 'Pedido creado exitosamente',
       order: coerceDecimalFields(order, ORDER_DECIMAL_FIELDS),
+      totals,
     };
   }
 

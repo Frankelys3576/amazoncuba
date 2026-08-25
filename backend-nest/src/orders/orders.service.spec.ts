@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { OrdersService } from './orders.service';
 
@@ -325,21 +325,63 @@ describe('OrdersService', () => {
   });
 
   describe('create', () => {
-    it('creates the order with status pending and defaults payment_method to cash_on_delivery', async () => {
+    // This is the assertion that matters: a client that submits a low-ball
+    // price must not get it stored. A test that only checks the response
+    // shape (e.g. that `totals` exists) would still pass with the
+    // vulnerability fully intact -- this one fails unless price_at_purchase
+    // is actually read from the database row, not the request body.
+    it('ignores a submitted price and total, storing the database price as price_at_purchase', async () => {
       const create = jest
         .fn()
-        .mockResolvedValue({ id: 1, total: new Prisma.Decimal(40) });
+        .mockResolvedValue({ id: 5, total: new Prisma.Decimal(20) });
+      const createMany = jest.fn().mockResolvedValue({ count: 1 });
       const prisma = {
+        product: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: PRODUCT_1, price: new Prisma.Decimal(20), currency: 'USD' },
+          ]),
+        },
         order: { create },
-        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        orderItem: { createMany },
       } as any;
       const service = new OrdersService(prisma);
 
       await service.create({
         customer_name: 'Juan',
         customer_email: 'juan@example.com',
-        total: 40,
-        items: [],
+        total: 0.01,
+        items: [{ product_id: PRODUCT_1, quantity: 2, price: 0.01 }],
+      } as any);
+
+      // Stored price_at_purchase must equal the DATABASE price (20), not the
+      // submitted 0.01.
+      expect(createMany.mock.calls[0][0].data).toEqual([
+        { order_id: 5, product_id: PRODUCT_1, quantity: 2, price_at_purchase: 20 },
+      ]);
+      // The order's legacy total is likewise the recomputed 40 (20 * 2),
+      // not the submitted 0.01.
+      expect(create.mock.calls[0][0].data.total).toBe(40);
+    });
+
+    it('creates the order with status pending and defaults payment_method to cash_on_delivery', async () => {
+      const create = jest
+        .fn()
+        .mockResolvedValue({ id: 1, total: new Prisma.Decimal(40) });
+      const prisma = {
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: new Prisma.Decimal(40), currency: 'USD' }]),
+        },
+        order: { create },
+        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await service.create({
+        customer_name: 'Juan',
+        customer_email: 'juan@example.com',
+        items: [{ product_id: PRODUCT_1, quantity: 1, price: 40 }],
       } as any);
 
       expect(create.mock.calls[0][0].data).toMatchObject({
@@ -350,48 +392,104 @@ describe('OrdersService', () => {
       });
     });
 
-    it('inserts order_items with price_at_purchase mapped from item.price', async () => {
-      const createMany = jest.fn().mockResolvedValue({ count: 1 });
-      const prisma = {
-        order: {
-          create: jest
-            .fn()
-            .mockResolvedValue({ id: 5, total: new Prisma.Decimal(20) }),
-        },
-        orderItem: { createMany },
-      } as any;
+    it('rejects an empty items array', async () => {
+      const prisma = { product: { findMany: jest.fn() } } as any;
       const service = new OrdersService(prisma);
 
-      await service.create({
-        customer_name: 'Juan',
-        customer_email: 'juan@example.com',
-        total: 20,
-        items: [{ product_id: 3, quantity: 2, price: 10 }],
-      } as any);
-
-      expect(createMany.mock.calls[0][0].data).toEqual([
-        { order_id: 5, product_id: 3, quantity: 2, price_at_purchase: 10 },
-      ]);
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [],
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.product.findMany).not.toHaveBeenCalled();
     });
 
-    it('does not call orderItem.createMany when items is empty', async () => {
-      const createMany = jest.fn();
+    it('rejects an item whose product_id does not exist', async () => {
       const prisma = {
+        product: { findMany: jest.fn().mockResolvedValue([]) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity: 1, price: 10 }],
+        } as any),
+      ).rejects.toMatchObject({
+        response: { message: 'Uno o más productos no existen' },
+      });
+    });
+
+    it.each([0, -1, 1.5])('rejects a quantity of %s', async (quantity) => {
+      const prisma = {
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: new Prisma.Decimal(10), currency: 'USD' }]),
+        },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity, price: 10 }],
+        } as any),
+      ).rejects.toMatchObject({
+        response: {
+          message: 'La cantidad de cada artículo debe ser un entero positivo',
+        },
+      });
+    });
+
+    it('returns a totals object keyed by currency for a two-currency cart', async () => {
+      const prisma = {
+        product: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: PRODUCT_1, price: new Prisma.Decimal(10), currency: 'USD' },
+            { id: PRODUCT_2, price: new Prisma.Decimal(100), currency: 'CUP' },
+          ]),
+        },
         order: {
           create: jest
             .fn()
-            .mockResolvedValue({ id: 5, total: new Prisma.Decimal(20) }),
+            .mockResolvedValue({ id: 9, total: new Prisma.Decimal(120) }),
         },
+        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      const result = await service.create({
+        customer_name: 'Juan',
+        customer_email: 'juan@example.com',
+        items: [
+          { product_id: PRODUCT_1, quantity: 2, price: 10 },
+          { product_id: PRODUCT_2, quantity: 1, price: 100 },
+        ],
+      } as any);
+
+      expect(result.totals).toEqual({ USD: 20, CUP: 100 });
+    });
+
+    it('does not call orderItem.createMany when the request is rejected before insertion', async () => {
+      const createMany = jest.fn();
+      const prisma = {
+        product: { findMany: jest.fn().mockResolvedValue([]) },
         orderItem: { createMany },
       } as any;
       const service = new OrdersService(prisma);
 
-      await service.create({
-        customer_name: 'Juan',
-        customer_email: 'juan@example.com',
-        total: 20,
-        items: [],
-      } as any);
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity: 1, price: 10 }],
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(createMany).not.toHaveBeenCalled();
     });
@@ -401,20 +499,24 @@ describe('OrdersService', () => {
     // though this response path has no nesting to worry about.
     it('coerces the Decimal total on the returned order to a plain number', async () => {
       const prisma = {
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: new Prisma.Decimal(40), currency: 'USD' }]),
+        },
         order: {
           create: jest
             .fn()
             .mockResolvedValue({ id: 1, total: new Prisma.Decimal(40) }),
         },
-        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
       } as any;
       const service = new OrdersService(prisma);
 
       const result = await service.create({
         customer_name: 'Juan',
         customer_email: 'juan@example.com',
-        total: 40,
-        items: [],
+        items: [{ product_id: PRODUCT_1, quantity: 1, price: 40 }],
       } as any);
 
       expect(typeof result.order.total).toBe('number');
