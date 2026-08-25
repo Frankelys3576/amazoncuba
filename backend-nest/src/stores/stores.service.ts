@@ -14,13 +14,11 @@ import { UpdateStoreProfileDto } from './dto/update-store-profile.dto';
 import { UpdateStoreCredentialsDto } from './dto/update-store-credentials.dto';
 import { UpdateZelleInfoDto } from './dto/update-zelle-info.dto';
 import { RequestWithStore } from '../auth/request-with-store.interface';
+import type { StoreCaller } from '../auth/store-caller.service';
 
-// Lo que StoresController#resolveCaller resuelve sobre el llamante de
-// findOne/findAll: si es administrador, y si es vendedor, el id de SU
-// PROPIA tienda (o null). No es un espejo completo de resolveOrdersCaller
-// -- aquí sólo hace falta saber "es admin" y "es dueño de esta tienda concreta",
-// nunca el usuario ni la tienda entera.
-export type StoreCaller = { isAdmin: boolean; storeId: string | null };
+// El tipo vive en auth/store-caller.service.ts, junto al servicio que lo
+// resuelve; se reexporta aquí porque findOne lo recibe como parámetro.
+export type { StoreCaller } from '../auth/store-caller.service';
 
 // Rethrows a Prisma "record to update not found" error (P2025) as the 404
 // Express returns for a zero-row update, and rethrows everything else

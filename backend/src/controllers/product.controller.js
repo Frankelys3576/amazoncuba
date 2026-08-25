@@ -1,11 +1,44 @@
 const supabase = require('../config/supabase');
+const { resolveOrdersCaller } = require('../middleware/auth.middleware');
+
+// Columnas de la tienda que el listado publica junto a cada producto. Se
+// declara aparte porque el embebido cambia de LEFT a INNER JOIN según el
+// llamante (ver getProducts).
+const STORE_COLUMNS = 'accepts_zelle, name, phone, slug, has_delivery';
 
 // Obtener todos los productos
 const getProducts = async (req, res) => {
   const { storeId, q, category, province, municipality, store_category_id, requireImage } = req.query;
 
   try {
-    let query = supabase.from('products').select('*, stores(accepts_zelle, name, phone, slug, has_delivery)');
+    // La tercera puerta: este listado no filtraba por estado de la tienda y
+    // publica store_name, store_phone y store_slug, así que una tienda
+    // 'pending' tenía catálogo público y comprable -- y de paso regalaba el
+    // slug que GET /api/stores/:id se niega a confirmar.
+    //
+    // El filtro NO se aplica al administrador ni al vendedor dueño: el panel
+    // del vendedor (seller-frontend) lista su propio catálogo con
+    // ?storeId=<suyo> y debe seguir viéndolo mientras espera aprobación. Es
+    // la misma resolución de llamante que usa getStoreById.
+    const caller = await resolveOrdersCaller(req);
+    const isAdmin = caller.kind === 'admin';
+    const ownStoreId = caller.kind === 'seller' ? caller.store.id : null;
+
+    // !inner para el público: con el LEFT JOIN, filtrar por stores.status
+    // sólo vaciaría el objeto embebido y el producto seguiría en la lista.
+    // El INNER JOIN además descarta productos sin tienda, igual que hace el
+    // `where.store = { status: 'approved' }` de Prisma en backend-nest.
+    let query = supabase
+      .from('products')
+      .select(`*, ${isAdmin ? `stores(${STORE_COLUMNS})` : `stores!inner(${STORE_COLUMNS})`}`);
+
+    if (!isAdmin) {
+      if (ownStoreId) {
+        query = query.or(`status.eq.approved,id.eq.${ownStoreId}`, { referencedTable: 'stores' });
+      } else {
+        query = query.eq('stores.status', 'approved');
+      }
+    }
     if (storeId) query = query.eq('store_id', storeId);
     if (category) query = query.eq('category_id', category);
     if (store_category_id) query = query.eq('store_category_id', store_category_id);
@@ -61,7 +94,7 @@ const getProductById = async (req, res) => {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('products')
-      .select('*, stores(accepts_zelle, name, phone, slug, has_delivery)')
+      .select(`*, stores(${STORE_COLUMNS})`)
       .eq('id', id)
       .single();
 

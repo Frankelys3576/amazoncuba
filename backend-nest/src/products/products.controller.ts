@@ -20,14 +20,22 @@ import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { SellerAuthGuard } from '../auth/seller-auth.guard';
 import type { RequestWithStore } from '../auth/request-with-store.interface';
 import { SpanishParseUuidPipe } from '../common/spanish-parse-uuid.pipe';
+import { StoreCallerService } from '../auth/store-caller.service';
+import type { Request } from 'express';
 
 @Controller('api/products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly storeCaller: StoreCallerService,
+  ) {}
 
   @Get()
-  findAll(@Query() query: Record<string, string>) {
-    return this.productsService.findAll(query);
+  async findAll(@Query() query: Record<string, string>, @Req() req: Request) {
+    // StoreCallerService no rechaza nunca: un llamante anónimo sigue viendo
+    // el listado, sólo que recortado a las tiendas aprobadas (I2).
+    const caller = await this.storeCaller.resolve(req);
+    return this.productsService.findAll(query, caller);
   }
 
   @Get(':id')

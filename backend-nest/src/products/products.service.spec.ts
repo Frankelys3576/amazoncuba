@@ -1,8 +1,17 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ProductsService } from './products.service';
+import type { StoreCaller } from '../auth/store-caller.service';
 
 describe('ProductsService', () => {
+  // Las pruebas de forma de `where` pasan un llamante ADMINISTRADOR a
+  // propósito: es el único que no añade el filtro de visibilidad de I2, así
+  // que cada aserción sigue describiendo sólo lo que aporta la query string.
+  // El filtro en sí tiene su propio bloque más abajo.
+  const ADMIN: StoreCaller = { isAdmin: true, storeId: null };
+  const ANON: StoreCaller = { isAdmin: false, storeId: null };
+  const SELLER: StoreCaller = { isAdmin: false, storeId: 'store-1' };
+
   describe('findAll', () => {
     // Finding 1 regression test: Express opts in explicitly to
     // `.order('is_featured', { ascending: false, nullsFirst: false })`
@@ -17,7 +26,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({});
+      await service.findAll({}, ADMIN);
 
       expect(findMany.mock.calls[0][0].orderBy).toEqual([
         { is_featured: { sort: 'desc', nulls: 'last' } },
@@ -25,12 +34,52 @@ describe('ProductsService', () => {
       ]);
     });
 
+    // I2: el listado publica store_name/store_phone/store_slug, así que sin
+    // filtro de estado una tienda 'pending' tenía catálogo público. El
+    // administrador y el vendedor dueño quedan fuera del filtro.
+    describe('filtro de visibilidad por estado de la tienda (I2)', () => {
+      it('restringe a tiendas aprobadas para un llamante anónimo', async () => {
+        const findMany = jest.fn().mockResolvedValue([]);
+        const prisma = { product: { findMany } } as any;
+        const service = new ProductsService(prisma);
+
+        await service.findAll({}, ANON);
+
+        expect(findMany.mock.calls[0][0].where).toEqual({
+          OR: [{ store: { status: 'approved' } }],
+        });
+      });
+
+      it('añade la tienda propia del vendedor al filtro, sin quitar las aprobadas', async () => {
+        const findMany = jest.fn().mockResolvedValue([]);
+        const prisma = { product: { findMany } } as any;
+        const service = new ProductsService(prisma);
+
+        await service.findAll({ storeId: 'store-1' }, SELLER);
+
+        expect(findMany.mock.calls[0][0].where).toEqual({
+          store_id: 'store-1',
+          OR: [{ store: { status: 'approved' } }, { store_id: 'store-1' }],
+        });
+      });
+
+      it('no filtra por estado para un administrador', async () => {
+        const findMany = jest.fn().mockResolvedValue([]);
+        const prisma = { product: { findMany } } as any;
+        const service = new ProductsService(prisma);
+
+        await service.findAll({}, ADMIN);
+
+        expect(findMany.mock.calls[0][0].where).toEqual({});
+      });
+    });
+
     it('builds where.store_id from storeId', async () => {
       const findMany = jest.fn().mockResolvedValue([]);
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ storeId: '5' });
+      await service.findAll({ storeId: '5' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({ store_id: '5' });
     });
@@ -40,7 +89,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ category: '3' });
+      await service.findAll({ category: '3' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({ category_id: '3' });
     });
@@ -50,7 +99,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ store_category_id: '7' });
+      await service.findAll({ store_category_id: '7' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({ store_category_id: '7' });
     });
@@ -60,7 +109,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ q: 'café' });
+      await service.findAll({ q: 'café' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({
         name: { contains: 'café', mode: 'insensitive' },
@@ -72,7 +121,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ requireImage: 'true' });
+      await service.findAll({ requireImage: 'true' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({
         image_url: { not: null, notIn: [''] },
@@ -84,7 +133,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ province: 'La Habana', municipality: 'Playa' });
+      await service.findAll({ province: 'La Habana', municipality: 'Playa' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({
         delivery_locations: {
@@ -102,7 +151,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ province: 'La Habana' });
+      await service.findAll({ province: 'La Habana' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({
         delivery_locations: {
@@ -116,7 +165,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({});
+      await service.findAll({}, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({});
     });
@@ -126,7 +175,7 @@ describe('ProductsService', () => {
       const prisma = { product: { findMany } } as any;
       const service = new ProductsService(prisma);
 
-      await service.findAll({ storeId: '5', category: '3', q: 'pan' });
+      await service.findAll({ storeId: '5', category: '3', q: 'pan' }, ADMIN);
 
       expect(findMany.mock.calls[0][0].where).toEqual({
         store_id: '5',

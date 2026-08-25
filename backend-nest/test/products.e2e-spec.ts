@@ -115,6 +115,19 @@ describe('Products (e2e)', () => {
       });
   });
 
+  // I2: GET /api/products publica store_name/store_phone/store_slug, así que
+  // sin filtro de estado el catálogo de una tienda 'pending' era público y
+  // comprable. Aquí se comprueba de punta a punta que el controlador resuelve
+  // al llamante y que el filtro llega a Prisma; el caso del vendedor dueño
+  // está cubierto en products.service.spec.ts.
+  it('GET /api/products (anónimo) restringe el listado a tiendas aprobadas', async () => {
+    await request(app.getHttpServer()).get('/api/products').expect(200);
+
+    expect(prismaMock.product.findMany.mock.calls[0][0].where).toEqual({
+      OR: [{ store: { status: 'approved' } }],
+    });
+  });
+
   // C2: schema.prisma still carries 15 `BigInt` `legacy_*` columns (the
   // migration's rollback scaffolding), and formatProduct spreads the whole
   // row (`...rest`). A row with a genuine bigint on it therefore reaches
