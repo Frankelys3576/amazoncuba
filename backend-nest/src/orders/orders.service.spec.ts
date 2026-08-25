@@ -406,6 +406,48 @@ describe('OrdersService', () => {
       expect(prisma.product.findMany).not.toHaveBeenCalled();
     });
 
+    // "Also fix": sin cota superior, quantity: 1e21 daba un 201 con
+    // total: 2e+22 -- 1e21 pasa el Number.isInteger. Mismo tope y mismo
+    // mensaje que Express (MAX_ITEM_QUANTITY en order.controller.js).
+    describe('tope de cantidad por línea', () => {
+      const makePrisma = (createMany: jest.Mock) => ({
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: 10, currency: 'USD' }]),
+        },
+        order: { create: jest.fn().mockResolvedValue({ id: ORDER_1, total: 10 }) },
+        orderItem: { createMany },
+      }) as any;
+
+      const body = (quantity: number) => ({
+        customer_name: 'Ana',
+        customer_email: 'ana@example.test',
+        items: [{ product_id: PRODUCT_1, quantity, price: 10 }],
+      }) as any;
+
+      for (const quantity of [1001, 1e21]) {
+        it(`rechaza quantity: ${quantity} sin insertar nada`, async () => {
+          const createMany = jest.fn();
+          const service = new OrdersService(makePrisma(createMany));
+
+          await expect(service.create(body(quantity))).rejects.toThrow(
+            'La cantidad de cada artículo no puede superar 1000 unidades',
+          );
+          expect(createMany).not.toHaveBeenCalled();
+        });
+      }
+
+      it('acepta quantity: 1000, el límite exacto', async () => {
+        const createMany = jest.fn().mockResolvedValue({ count: 1 });
+        const service = new OrdersService(makePrisma(createMany));
+
+        await expect(service.create(body(1000))).resolves.toMatchObject({
+          totals: { USD: 10000 },
+        });
+      });
+    });
+
     it('rejects an item whose product_id does not exist', async () => {
       const prisma = {
         product: { findMany: jest.fn().mockResolvedValue([]) },

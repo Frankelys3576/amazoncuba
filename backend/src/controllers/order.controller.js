@@ -10,6 +10,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // mostraba en los paneles del vendedor y del administrador.
 const ORDER_STATUSES = ['pending', 'shipped', 'delivered'];
 
+// Tope por línea de pedido. Sin él, quantity: 1e21 pasaba el
+// Number.isInteger (1e21 SÍ es entero para JavaScript) y el pedido se creaba
+// con total: 2e+22. Mil unidades es holgadamente más de lo que vende una
+// tienda de este catálogo en un solo pedido, y deja el total dentro de lo que
+// la columna numeric puede representar sin sorpresas.
+const MAX_ITEM_QUANTITY = 1000;
+
 const getOrders = async (req, res) => {
   try {
     const { storeId, ids } = req.query;
@@ -136,6 +143,10 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ error: 'La cantidad de cada artículo debe ser un entero positivo' });
       }
 
+      if (quantity > MAX_ITEM_QUANTITY) {
+        return res.status(400).json({ error: `La cantidad de cada artículo no puede superar ${MAX_ITEM_QUANTITY} unidades` });
+      }
+
       const unitPrice = Number(product.price);
       const currency = product.currency || 'USD';
 
@@ -212,6 +223,7 @@ const updateOrder = async (req, res) => {
 module.exports = {
   UUID,
   ORDER_STATUSES,
+  MAX_ITEM_QUANTITY,
   getOrders,
   createOrder,
   updateOrder

@@ -29,6 +29,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // test/orders.e2e-spec.ts.
 const ORDER_STATUSES = ['pending', 'shipped', 'delivered'];
 
+// Tope por línea de pedido. Espejo de MAX_ITEM_QUANTITY en
+// order.controller.js: sin él, quantity: 1e21 pasaba el Number.isInteger
+// (1e21 SÍ es entero para JavaScript) y el pedido se creaba con
+// total: 2e+22.
+const MAX_ITEM_QUANTITY = 1000;
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -156,6 +162,12 @@ export class OrdersService {
       if (!Number.isInteger(quantity) || quantity < 1) {
         throw new BadRequestException(
           'La cantidad de cada artículo debe ser un entero positivo',
+        );
+      }
+
+      if (quantity > MAX_ITEM_QUANTITY) {
+        throw new BadRequestException(
+          `La cantidad de cada artículo no puede superar ${MAX_ITEM_QUANTITY} unidades`,
         );
       }
 

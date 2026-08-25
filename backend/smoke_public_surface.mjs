@@ -217,6 +217,25 @@ if (MODE === 'local') {
         items: [{ product_id: product.id, quantity: 0 }],
       },
     })).status === 400, 'POST /api/orders con quantity:0 responde 400');
+
+    // Cantidad desmesurada -> 400. Sin cota superior, quantity: 1e21 daba un
+    // 201 y un pedido guardado con total: 2e+22 (1e21 pasa el
+    // Number.isInteger).
+    check((await call('POST', '/api/orders', {
+      body: {
+        customer_name: 'Cliente Smoke',
+        customer_email: 'cliente-smoke@example.test',
+        items: [{ product_id: product.id, quantity: 1e21 }],
+      },
+    })).status === 400, 'POST /api/orders con quantity:1e21 responde 400');
+
+    check((await call('POST', '/api/orders', {
+      body: {
+        customer_name: 'Cliente Smoke',
+        customer_email: 'cliente-smoke@example.test',
+        items: [{ product_id: product.id, quantity: 1001 }],
+      },
+    })).status === 400, 'POST /api/orders con quantity:1001 responde 400');
   }
 }
 
