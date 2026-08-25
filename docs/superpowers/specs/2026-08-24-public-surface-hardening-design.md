@@ -64,8 +64,14 @@ Three callers, three rules, structured like the existing `authorizeOrdersQuery`:
 | Caller | Proof | May set |
 |---|---|---|
 | Customer | knows the order id | `delivered` only |
-| Seller | valid session, owns a product in the order | fulfilment statuses |
-| Admin | valid admin token | any status |
+| Seller | valid session, owns a product in the order | `shipped`, `delivered` |
+| Admin | valid admin token | any value in the allowlist |
+
+**`status` is not validated today at all** — a separate defect found while writing this
+spec. `updateOrder` writes whatever string the request body carries, so an order's status
+can be set to arbitrary text that then renders in the seller and admin UIs. The allowlist
+is exactly the three values the codebase uses: **`pending`, `shipped`, `delivered`**.
+Anything else is rejected with 400 in both backends, regardless of caller.
 
 Today anyone can set **any** status on **any** order by walking sequential integer ids.
 
@@ -105,10 +111,21 @@ o principal"*.
 
 ### Rate limiting (#4 above)
 
-Applied to `POST /api/products/:id/reviews`, `POST /api/products/:id/view`,
-`POST /api/upload` and `POST /api/auth/login`. Additionally, `rating` is clamped to 1–5
-(today it is unbounded, so a single request can skew a product's average arbitrarily) and
-`comment` is length-capped.
+Per-IP limits, chosen to sit far above real use and far below abuse:
+
+| Endpoint | Limit |
+|---|---|
+| `POST /api/auth/login` | 10 per 15 minutes |
+| `POST /api/products/:id/reviews` | 5 per hour |
+| `POST /api/products/:id/view` | 60 per hour |
+| `POST /api/upload` | 20 per hour |
+
+Exceeding a limit returns **429** with a Spanish message.
+
+Additionally on the review endpoint, which is public and unauthenticated: `rating` is
+rejected unless it is an integer from **1 to 5** (today it is unbounded, so one request can
+set `999` and skew a product's average arbitrarily), `comment` is capped at **1000**
+characters and `customer_name` at **100**.
 
 **The limit is approximate, and that is a deliberate trade.** On Vercel serverless, an
 in-process counter does not hold across instances, so `express-rate-limit`'s memory store
@@ -144,8 +161,11 @@ Extend the existing smoke-script pattern, run against a local Supabase stack:
 - **Order totals:** an order submitted with `total: 0.01` and `price: 0.01` is stored with
   the **database** prices, and the returned `totals` reflect them; a mixed-currency cart
   yields one entry per currency; an order naming a nonexistent product is rejected.
-- **Rate limiting:** the limit triggers on repeated requests to each of the four endpoints;
-  `rating: 999` and `rating: -1` are rejected.
+- **Rate limiting:** the limit triggers on repeated requests to each of the four endpoints
+  and returns 429; `rating: 999`, `rating: -1` and `rating: 2.5` are rejected while
+  `rating: 1` and `rating: 5` are accepted.
+- **Status allowlist:** `PUT /api/orders/:id` with `status: "cualquier cosa"` is rejected
+  with 400 for every caller, including an admin.
 
 Every one of these assertions must fail if the protection it covers is removed. NestJS
 additions get unit and e2e coverage, and — as with the admin work — each new guard must be
