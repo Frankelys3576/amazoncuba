@@ -8,8 +8,20 @@
 //                 tienda propia y una cuenta de administrador.
 // MODE=production (por defecto) sólo ejecuta lo que es seguro contra un
 //                 sistema en producción: comprobaciones de sólo lectura y
-//                 rechazos contra ids inexistentes, que nunca tocan una fila
-//                 real.
+//                 rechazos que el backend corta ANTES de escribir nada
+//                 (credencial insuficiente, estado inválido, id inexistente),
+//                 así que no crea ni modifica ninguna fila de negocio
+//                 -- tiendas, productos, pedidos, reseñas.
+//                 Lo único que deja rastro es el inicio de sesión de las dos
+//                 cuentas al arrancar, que crea una sesión en Supabase Auth.
+//
+//                 I4: el bloque de totales creaba un pedido REAL (con sus
+//                 order_items) fuera de la guarda de MODE, así que quien
+//                 siguiera esta cabecera y lo apuntara a producción ensuciaba
+//                 la tabla de pedidos. Ahora sólo queda ahí el rechazo por
+//                 product_id inexistente. Si añades una comprobación nueva,
+//                 pregúntate primero si escribe: si escribe, va dentro de
+//                 `if (MODE === 'local')`.
 //
 // Configuración por variables de entorno (nunca se lee un archivo .env):
 //   BASE, ADMIN_EMAIL, ADMIN_PASSWORD, SELLER_EMAIL, SELLER_PASSWORD, MODE
@@ -147,9 +159,21 @@ if (MODE === 'local') {
 // ===========================================================================
 // Totales de los pedidos (POST /api/orders)
 // ===========================================================================
-console.log('\n-- totales de los pedidos --');
+console.log('\n-- totales de los pedidos: rechazos que no insertan nada (seguro en ambos modos) --');
 
-{
+// product_id inexistente -> 400. La comprobación de existencia ocurre antes de
+// cualquier INSERT, así que esto nunca crea un pedido.
+check((await call('POST', '/api/orders', {
+  body: {
+    customer_name: 'Cliente Smoke',
+    customer_email: 'cliente-smoke@example.test',
+    items: [{ product_id: FAKE, quantity: 1 }],
+  },
+})).status === 400, 'POST /api/orders con un product_id inexistente responde 400');
+
+if (MODE === 'local') {
+  console.log('\n-- totales de los pedidos: contra pedidos de prueba reales --');
+
   const { json: products } = await call('GET', '/api/products');
   const product = Array.isArray(products) ? products.find((p) => p && p.price != null) : null;
   check(Boolean(product?.id), 'hay un producto público con precio para probar los totales');
@@ -185,15 +209,6 @@ console.log('\n-- totales de los pedidos --');
         'price_at_purchase guardado coincide con el precio real del producto en la base de datos');
     }
 
-    // product_id inexistente -> 400
-    check((await call('POST', '/api/orders', {
-      body: {
-        customer_name: 'Cliente Smoke',
-        customer_email: 'cliente-smoke@example.test',
-        items: [{ product_id: FAKE, quantity: 1 }],
-      },
-    })).status === 400, 'POST /api/orders con un product_id inexistente responde 400');
-
     // quantity: 0 -> 400
     check((await call('POST', '/api/orders', {
       body: {
@@ -202,45 +217,6 @@ console.log('\n-- totales de los pedidos --');
         items: [{ product_id: product.id, quantity: 0 }],
       },
     })).status === 400, 'POST /api/orders con quantity:0 responde 400');
-  }
-}
-
-if (MODE === 'local') {
-  console.log('\n-- totales de los pedidos: carrito con dos monedas --');
-
-  const currencyA = `USD`;
-  const currencyB = `CUP`;
-
-  const { status: statusA, json: productA } = await call('POST', '/api/products', {
-    token: seller.token,
-    body: {
-      name: 'Producto Smoke Moneda A', price: 10, currency: currencyA,
-      store_id: seller.storeId, province: 'La Habana', municipality: 'Playa',
-    },
-  });
-  const { status: statusB, json: productB } = await call('POST', '/api/products', {
-    token: seller.token,
-    body: {
-      name: 'Producto Smoke Moneda B', price: 250, currency: currencyB,
-      store_id: seller.storeId, province: 'La Habana', municipality: 'Playa',
-    },
-  });
-  check(statusA === 201 && statusB === 201, 'se crean dos productos de prueba con monedas distintas');
-
-  if (productA?.id && productB?.id) {
-    const { status: mixStatus, json: mixOrder } = await call('POST', '/api/orders', {
-      body: {
-        customer_name: 'Cliente Smoke Monedas',
-        customer_email: 'monedas-smoke@example.test',
-        items: [
-          { product_id: productA.id, quantity: 1 },
-          { product_id: productB.id, quantity: 1 },
-        ],
-      },
-    });
-    check(mixStatus === 201, 'se crea un pedido con un carrito de dos monedas');
-    const totalsKeys = mixOrder?.totals ? Object.keys(mixOrder.totals) : [];
-    check(totalsKeys.length === 2, `la respuesta trae "totals" con dos claves (tiene ${totalsKeys.length}: ${totalsKeys.join(', ')})`);
   }
 }
 
@@ -327,7 +303,7 @@ if (MODE === 'local') {
     check(results[5] === 429, `la 6ª petición rápida responde 429 (secuencia: ${results.join(', ')})`);
   }
 } else {
-  console.log('\n(MODE=production: no se comprueban totales con dos monedas, estado de pedidos reales, ni reseñas -- todas escriben datos)');
+  console.log('\n(MODE=production: no se comprueban los totales contra pedidos reales, el carrito de dos monedas, el estado de pedidos reales, la tienda pendiente vista por su dueño, ni las reseñas -- todas escriben datos)');
 }
 
 console.log(failures === 0 ? '\nPASS' : `\nFAIL: ${failures} comprobación(es)`);
