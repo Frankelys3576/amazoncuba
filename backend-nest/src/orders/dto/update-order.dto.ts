@@ -12,7 +12,7 @@ import { IsIn } from 'class-validator';
 // justo en el cambio de backend.
 export class UpdateOrderDto {
   @IsIn(['pending', 'shipped', 'delivered'], {
-    message: 'El estado debe ser "pending", "shipped" o "delivered"',
+    message: 'Estado de pedido no válido',
   })
   status: string;
 }
