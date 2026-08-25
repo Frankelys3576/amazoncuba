@@ -125,8 +125,13 @@ export const createOrder = async (orderData) => {
 
 export const getStoreOrders = async (storeId) => {
   try {
+    // El backend exige sesión de vendedor para ?storeId=: la ruta devolvía
+    // antes los pedidos de cualquier tienda (con nombre, correo, teléfono y
+    // dirección del cliente) a quien preguntara.
+    const token = localStorage.getItem('seller_token');
     const response = await fetch(`${API_URL}/orders?storeId=${storeId}&t=${Date.now()}`, {
       headers: {
+        'Authorization': `Bearer ${token}`,
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
       }
@@ -141,7 +146,10 @@ export const getStoreOrders = async (storeId) => {
 
 export const getStoreStats = async (storeId) => {
   try {
-    const response = await fetch(`${API_URL}/stores/${storeId}/stats`);
+    const token = localStorage.getItem('seller_token');
+    const response = await fetch(`${API_URL}/stores/${storeId}/stats`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!response.ok) throw new Error('Error al obtener estadísticas de la tienda');
     return await response.json();
   } catch (error) {
@@ -199,7 +207,16 @@ export const getStores = async () => {
 
 export const getStoreById = async (id) => {
   try {
-    const response = await fetch(`${API_URL}/stores/${id}`);
+    // GET /api/stores/:id ahora devuelve 404 para una tienda pending/rejected
+    // salvo que el llamante sea el vendedor dueño o un administrador. Todo el
+    // panel del vendedor consulta SU PROPIA tienda con este helper -- incluso
+    // justo tras registrarse, cuando la tienda sigue pending -- así que hay
+    // que mandar el token del vendedor para que el backend reconozca la
+    // propiedad.
+    const token = localStorage.getItem('seller_token');
+    const response = await fetch(`${API_URL}/stores/${id}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     if (!response.ok) throw new Error('Error al obtener tienda');
     return await response.json();
   } catch (error) {

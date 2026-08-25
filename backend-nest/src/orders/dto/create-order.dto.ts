@@ -44,9 +44,6 @@ export class CreateOrderDto {
   @IsString({ message: 'El teléfono debe ser texto' })
   customer_phone?: string;
 
-  @IsNumber({}, { message: 'El total debe ser un número' })
-  total: number;
-
   @IsOptional()
   @IsIn(['cash_on_delivery', 'zelle', 'transfer'], {
     message:

@@ -14,6 +14,11 @@ import { UpdateStoreProfileDto } from './dto/update-store-profile.dto';
 import { UpdateStoreCredentialsDto } from './dto/update-store-credentials.dto';
 import { UpdateZelleInfoDto } from './dto/update-zelle-info.dto';
 import { RequestWithStore } from '../auth/request-with-store.interface';
+import type { StoreCaller } from '../auth/store-caller.service';
+
+// El tipo vive en auth/store-caller.service.ts, junto al servicio que lo
+// resuelve; se reexporta aquí porque findOne lo recibe como parámetro.
+export type { StoreCaller } from '../auth/store-caller.service';
 
 // Rethrows a Prisma "record to update not found" error (P2025) as the 404
 // Express returns for a zero-row update, and rethrows everything else
@@ -33,10 +38,15 @@ export class StoresService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  async findAll(query: { type?: string; province?: string; municipality?: string; q?: string }) {
-    const stores = await this.prisma.store.findMany({
-      where: query.type ? { store_type: query.type } : undefined,
-    });
+  async findAll(
+    query: { type?: string; province?: string; municipality?: string; q?: string },
+    isAdmin: boolean,
+  ) {
+    const where: Prisma.StoreWhereInput = {};
+    if (query.type) where.store_type = query.type;
+    if (!isAdmin) where.status = 'approved';
+
+    const stores = await this.prisma.store.findMany({ where });
     let formatted = stores.map((s) => formatStore(s));
 
     if (query.province) {
@@ -60,7 +70,7 @@ export class StoresService {
     return formatted;
   }
 
-  async findOne(idOrSlug: string) {
+  async findOne(idOrSlug: string, caller: StoreCaller) {
     // Store ids are uuid v7 strings post-migration; a slug never matches
     // that shape, so this replaces the old isNumeric-vs-slug check.
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
@@ -69,6 +79,20 @@ export class StoresService {
       : await this.prisma.store.findFirst({ where: { slug: idOrSlug } });
 
     if (!store) throw new NotFoundException('Tienda no encontrada');
+
+    // Una tienda no aprobada (pending/rejected) sólo la puede ver un
+    // administrador o el vendedor dueño de ESA tienda -- por ejemplo, justo
+    // después de registrarse, mientras espera aprobación. Cualquier otro
+    // llamante recibe el mismo 404 que "no existe": un 403 confirmaría que
+    // la tienda existe, que es justo lo que no queremos revelar. El slug es
+    // legible por humanos, así que además de "conocible" es "adivinable".
+    if (store.status !== 'approved') {
+      const isOwner = caller.storeId !== null && caller.storeId === store.id;
+      if (!caller.isAdmin && !isOwner) {
+        throw new NotFoundException('Tienda no encontrada');
+      }
+    }
+
     return formatStore(store);
   }
 
@@ -203,7 +227,21 @@ export class StoresService {
     });
     const totalSalesCount = orderItems.reduce((acc, item) => acc + item.quantity, 0);
 
-    return { store: formatStore(store), activeProductsCount, totalSalesCount };
+    // El blob zelle_info COMPLETO, no el subconjunto público de formatStore.
+    // Esta ruta va detrás de AdminGuard, y admin-frontend/src/AdminStores.jsx
+    // rellena su formulario de Zelle desde details.store.zelle_info: con el
+    // subconjunto, abrir el modal y pulsar "guardar" mandaba
+    // { name:'', email_phone:'', description:'' } y updateZelleInfo lo
+    // escribía entero encima, borrando los datos de cobro del vendedor.
+    // Espejo de getAdminStoreDetails en
+    // backend/src/controllers/store.controller.js. Se parte de formatStore
+    // (no de la fila cruda) porque ésta lleva legacy_id BigInt y Decimals,
+    // que no serializan igual que en Express.
+    return {
+      store: { ...formatStore(store), zelle_info: store.zelle_info },
+      activeProductsCount,
+      totalSalesCount,
+    };
   }
 
   async updateCredentials(id: string, req: RequestWithStore, dto: UpdateStoreCredentialsDto) {

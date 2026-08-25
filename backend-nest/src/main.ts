@@ -5,6 +5,13 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
+  // Same reasoning as backend/src/index.js: Vercel is a single edge/proxy
+  // hop in front of this app, and @nestjs/throttler's default tracker reads
+  // `req.ip` from the underlying Express instance. `1` trusts exactly that
+  // one hop's X-Forwarded-For entry (the real client), not `true`, which
+  // would trust a client-forged X-Forwarded-For and let it dodge the
+  // per-IP throttler buckets.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());

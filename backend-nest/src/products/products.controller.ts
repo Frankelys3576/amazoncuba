@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -19,14 +20,22 @@ import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { SellerAuthGuard } from '../auth/seller-auth.guard';
 import type { RequestWithStore } from '../auth/request-with-store.interface';
 import { SpanishParseUuidPipe } from '../common/spanish-parse-uuid.pipe';
+import { StoreCallerService } from '../auth/store-caller.service';
+import type { Request } from 'express';
 
 @Controller('api/products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly storeCaller: StoreCallerService,
+  ) {}
 
   @Get()
-  findAll(@Query() query: Record<string, string>) {
-    return this.productsService.findAll(query);
+  async findAll(@Query() query: Record<string, string>, @Req() req: Request) {
+    // StoreCallerService no rechaza nunca: un llamante anónimo sigue viendo
+    // el listado, sólo que recortado a las tiendas aprobadas (I2).
+    const caller = await this.storeCaller.resolve(req);
+    return this.productsService.findAll(query, caller);
   }
 
   @Get(':id')
@@ -62,6 +71,8 @@ export class ProductsController {
   // needs an explicit override to match.
   @Post(':id/view')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60 * 60 * 1000 } })
   registerView(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.productsService.registerView(id);
   }
@@ -73,6 +84,8 @@ export class ProductsController {
 
   @Post(':id/reviews')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
   addReview(@Param('id', SpanishParseUuidPipe) id: string, @Body() dto: CreateProductReviewDto) {
     return this.productsService.addReview(id, dto);
   }

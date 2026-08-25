@@ -33,6 +33,48 @@ describe('formatStore', () => {
     });
   });
 
+  // C1: el blob crudo se dejó fuera entero y con él desapareció el
+  // beneficiario de Zelle, que Checkout.jsx pinta ("Titular", "Zelle
+  // (Correo/Tel)"). Vuelven esas tres claves y sólo esas tres.
+  describe('zelle_info (subconjunto del beneficiario)', () => {
+    it('devuelve name/email_phone/description y nada más del blob', () => {
+      const store = {
+        id: 1,
+        zelle_info: {
+          name: 'Titular Zelle',
+          email_phone: 'titular@example.com',
+          description: 'Poner el número de pedido',
+          province: 'La Habana',
+          gallery: ['a.png'],
+          user_id: 'no-debe-salir',
+        },
+      };
+
+      const formatted = formatStore(store as any);
+      expect(Object.keys(formatted.zelle_info!).sort()).toEqual([
+        'description',
+        'email_phone',
+        'name',
+      ]);
+      expect(formatted.zelle_info).toEqual({
+        name: 'Titular Zelle',
+        email_phone: 'titular@example.com',
+        description: 'Poner el número de pedido',
+      });
+    });
+
+    it('devuelve null (no un objeto con las tres claves en null) cuando no hay beneficiario configurado', () => {
+      expect(formatStore({ id: 1, zelle_info: null } as any).zelle_info).toBeNull();
+      expect(formatStore({ id: 1, zelle_info: {} } as any).zelle_info).toBeNull();
+      expect(
+        formatStore({
+          id: 1,
+          zelle_info: { province: 'La Habana', gallery: ['a.png'] },
+        } as any).zelle_info,
+      ).toBeNull();
+    });
+  });
+
   it('prefers direct columns over zelle_info when both are set', () => {
     const store = {
       id: 1,

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { OrdersService } from './orders.service';
 
@@ -325,21 +325,63 @@ describe('OrdersService', () => {
   });
 
   describe('create', () => {
-    it('creates the order with status pending and defaults payment_method to cash_on_delivery', async () => {
+    // This is the assertion that matters: a client that submits a low-ball
+    // price must not get it stored. A test that only checks the response
+    // shape (e.g. that `totals` exists) would still pass with the
+    // vulnerability fully intact -- this one fails unless price_at_purchase
+    // is actually read from the database row, not the request body.
+    it('ignores a submitted price and total, storing the database price as price_at_purchase', async () => {
       const create = jest
         .fn()
-        .mockResolvedValue({ id: 1, total: new Prisma.Decimal(40) });
+        .mockResolvedValue({ id: 5, total: new Prisma.Decimal(20) });
+      const createMany = jest.fn().mockResolvedValue({ count: 1 });
       const prisma = {
+        product: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: PRODUCT_1, price: new Prisma.Decimal(20), currency: 'USD' },
+          ]),
+        },
         order: { create },
-        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        orderItem: { createMany },
       } as any;
       const service = new OrdersService(prisma);
 
       await service.create({
         customer_name: 'Juan',
         customer_email: 'juan@example.com',
-        total: 40,
-        items: [],
+        total: 0.01,
+        items: [{ product_id: PRODUCT_1, quantity: 2, price: 0.01 }],
+      } as any);
+
+      // Stored price_at_purchase must equal the DATABASE price (20), not the
+      // submitted 0.01.
+      expect(createMany.mock.calls[0][0].data).toEqual([
+        { order_id: 5, product_id: PRODUCT_1, quantity: 2, price_at_purchase: 20 },
+      ]);
+      // The order's legacy total is likewise the recomputed 40 (20 * 2),
+      // not the submitted 0.01.
+      expect(create.mock.calls[0][0].data.total).toBe(40);
+    });
+
+    it('creates the order with status pending and defaults payment_method to cash_on_delivery', async () => {
+      const create = jest
+        .fn()
+        .mockResolvedValue({ id: 1, total: new Prisma.Decimal(40) });
+      const prisma = {
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: new Prisma.Decimal(40), currency: 'USD' }]),
+        },
+        order: { create },
+        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await service.create({
+        customer_name: 'Juan',
+        customer_email: 'juan@example.com',
+        items: [{ product_id: PRODUCT_1, quantity: 1, price: 40 }],
       } as any);
 
       expect(create.mock.calls[0][0].data).toMatchObject({
@@ -350,48 +392,146 @@ describe('OrdersService', () => {
       });
     });
 
-    it('inserts order_items with price_at_purchase mapped from item.price', async () => {
-      const createMany = jest.fn().mockResolvedValue({ count: 1 });
-      const prisma = {
-        order: {
-          create: jest
-            .fn()
-            .mockResolvedValue({ id: 5, total: new Prisma.Decimal(20) }),
-        },
-        orderItem: { createMany },
-      } as any;
+    it('rejects an empty items array', async () => {
+      const prisma = { product: { findMany: jest.fn() } } as any;
       const service = new OrdersService(prisma);
 
-      await service.create({
-        customer_name: 'Juan',
-        customer_email: 'juan@example.com',
-        total: 20,
-        items: [{ product_id: 3, quantity: 2, price: 10 }],
-      } as any);
-
-      expect(createMany.mock.calls[0][0].data).toEqual([
-        { order_id: 5, product_id: 3, quantity: 2, price_at_purchase: 10 },
-      ]);
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [],
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.product.findMany).not.toHaveBeenCalled();
     });
 
-    it('does not call orderItem.createMany when items is empty', async () => {
-      const createMany = jest.fn();
+    // "Also fix": sin cota superior, quantity: 1e21 daba un 201 con
+    // total: 2e+22 -- 1e21 pasa el Number.isInteger. Mismo tope y mismo
+    // mensaje que Express (MAX_ITEM_QUANTITY en order.controller.js).
+    describe('tope de cantidad por línea', () => {
+      const makePrisma = (createMany: jest.Mock) => ({
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: 10, currency: 'USD' }]),
+        },
+        order: { create: jest.fn().mockResolvedValue({ id: ORDER_1, total: 10 }) },
+        orderItem: { createMany },
+      }) as any;
+
+      const body = (quantity: number) => ({
+        customer_name: 'Ana',
+        customer_email: 'ana@example.test',
+        items: [{ product_id: PRODUCT_1, quantity, price: 10 }],
+      }) as any;
+
+      for (const quantity of [1001, 1e21]) {
+        it(`rechaza quantity: ${quantity} sin insertar nada`, async () => {
+          const createMany = jest.fn();
+          const service = new OrdersService(makePrisma(createMany));
+
+          await expect(service.create(body(quantity))).rejects.toThrow(
+            'La cantidad de cada artículo no puede superar 1000 unidades',
+          );
+          expect(createMany).not.toHaveBeenCalled();
+        });
+      }
+
+      it('acepta quantity: 1000, el límite exacto', async () => {
+        const createMany = jest.fn().mockResolvedValue({ count: 1 });
+        const service = new OrdersService(makePrisma(createMany));
+
+        await expect(service.create(body(1000))).resolves.toMatchObject({
+          totals: { USD: 10000 },
+        });
+      });
+    });
+
+    it('rejects an item whose product_id does not exist', async () => {
       const prisma = {
+        product: { findMany: jest.fn().mockResolvedValue([]) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity: 1, price: 10 }],
+        } as any),
+      ).rejects.toMatchObject({
+        response: { message: 'Uno o más productos no existen' },
+      });
+    });
+
+    it.each([0, -1, 1.5])('rejects a quantity of %s', async (quantity) => {
+      const prisma = {
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: new Prisma.Decimal(10), currency: 'USD' }]),
+        },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity, price: 10 }],
+        } as any),
+      ).rejects.toMatchObject({
+        response: {
+          message: 'La cantidad de cada artículo debe ser un entero positivo',
+        },
+      });
+    });
+
+    it('returns a totals object keyed by currency for a two-currency cart', async () => {
+      const prisma = {
+        product: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: PRODUCT_1, price: new Prisma.Decimal(10), currency: 'USD' },
+            { id: PRODUCT_2, price: new Prisma.Decimal(100), currency: 'CUP' },
+          ]),
+        },
         order: {
           create: jest
             .fn()
-            .mockResolvedValue({ id: 5, total: new Prisma.Decimal(20) }),
+            .mockResolvedValue({ id: 9, total: new Prisma.Decimal(120) }),
         },
+        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      const result = await service.create({
+        customer_name: 'Juan',
+        customer_email: 'juan@example.com',
+        items: [
+          { product_id: PRODUCT_1, quantity: 2, price: 10 },
+          { product_id: PRODUCT_2, quantity: 1, price: 100 },
+        ],
+      } as any);
+
+      expect(result.totals).toEqual({ USD: 20, CUP: 100 });
+    });
+
+    it('does not call orderItem.createMany when the request is rejected before insertion', async () => {
+      const createMany = jest.fn();
+      const prisma = {
+        product: { findMany: jest.fn().mockResolvedValue([]) },
         orderItem: { createMany },
       } as any;
       const service = new OrdersService(prisma);
 
-      await service.create({
-        customer_name: 'Juan',
-        customer_email: 'juan@example.com',
-        total: 20,
-        items: [],
-      } as any);
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity: 1, price: 10 }],
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(createMany).not.toHaveBeenCalled();
     });
@@ -401,20 +541,24 @@ describe('OrdersService', () => {
     // though this response path has no nesting to worry about.
     it('coerces the Decimal total on the returned order to a plain number', async () => {
       const prisma = {
+        product: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: PRODUCT_1, price: new Prisma.Decimal(40), currency: 'USD' }]),
+        },
         order: {
           create: jest
             .fn()
             .mockResolvedValue({ id: 1, total: new Prisma.Decimal(40) }),
         },
-        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        orderItem: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
       } as any;
       const service = new OrdersService(prisma);
 
       const result = await service.create({
         customer_name: 'Juan',
         customer_email: 'juan@example.com',
-        total: 40,
-        items: [],
+        items: [{ product_id: PRODUCT_1, quantity: 1, price: 40 }],
       } as any);
 
       expect(typeof result.order.total).toBe('number');
@@ -428,6 +572,41 @@ describe('OrdersService', () => {
       'An operation failed because it depends on one or more records that were required but not found.',
       { code: 'P2025', clientVersion: '5.0.0' },
     );
+
+    // I6: OrderUpdateAuthGuard deja pasar a un administrador sin más
+    // comprobación, así que esta lista blanca es LO ÚNICO que hay entre un
+    // token de administrador y un estado arbitrario en la base de datos.
+    // Borrarla no ponía en rojo ninguna de las 228 pruebas. Se comprueba
+    // aquí, en el servicio, y no sólo por HTTP: el @IsIn del DTO rechaza hoy
+    // los mismos tres estados, así que una prueba e2e no distingue qué capa
+    // rechazó -- ésta sí, y se pone en rojo en cuanto la comprobación
+    // desaparece del servicio.
+    describe('lista blanca de estados (I6)', () => {
+      for (const status of ['confirmed', 'cancelled', 'cualquier cosa', '']) {
+        it(`rechaza status: ${JSON.stringify(status)} con 400 y sin tocar la base de datos`, async () => {
+          const update = jest.fn();
+          const prisma = { order: { update } } as any;
+          const service = new OrdersService(prisma);
+
+          await expect(
+            service.update('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', status),
+          ).rejects.toBeInstanceOf(BadRequestException);
+          expect(update).not.toHaveBeenCalled();
+        });
+      }
+
+      for (const status of ['pending', 'shipped', 'delivered']) {
+        it(`acepta status: ${JSON.stringify(status)}`, async () => {
+          const update = jest.fn().mockResolvedValue({ id: 1, status, total: 10 });
+          const prisma = { order: { update } } as any;
+          const service = new OrdersService(prisma);
+
+          await expect(
+            service.update('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', status),
+          ).resolves.toMatchObject({ status });
+        });
+      }
+    });
 
     it('throws NotFoundException on a P2025 (zero-row update)', async () => {
       const prisma = {

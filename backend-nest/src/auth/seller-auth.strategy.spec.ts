@@ -36,6 +36,24 @@ describe('SellerAuthStrategy', () => {
     );
   });
 
+  it('rechaza un token vacío o ausente sin consultar a Supabase', async () => {
+    // getUser(undefined) NO falla: recae en la sesión que el cliente
+    // compartido tenga guardada (ver supabase.service.ts) y devuelve el
+    // último usuario que inició sesión. No debemos llegar a llamarlo.
+    const getUser = jest.fn();
+    const findUnique = jest.fn();
+    const strategy = makeStrategy(getUser, findUnique);
+
+    for (const token of [undefined, null, '', '   '] as unknown as string[]) {
+      await expect(strategy.validate(token)).rejects.toThrow(
+        new UnauthorizedException('Token inválido o expirado'),
+      );
+    }
+
+    expect(getUser).not.toHaveBeenCalled();
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
   it('throws ForbiddenException when no store matches the user', async () => {
     const user = { id: 'u1', email: '5551234@cubaamazon.com' };
     const strategy = makeStrategy(

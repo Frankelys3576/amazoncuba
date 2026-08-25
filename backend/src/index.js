@@ -5,6 +5,16 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Vercel sits in front of this app as a single edge/proxy hop, so `req.ip`
+// is the proxy's address unless Express is told to trust it. `1` trusts
+// exactly that one hop's X-Forwarded-For entry (the real client) — not
+// `true`, which would trust the whole chain and let a client forge its own
+// X-Forwarded-For to dodge express-rate-limit's per-IP buckets. Without
+// this, every request shares one bucket and the limiters in
+// middleware/rate-limit.middleware.js throttle the whole platform instead
+// of individual abusers.
+app.set('trust proxy', 1);
+
 // Middlewares
 app.use(cors()); // Permite peticiones del frontend
 app.use(express.json()); // Parsea JSON en el body de las peticiones

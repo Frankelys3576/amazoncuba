@@ -1,11 +1,44 @@
 const supabase = require('../config/supabase');
+const { resolveOrdersCaller } = require('../middleware/auth.middleware');
+
+// Columnas de la tienda que el listado publica junto a cada producto. Se
+// declara aparte porque el embebido cambia de LEFT a INNER JOIN según el
+// llamante (ver getProducts).
+const STORE_COLUMNS = 'accepts_zelle, name, phone, slug, has_delivery';
 
 // Obtener todos los productos
 const getProducts = async (req, res) => {
   const { storeId, q, category, province, municipality, store_category_id, requireImage } = req.query;
 
   try {
-    let query = supabase.from('products').select('*, stores(accepts_zelle, name, phone, slug, has_delivery)');
+    // La tercera puerta: este listado no filtraba por estado de la tienda y
+    // publica store_name, store_phone y store_slug, así que una tienda
+    // 'pending' tenía catálogo público y comprable -- y de paso regalaba el
+    // slug que GET /api/stores/:id se niega a confirmar.
+    //
+    // El filtro NO se aplica al administrador ni al vendedor dueño: el panel
+    // del vendedor (seller-frontend) lista su propio catálogo con
+    // ?storeId=<suyo> y debe seguir viéndolo mientras espera aprobación. Es
+    // la misma resolución de llamante que usa getStoreById.
+    const caller = await resolveOrdersCaller(req);
+    const isAdmin = caller.kind === 'admin';
+    const ownStoreId = caller.kind === 'seller' ? caller.store.id : null;
+
+    // !inner para el público: con el LEFT JOIN, filtrar por stores.status
+    // sólo vaciaría el objeto embebido y el producto seguiría en la lista.
+    // El INNER JOIN además descarta productos sin tienda, igual que hace el
+    // `where.store = { status: 'approved' }` de Prisma en backend-nest.
+    let query = supabase
+      .from('products')
+      .select(`*, ${isAdmin ? `stores(${STORE_COLUMNS})` : `stores!inner(${STORE_COLUMNS})`}`);
+
+    if (!isAdmin) {
+      if (ownStoreId) {
+        query = query.or(`status.eq.approved,id.eq.${ownStoreId}`, { referencedTable: 'stores' });
+      } else {
+        query = query.eq('stores.status', 'approved');
+      }
+    }
     if (storeId) query = query.eq('store_id', storeId);
     if (category) query = query.eq('category_id', category);
     if (store_category_id) query = query.eq('store_category_id', store_category_id);
@@ -61,7 +94,7 @@ const getProductById = async (req, res) => {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('products')
-      .select('*, stores(accepts_zelle, name, phone, slug, has_delivery)')
+      .select(`*, stores(${STORE_COLUMNS})`)
       .eq('id', id)
       .single();
 
@@ -241,8 +274,24 @@ const addProductReview = async (req, res) => {
     const { id } = req.params;
     const { customer_name, rating, comment } = req.body;
 
-    if (!customer_name || !rating) {
-      return res.status(400).json({ error: 'Name and rating are required' });
+    if (!customer_name) {
+      return res.status(400).json({ error: 'El nombre del cliente es requerido' });
+    }
+
+    // Rating is checked separately (not folded into the customer_name
+    // truthiness check above) so `rating: 0` and an absent `rating` both
+    // fall through to this Spanish message instead of the old English
+    // "Name and rating are required" — matches NestJS's class-validator
+    // errors on CreateProductReviewDto for the same inputs.
+    const numericRating = Number(rating);
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ error: 'La valoración debe ser un número entero del 1 al 5' });
+    }
+    if (typeof customer_name !== 'string' || customer_name.length > 100) {
+      return res.status(400).json({ error: 'El nombre no puede superar los 100 caracteres' });
+    }
+    if (comment !== undefined && comment !== null && (typeof comment !== 'string' || comment.length > 1000)) {
+      return res.status(400).json({ error: 'El comentario no puede superar los 1000 caracteres' });
     }
 
     const { data, error } = await supabase
@@ -250,7 +299,7 @@ const addProductReview = async (req, res) => {
       .insert([{
         product_id: id,
         customer_name,
-        rating,
+        rating: numericRating,
         comment
       }])
       .select();

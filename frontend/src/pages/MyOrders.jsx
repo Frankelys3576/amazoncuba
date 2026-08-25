@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrdersByIds, updateOrder } from '../services/api';
 import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
+import { getOrderTotalDisplay } from '../utils/orderTotals';
 import './MyOrders.css';
 
 const MyOrders = () => {
@@ -69,7 +70,7 @@ const MyOrders = () => {
     });
     
     receiptText += `--------------------------------------\n`;
-    receiptText += `TOTAL: $${order.total.toFixed(2)} USD\n`;
+    receiptText += `TOTAL: ${getOrderTotalDisplay(order)}\n`;
     receiptText += `======================================\n`;
     receiptText += `¡Gracias por su compra!\n`;
 
@@ -141,7 +142,7 @@ const MyOrders = () => {
               <div className="order-summary-mini">
                 <div className="summary-row">
                   <span>Total:</span>
-                  <span className="bold-price">${order.total.toFixed(2)}</span>
+                  <span className="bold-price">{getOrderTotalDisplay(order)}</span>
                 </div>
                 <div className="summary-row">
                   <span>Enviado a:</span>

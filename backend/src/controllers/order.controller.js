@@ -4,6 +4,19 @@ const supabase = require('../config/supabase');
 // getOrders (query ?ids=) y updateOrder (:id) validen exactamente igual.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Los tres únicos estados que usa la aplicación. Antes no se validaba nada:
+// updateOrder escribía la cadena que viniera en el cuerpo, así que el estado
+// de un pedido podía quedar en cualquier texto arbitrario, que luego se
+// mostraba en los paneles del vendedor y del administrador.
+const ORDER_STATUSES = ['pending', 'shipped', 'delivered'];
+
+// Tope por línea de pedido. Sin él, quantity: 1e21 pasaba el
+// Number.isInteger (1e21 SÍ es entero para JavaScript) y el pedido se creaba
+// con total: 2e+22. Mil unidades es holgadamente más de lo que vende una
+// tienda de este catálogo en un solo pedido, y deja el total dentro de lo que
+// la columna numeric puede representar sin sorpresas.
+const MAX_ITEM_QUANTITY = 1000;
+
 const getOrders = async (req, res) => {
   try {
     const { storeId, ids } = req.query;
@@ -96,37 +109,72 @@ const getOrders = async (req, res) => {
 // Crear un pedido
 const createOrder = async (req, res) => {
   try {
-    const { customer_name, customer_email, customer_address, customer_phone, total, items, payment_method, payment_proof_url } = req.body;
-    
-    // 1. Crear el pedido (asegurándonos de guardar customer_phone y datos de pago)
+    const { customer_name, customer_email, customer_address, customer_phone, items, payment_method, payment_proof_url } = req.body;
+
+    // El total y los precios NO se leen del cuerpo. Antes sí: un cliente podía
+    // enviar total: 0.01 y el pedido se guardaba con ese importe.
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'El pedido no tiene artículos' });
+    }
+
+    const productIds = [...new Set(items.map((item) => item.product_id))];
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, price, currency')
+      .in('id', productIds);
+
+    if (productsError) throw productsError;
+
+    const byId = new Map((products || []).map((p) => [String(p.id), p]));
+    if (productIds.some((id) => !byId.has(String(id)))) {
+      return res.status(400).json({ error: 'Uno o más productos no existen' });
+    }
+
+    // Los importes se calculan por moneda: cada producto lleva la suya y un
+    // carrito puede mezclarlas, así que un único número no significaría nada.
+    const totals = {};
+    const lines = [];
+
+    for (const item of items) {
+      const product = byId.get(String(item.product_id));
+      const quantity = Number(item.quantity);
+
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        return res.status(400).json({ error: 'La cantidad de cada artículo debe ser un entero positivo' });
+      }
+
+      if (quantity > MAX_ITEM_QUANTITY) {
+        return res.status(400).json({ error: `La cantidad de cada artículo no puede superar ${MAX_ITEM_QUANTITY} unidades` });
+      }
+
+      const unitPrice = Number(product.price);
+      const currency = product.currency || 'USD';
+
+      totals[currency] = (totals[currency] || 0) + unitPrice * quantity;
+      lines.push({ product_id: product.id, quantity, price_at_purchase: unitPrice });
+    }
+
+    // orders.total es NOT NULL y se conserva por compatibilidad: es la suma
+    // sin distinguir moneda, exactamente lo que se guardaba antes. El dato
+    // bueno es `totals`; los frontales deben leer ese.
+    const legacyTotal = Object.values(totals).reduce((sum, value) => sum + value, 0);
+
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
-      .insert([
-        { customer_name, customer_email, customer_address, customer_phone, total, status: 'pending', payment_method: payment_method || 'cash_on_delivery', payment_proof_url }
-      ])
+      .insert([{ customer_name, customer_email, customer_address, customer_phone, total: legacyTotal, status: 'pending', payment_method: payment_method || 'cash_on_delivery', payment_proof_url }])
       .select();
 
     if (orderError) throw orderError;
-    
+
     const newOrderId = orderData[0].id;
 
-    // 2. Insertar los items del pedido
-    if (items && items.length > 0) {
-      const orderItems = items.map(item => ({
-        order_id: newOrderId,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price_at_purchase: item.price
-      }));
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(lines.map((line) => ({ ...line, order_id: newOrderId })));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+    if (itemsError) throw itemsError;
 
-      if (itemsError) throw itemsError;
-    }
-    
-    res.status(201).json({ message: 'Pedido creado exitosamente', order: orderData[0] });
+    res.status(201).json({ message: 'Pedido creado exitosamente', order: orderData[0], totals });
   } catch (error) {
     console.error('Error creating order:', error.message);
     res.status(500).json({ error: 'Error al crear el pedido' });
@@ -149,6 +197,10 @@ const updateOrder = async (req, res) => {
       return res.status(400).json({ error: 'El identificador debe ser un UUID válido' });
     }
 
+    if (!ORDER_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Estado de pedido no válido' });
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .update({ status })
@@ -169,6 +221,9 @@ const updateOrder = async (req, res) => {
 };
 
 module.exports = {
+  UUID,
+  ORDER_STATUSES,
+  MAX_ITEM_QUANTITY,
   getOrders,
   createOrder,
   updateOrder

@@ -5,6 +5,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { formatProduct } from './product-format.util';
+import type { StoreCaller } from '../auth/store-caller.service';
 import { coerceDecimalFields } from '../common/decimal.util';
 
 // price/price_usd/rating_avg are Decimal/Decimal? columns on `products`.
@@ -24,16 +25,37 @@ const STORE_INCLUDE = {
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: {
-    storeId?: string;
-    q?: string;
-    category?: string;
-    province?: string;
-    municipality?: string;
-    store_category_id?: string;
-    requireImage?: string;
-  }) {
+  async findAll(
+    query: {
+      storeId?: string;
+      q?: string;
+      category?: string;
+      province?: string;
+      municipality?: string;
+      store_category_id?: string;
+      requireImage?: string;
+    },
+    caller: StoreCaller,
+  ) {
     const where: Record<string, unknown> = {};
+
+    // I2, la tercera puerta: este listado no filtraba por el estado de la
+    // tienda y publica store_name, store_phone y store_slug, así que una
+    // tienda 'pending' tenía catálogo público y comprable -- y de paso
+    // regalaba el slug que GET /api/stores/:id se niega a confirmar.
+    //
+    // El filtro NO se aplica al administrador ni al vendedor dueño:
+    // seller-frontend lista su propio catálogo con ?storeId=<suyo> y debe
+    // seguir viéndolo mientras espera aprobación. Espejo de getProducts en
+    // backend/src/controllers/product.controller.js, donde el mismo filtro se
+    // expresa como `stores!inner(...)` + status/or: un producto sin tienda
+    // tampoco pasa el filtro relacional de Prisma, igual que no pasa el INNER
+    // JOIN de PostgREST.
+    if (!caller.isAdmin) {
+      const visible: Record<string, unknown>[] = [{ store: { status: 'approved' } }];
+      if (caller.storeId) visible.push({ store_id: caller.storeId });
+      where.OR = visible;
+    }
     // Product.store_id/category_id/store_category_id are uuid columns now,
     // so the query string values are used as-is — no numeric coercion.
     if (query.storeId) where.store_id = query.storeId;

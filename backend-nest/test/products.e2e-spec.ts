@@ -21,6 +21,9 @@ describe('Products (e2e)', () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    productReview: {
+      create: jest.Mock;
+    };
   };
 
   // class-validator's @IsUUID checks the RFC variant nibble too (must be
@@ -37,6 +40,15 @@ describe('Products (e2e)', () => {
         create: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
         findUnique: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
         update: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
+      },
+      productReview: {
+        create: jest.fn().mockResolvedValue({
+          id: '33333333-3333-7333-8333-333333333333',
+          product_id: PRODUCT_ID,
+          customer_name: 'Ana',
+          rating: 5,
+          comment: 'Bien',
+        }),
       },
     };
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -101,6 +113,19 @@ describe('Products (e2e)', () => {
       .expect((res) => {
         expect(Array.isArray(res.body)).toBe(true);
       });
+  });
+
+  // I2: GET /api/products publica store_name/store_phone/store_slug, así que
+  // sin filtro de estado el catálogo de una tienda 'pending' era público y
+  // comprable. Aquí se comprueba de punta a punta que el controlador resuelve
+  // al llamante y que el filtro llega a Prisma; el caso del vendedor dueño
+  // está cubierto en products.service.spec.ts.
+  it('GET /api/products (anónimo) restringe el listado a tiendas aprobadas', async () => {
+    await request(app.getHttpServer()).get('/api/products').expect(200);
+
+    expect(prismaMock.product.findMany.mock.calls[0][0].where).toEqual({
+      OR: [{ store: { status: 'approved' } }],
+    });
   });
 
   // C2: schema.prisma still carries 15 `BigInt` `legacy_*` columns (the
@@ -196,5 +221,74 @@ describe('Products (e2e)', () => {
           }),
         );
       });
+  });
+
+  // Task 4 review of task-4: nothing previously exercised ThrottlerGuard or
+  // CreateProductReviewDto's decorators end to end, so a wrong option key,
+  // a dropped @UseGuards, or the whole throttling feature being deleted
+  // would still have shipped with tsc/unit/e2e all green. This pins the
+  // review endpoint's 5-per-hour limit (see products.controller.ts) at the
+  // HTTP boundary: five requests succeed, the sixth is throttled with the
+  // same Spanish message Express returns for the same feature. Confirmed
+  // this goes red without @UseGuards(ThrottlerGuard) on addReview, then
+  // restored it (see task-4-report.md).
+  it('POST /api/products/:id/reviews throttles after 5 requests/hour and returns the Spanish 429 body', async () => {
+    const validReview = { customer_name: 'Ana', rating: 5, comment: 'Bien' };
+
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer())
+        .post(`/api/products/${PRODUCT_ID}/reviews`)
+        .send(validReview)
+        .expect(201);
+    }
+
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send(validReview)
+      .expect(429)
+      .expect((res) => {
+        expect(res.body.error).toBe(
+          'Demasiadas peticiones. Inténtalo de nuevo más tarde.',
+        );
+      });
+  });
+
+  // rating: 999 must be rejected by CreateProductReviewDto's @Max(5) at the
+  // HTTP boundary (ValidationPipe), not just verified against the DTO class
+  // in isolation — whitelist:true silently drops unknown fields but a
+  // present, out-of-range `rating` should 400.
+  it('POST /api/products/:id/reviews with rating: 999 returns 400', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: 999 })
+      .expect(400);
+  });
+
+  // I6: sólo el 999 estaba cubierto, así que quitar el @Min(1) del DTO dejaba
+  // las 228 pruebas en verde mientras rating: 0 y rating: -1 se guardaban
+  // tan ricamente. La especificación nombra -1 y 2.5 como rechazos
+  // obligatorios; el 0 es el límite exacto que protege @Min(1).
+  it('POST /api/products/:id/reviews with rating: 0 returns 400 (@Min(1))', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: 0 })
+      .expect(400)
+      .expect(() => {
+        expect(prismaMock.productReview.create).not.toHaveBeenCalled();
+      });
+  });
+
+  it('POST /api/products/:id/reviews with rating: -1 returns 400 (@Min(1))', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: -1 })
+      .expect(400);
+  });
+
+  it('POST /api/products/:id/reviews with rating: 2.5 returns 400 (@IsInt)', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: 2.5 })
+      .expect(400);
   });
 });
