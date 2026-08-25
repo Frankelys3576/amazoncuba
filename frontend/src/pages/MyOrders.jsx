@@ -4,6 +4,22 @@ import { getOrdersByIds, updateOrder } from '../services/api';
 import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './MyOrders.css';
 
+// Renders the server-authoritative per-currency totals, e.g. "45.00 USD + 12000.00 CUP"
+const formatTotals = (totals) =>
+  Object.entries(totals || {})
+    .map(([currency, amount]) => `${Number(amount).toFixed(2)} ${currency}`)
+    .join(' + ');
+
+// Orders placed before the server started returning `totals` have none stored in
+// localStorage — fall back to the old client-computed `total` so their history
+// still renders instead of breaking.
+const getOrderTotalDisplay = (order) => {
+  if (order.totals && Object.keys(order.totals).length > 0) {
+    return formatTotals(order.totals);
+  }
+  return `${Number(order.total || 0).toFixed(2)} USD`;
+};
+
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
 
@@ -69,7 +85,7 @@ const MyOrders = () => {
     });
     
     receiptText += `--------------------------------------\n`;
-    receiptText += `TOTAL: $${order.total.toFixed(2)} USD\n`;
+    receiptText += `TOTAL: ${getOrderTotalDisplay(order)}\n`;
     receiptText += `======================================\n`;
     receiptText += `¡Gracias por su compra!\n`;
 
@@ -141,7 +157,7 @@ const MyOrders = () => {
               <div className="order-summary-mini">
                 <div className="summary-row">
                   <span>Total:</span>
-                  <span className="bold-price">${order.total.toFixed(2)}</span>
+                  <span className="bold-price">{getOrderTotalDisplay(order)}</span>
                 </div>
                 <div className="summary-row">
                   <span>Enviado a:</span>
