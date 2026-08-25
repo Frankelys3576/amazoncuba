@@ -259,10 +259,19 @@ console.log('\n-- listado de tiendas --');
 
   const leaks = stores.some((s) =>
     Object.prototype.hasOwnProperty.call(s, 'user_id') ||
-    Object.prototype.hasOwnProperty.call(s, 'zelle_info') ||
     Object.keys(s).some((k) => k.startsWith('legacy_'))
   );
-  check(!leaks, 'GET /api/stores (anónimo): ninguna tienda expone user_id, legacy_* ni zelle_info');
+  check(!leaks, 'GET /api/stores (anónimo): ninguna tienda expone user_id ni legacy_*');
+
+  // C1: zelle_info vuelve, pero SOLO el beneficiario (lo que Checkout.jsx
+  // pinta). Si reapareciera el blob crudo volverían con él las claves de
+  // ubicación, la galería y cualquier cosa que se guarde ahí en el futuro.
+  const ZELLE_PUBLIC_KEYS = ['name', 'email_phone', 'description'];
+  const zelleOk = stores.every((s) =>
+    s.zelle_info &&
+    Object.keys(s.zelle_info).every((k) => ZELLE_PUBLIC_KEYS.includes(k))
+  );
+  check(zelleOk, 'GET /api/stores (anónimo): zelle_info trae sólo name/email_phone/description');
 
   const { status: adminStatus, json: adminStores } = await call('GET', '/api/stores', { token: admin.token });
   check(adminStatus === 200, 'GET /api/stores (token de administrador) responde 200');

@@ -9,7 +9,9 @@ import { SupabaseService } from '../src/supabase/supabase.service';
 // e2e coverage for Task 3 (public surface hardening): GET /api/stores used to
 // have no status filter (pending/rejected stores were public) and formatStore
 // spread `...store`, so the response also carried legacy_id, user_id, and the
-// raw zelle_info blob. Only the external boundaries (PrismaService,
+// raw zelle_info blob. The payee subset of zelle_info (name/email_phone/
+// description) is back on purpose — Checkout.jsx renders it — but the rest of
+// the blob stays out. Only the external boundaries (PrismaService,
 // SupabaseService's client) are stubbed here — StoresController's own
 // admin-detection and StoresService/formatStore are all real, so a
 // regression to the old spread-everything/no-filter behaviour shows up as a
@@ -27,7 +29,14 @@ describe('GET /api/stores (e2e) — status filter + column whitelist', () => {
     status: 'approved',
     user_id: '99999999-9999-9999-9999-999999999999',
     phone: '5551234',
-    zelle_info: { name: 'secret-zelle-name', email_phone: 'secret@example.com' },
+    zelle_info: {
+      name: 'Titular Zelle',
+      email_phone: 'titular@example.com',
+      description: 'Poner el número de pedido',
+      lat: 23.1,
+      lng: -82.3,
+      gallery: ['a.jpg'],
+    },
   };
   const PENDING_STORE = {
     id: '22222222-2222-2222-2222-222222222222',
@@ -128,16 +137,35 @@ describe('GET /api/stores (e2e) — status filter + column whitelist', () => {
       });
   });
 
-  it('4. the response never carries the raw zelle_info blob, user_id, or legacy_id, but does carry phone', () => {
+  it('4. the response never carries user_id or legacy_id, but does carry phone', () => {
     return request(app.getHttpServer())
       .get('/api/stores')
       .expect(200)
       .expect((res) => {
         const store = res.body[0];
-        expect(store).not.toHaveProperty('zelle_info');
         expect(store).not.toHaveProperty('user_id');
         expect(store).not.toHaveProperty('legacy_id');
         expect(store.phone).toBe(APPROVED_STORE.phone);
+      });
+  });
+
+  // C1: dropping zelle_info entirely took the Zelle payment block off the
+  // air (Checkout.jsx reads store.zelle_info.name / .email_phone). Only the
+  // payee subset comes back; the rest of the blob must not.
+  it('5. zelle_info carries exactly the three payee keys, and nothing else from the blob', () => {
+    return request(app.getHttpServer())
+      .get('/api/stores')
+      .expect(200)
+      .expect((res) => {
+        const store = res.body[0];
+        expect(Object.keys(store.zelle_info).sort()).toEqual([
+          'description',
+          'email_phone',
+          'name',
+        ]);
+        expect(store.zelle_info.name).toBe('Titular Zelle');
+        expect(store.zelle_info.email_phone).toBe('titular@example.com');
+        expect(store.zelle_info.description).toBe('Poner el número de pedido');
       });
   });
 });

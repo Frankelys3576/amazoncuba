@@ -39,7 +39,20 @@ const formatStore = (store) => {
     lat: store.lat !== undefined && store.lat !== null ? store.lat : (info.lat !== undefined ? info.lat : null),
     lng: store.lng !== undefined && store.lng !== null ? store.lng : (info.lng !== undefined ? info.lng : null),
     price_per_night: store.price_per_night || info.price_per_night || null,
-    gallery: info.gallery || []
+    gallery: info.gallery || [],
+    // El blob crudo sigue fuera (lleva user_id heredado, legacy_* y las claves
+    // de ubicación ya derivadas arriba), pero el BENEFICIARIO de Zelle sí
+    // vuelve: frontend/src/pages/Checkout.jsx lee store.zelle_info y pinta
+    // "Titular" y "Zelle (Correo/Tel)". Sin estas tres claves el bloque de
+    // instrucciones de pago no se renderiza nunca, mientras accepts_zelle
+    // sigue en true y la caja exige un comprobante de un pago que no explica
+    // cómo hacer. Son datos que la tienda ya muestra a cualquier cliente
+    // anónimo, así que no son una fuga.
+    zelle_info: {
+      name: info.name ?? null,
+      email_phone: info.email_phone ?? null,
+      description: info.description ?? null
+    }
   };
 };
 
