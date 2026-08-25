@@ -18,8 +18,13 @@ const adminHeaders = (extra = {}) => ({
 // El panel devolvía [] cuando el backend respondía 401/403, así que una sesión
 // caducada era indistinguible de una lista vacía. Ahora se limpia la sesión y
 // se vuelve al login.
+//
+// SÓLO con 401. Un 403 significa "estás autenticado pero esto no te toca":
+// la sesión es perfectamente válida y borrarla convierte cualquier error de
+// permisos en una expulsión al login, una y otra vez. El 403 se deja pasar
+// para que lo trate quien haya llamado.
 const handleAuthFailure = (response) => {
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     localStorage.removeItem('admin_token');
     window.location.href = '/login';
     return true;
@@ -199,7 +204,10 @@ export const getOrders = async (params = {}) => {
     const url = queryString ? `${API_URL}/orders?${queryString}` : `${API_URL}/orders`;
 
     const response = await fetch(url, { headers: adminHeaders() });
-    if (handleAuthFailure(response)) return null;
+    // [] y no null: quien llama hace orders.length / ordersData.reduce(...)
+    // sobre lo que devolvamos (AdminDirectory.jsx, AdminDashboard.jsx). Un
+    // null ahí revienta el render en vez de degradar.
+    if (handleAuthFailure(response)) return [];
     if (!response.ok) throw new Error('Error al obtener órdenes');
     return await response.json();
   } catch (error) {

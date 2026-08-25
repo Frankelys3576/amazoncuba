@@ -134,6 +134,64 @@ describe('OrdersQueryAuthGuard', () => {
     ).resolves.toBe(true);
   });
 
+  it('con query.storeId y token de ADMINISTRADOR, resuelve true sin buscar tienda', async () => {
+    // El administrador no tiene fila en `stores`: si la rama de storeId
+    // exigiera vendedor, el panel de administración se llevaría un 403 al
+    // pulsar "ver pedidos" de una tienda.
+    const user = { id: 'admin-u1', app_metadata: { role: 'admin' } };
+    const supabaseService = {
+      client: {
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }) },
+      },
+    };
+    const prisma = { store: { findUnique: jest.fn() } };
+    const adminGuard = { canActivate: jest.fn() };
+
+    const guard = new OrdersQueryAuthGuard(
+      supabaseService as never,
+      prisma as never,
+      adminGuard as never,
+    );
+
+    const request: Record<string, unknown> = {
+      query: { storeId: 'cualquier-tienda' },
+      headers: { authorization: 'Bearer t' },
+    };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+
+    expect(prisma.store.findUnique).not.toHaveBeenCalled();
+    expect(request.admin).toBe(user);
+  });
+
+  it('con query.storeId, token válido y SIN tienda, rechaza con ForbiddenException', async () => {
+    const user = { id: 'u9' };
+    const supabaseService = {
+      client: {
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }) },
+      },
+    };
+    const prisma = { store: { findUnique: jest.fn().mockResolvedValue(null) } };
+    const adminGuard = { canActivate: jest.fn() };
+
+    const guard = new OrdersQueryAuthGuard(
+      supabaseService as never,
+      prisma as never,
+      adminGuard as never,
+    );
+
+    await expect(
+      guard.canActivate(
+        contextFor({
+          query: { storeId: 's1' },
+          headers: { authorization: 'Bearer t' },
+        }),
+      ),
+    ).rejects.toThrow(
+      new ForbiddenException('No se encontró una tienda asociada a este usuario'),
+    );
+  });
+
   describe('sin storeId ni ids, cae en la comprobación de admin', () => {
     it('token no admin: propaga el ForbiddenException de AdminGuard', async () => {
       const supabaseService = { client: { auth: { getUser: jest.fn() } } };

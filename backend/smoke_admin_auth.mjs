@@ -103,6 +103,12 @@ check(await call('GET', '/api/users', { token: adminToken }) === 200,
   'GET /api/users responde con token de administrador válido');
 check(await call('GET', '/api/orders', { token: adminToken }) === 200,
   'GET /api/orders responde con token de administrador válido');
+// El panel de administración pide los pedidos de UNA tienda al pulsar "ver
+// pedidos". La rama de ?storeId= exigía sesión de vendedor, y el
+// administrador no tiene fila en `stores`: respondía 403, el panel lo tomaba
+// por sesión muerta y cerraba la sesión en cada clic.
+check(await call('GET', `/api/orders?storeId=${FAKE}`, { token: adminToken }) === 200,
+  'GET /api/orders?storeId= responde 200 con token de administrador');
 
 if (MODE === 'local') {
   console.log('\n-- autoascenso: escribir tu propio user_metadata no debe conceder nada --');
@@ -210,6 +216,12 @@ if (MODE === 'local') {
       'el vendedor ve los pedidos de SU tienda');
     check(await call('GET', `/api/orders?storeId=${FAKE}`, { token: sellerToken }) === 403,
       'el vendedor NO ve los pedidos de otra tienda');
+    // La misma tienda REAL, con el token del administrador: 200. Junto a la
+    // línea de arriba fija las dos mitades de la corrección: el
+    // administrador entra en cualquier tienda, el vendedor sigue encerrado
+    // en la suya.
+    check(await call('GET', `/api/orders?storeId=${seller.storeId}`, { token: adminToken }) === 200,
+      'el administrador ve los pedidos de una tienda real que no es suya');
     check(await call('GET', `/api/stores/${seller.storeId}/stats`, { token: sellerToken }) === 200,
       'el vendedor ve las estadísticas de SU tienda');
     check(await call('GET', `/api/stores/${FAKE}/stats`, { token: sellerToken }) === 403,

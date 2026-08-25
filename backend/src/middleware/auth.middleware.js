@@ -96,28 +96,104 @@ const authenticateAdmin = async (req, res, next) => {
   }
 };
 
+// Resuelve QUIÉN es el llamante sin tocar `res`.
+//
+// authenticateSeller y authenticateAdmin son middlewares: en cuanto algo no
+// cuadra, RESPONDEN. Eso impide componerlos ("vale el vendedor dueño de la
+// tienda O un administrador"), porque el primero en fallar cierra la
+// respuesta y el segundo ya no puede decidir nada. Este helper sólo mira la
+// credencial y describe al llamante; quien lo llama decide y envía la única
+// respuesta final.
+//
+// Devuelve una de estas formas:
+//   { kind: 'anonymous', error }        sin credencial válida (401)
+//   { kind: 'admin',  user }            app_metadata.role === 'admin'
+//   { kind: 'seller', user, store }     autenticado y con tienda propia
+//   { kind: 'user',   user }            autenticado, ni admin ni con tienda
+//
+// El motivo del rechazo viaja en `error` en vez de devolver null a secas para
+// no perder la distinción entre "falta la cabecera" y "el token no vale":
+// son dos 401 con mensajes distintos que el panel ya mostraba.
+const resolveOrdersCaller = async (req) => {
+  const token = extractBearerToken(req.headers.authorization);
+  if (!token) {
+    return { kind: 'anonymous', error: 'Token no proporcionado' };
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+  if (authError || !user) {
+    return { kind: 'anonymous', error: 'Token inválido o expirado' };
+  }
+
+  // El rol se mira antes que la tienda: un administrador que además tuviera
+  // tienda sigue siendo administrador aquí.
+  if (user.app_metadata && user.app_metadata.role === 'admin') {
+    return { kind: 'admin', user };
+  }
+
+  const { data: store } = await supabase
+    .from('stores')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (store) {
+    return { kind: 'seller', user, store };
+  }
+
+  return { kind: 'user', user };
+};
+
 // Autorización de GET /api/orders. La ruta tiene tres llamantes legítimos y
 // cada uno merece una comprobación distinta:
 //
 //   ?ids=...     el cliente consultando "mis pedidos". Conocer los ids ES la
 //                credencial. OJO: sólo es seguro con ids UUID v7; mientras los
 //                ids sean enteros consecutivos se pueden enumerar.
-//   ?storeId=... el panel del vendedor. Exige sesión de vendedor Y que la
-//                tienda consultada sea la suya.
+//   ?storeId=... el panel del vendedor Y el panel de administración. Exige
+//                sesión: o la del vendedor dueño de ESA tienda, o la de un
+//                administrador (que puede consultar cualquiera). Un vendedor
+//                sigue sin poder leer los pedidos de otra tienda.
 //   sin filtro   devuelve la tabla completa con nombre, correo, teléfono y
 //                dirección de cada cliente. Sólo administración.
-const authorizeOrdersQuery = (req, res, next) => {
+//
+// La rama de ?storeId= exigía sesión de VENDEDOR y nada más, así que el panel
+// de administración —que manda su propio token— recibía un 403 al pulsar "ver
+// pedidos" de una tienda: el administrador no tiene fila en `stores`.
+const authorizeOrdersQuery = async (req, res, next) => {
   const { storeId, ids } = req.query;
 
   if (ids) return next();
 
   if (storeId) {
-    return authenticateSeller(req, res, () => {
-      if (String(req.store.id) !== String(storeId)) {
+    try {
+      const caller = await resolveOrdersCaller(req);
+
+      if (caller.kind === 'anonymous') {
+        return res.status(401).json({ error: caller.error });
+      }
+
+      if (caller.kind === 'admin') {
+        req.admin = caller.user;
+        return next();
+      }
+
+      if (caller.kind !== 'seller') {
+        return res.status(403).json({ error: 'No se encontró una tienda asociada a este usuario' });
+      }
+
+      if (String(caller.store.id) !== String(storeId)) {
         return res.status(403).json({ error: 'No tienes permiso sobre esta tienda' });
       }
-      next();
-    });
+
+      req.user = caller.user;
+      req.store = caller.store;
+      return next();
+    } catch (error) {
+      console.error('Error in authorizeOrdersQuery:', error.message);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+    }
   }
 
   return authenticateAdmin(req, res, next);
@@ -125,6 +201,7 @@ const authorizeOrdersQuery = (req, res, next) => {
 
 module.exports = {
   extractBearerToken,
+  resolveOrdersCaller,
   authenticateSeller,
   requireStoreOwnership,
   authenticateAdmin,
