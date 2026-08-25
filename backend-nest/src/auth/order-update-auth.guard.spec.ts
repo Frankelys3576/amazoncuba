@@ -1,4 +1,4 @@
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common';
 import { OrderUpdateAuthGuard } from './order-update-auth.guard';
 import { AdminGuard } from './admin.guard';
@@ -87,13 +87,13 @@ describe('OrderUpdateAuthGuard', () => {
     const request: Record<string, unknown> = {
       headers: { authorization: 'Bearer t' },
       body: { status: 'shipped' },
-      params: { id: 'order-1' },
+      params: { id: '33333333-3333-3333-3333-333333333333' },
     };
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
 
     expect(prisma.orderItem.findFirst).toHaveBeenCalledWith({
-      where: { order_id: 'order-1', product: { store_id: 'store-own' } },
+      where: { order_id: '33333333-3333-3333-3333-333333333333', product: { store_id: 'store-own' } },
     });
     expect(request.user).toBe(user);
     expect(request.store).toBe(store);
@@ -124,7 +124,7 @@ describe('OrderUpdateAuthGuard', () => {
         contextFor({
           headers: { authorization: 'Bearer t' },
           body: { status: 'shipped' },
-          params: { id: 'order-ajeno' },
+          params: { id: '33333333-3333-3333-3333-333333333333' },
         }),
       ),
     ).rejects.toThrow(
@@ -185,16 +185,55 @@ describe('OrderUpdateAuthGuard', () => {
       adminGuard as never,
     );
 
-    const context = contextFor({
+    const request: Record<string, unknown> = {
       headers: { authorization: 'Bearer t' },
       body: { status: 'pending' },
       params: { id: 'order-1' },
-    });
+    };
 
-    await expect(guard.canActivate(context)).resolves.toBe(true);
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
 
-    expect(adminGuard.canActivate).toHaveBeenCalledWith(context);
+    // Un solo getUser: el rol ya se conoce desde resolveCaller, así que no
+    // debe delegarse en AdminGuard (eso repetiría la llamada a Supabase).
+    expect(adminGuard.canActivate).not.toHaveBeenCalled();
+    expect(supabaseService.client.auth.getUser).toHaveBeenCalledTimes(1);
+    expect(request.admin).toBe(user);
     expect(prisma.store.findUnique).not.toHaveBeenCalled();
+    expect(prisma.orderItem.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('vendedor: rechaza un id de pedido malformado con 400 antes de consultar la propiedad', async () => {
+    const user = { id: 'u1' };
+    const store = { id: 'store-own', user_id: 'u1' };
+    const supabaseService = {
+      client: {
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }) },
+      },
+    };
+    const prisma = {
+      store: { findUnique: jest.fn().mockResolvedValue(store) },
+      orderItem: { findFirst: jest.fn() },
+    };
+    const adminGuard = { canActivate: jest.fn() };
+
+    const guard = new OrderUpdateAuthGuard(
+      supabaseService as never,
+      prisma as never,
+      adminGuard as never,
+    );
+
+    await expect(
+      guard.canActivate(
+        contextFor({
+          headers: { authorization: 'Bearer t' },
+          body: { status: 'shipped' },
+          params: { id: 'not-a-uuid' },
+        }),
+      ),
+    ).rejects.toThrow(
+      new BadRequestException('El identificador debe ser un UUID válido'),
+    );
+
     expect(prisma.orderItem.findFirst).not.toHaveBeenCalled();
   });
 

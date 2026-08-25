@@ -179,6 +179,7 @@ const updateOrder = async (req, res) => {
 };
 
 module.exports = {
+  UUID,
   ORDER_STATUSES,
   getOrders,
   createOrder,

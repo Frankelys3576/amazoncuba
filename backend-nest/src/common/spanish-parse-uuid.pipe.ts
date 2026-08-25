@@ -13,7 +13,7 @@ import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 // replaces SpanishParseIntPipe: an integer string like '42' — a valid id
 // under the old schema — must now be rejected here with a clean 400 rather
 // than reaching Prisma and failing there with a 500.
-const UUID =
+export const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()

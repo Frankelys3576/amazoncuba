@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
@@ -12,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdminGuard } from './admin.guard';
 import { RequestWithStore } from './request-with-store.interface';
 import { extractBearerToken } from './bearer-token.util';
+import { UUID } from '../common/spanish-parse-uuid.pipe';
 
 // Quién resulta ser el llamante. Espejo de resolveOrdersCaller en
 // backend/src/middleware/auth.middleware.js.
@@ -68,8 +70,14 @@ export class OrderUpdateAuthGuard implements CanActivate {
       throw new UnauthorizedException(caller.error);
     }
 
+    // El vendedor ya se resolvió más arriba (un solo getUser); delegar aquí
+    // en AdminGuard repetiría esa llamada a Supabase para volver a derivar
+    // el mismo rol. A diferencia de OrdersQueryAuthGuard (cuya rama sin
+    // filtro nunca resuelve identidad antes de delegar), aquí sí la
+    // tenemos: basta con fijar request.admin.
     if (caller.kind === 'admin') {
-      return this.adminGuard.canActivate(context);
+      request.admin = caller.user;
+      return true;
     }
 
     if (caller.kind !== 'seller') {
@@ -85,6 +93,15 @@ export class OrderUpdateAuthGuard implements CanActivate {
     }
 
     const orderId = (request.params as { id?: string })?.id;
+
+    // El vendedor sí consulta la base de datos (orderItem.findFirst), así
+    // que un id malformado debe cortarse aquí con el mismo 400 que usa
+    // SpanishParseUuidPipe, en vez de llegar a Prisma y convertirse en un
+    // 500 antes de que el pipe del controlador tenga ocasión de rechazarlo.
+    if (!orderId || !UUID.test(orderId)) {
+      throw new BadRequestException('El identificador debe ser un UUID válido');
+    }
+
     const ownedItem = await this.prisma.orderItem.findFirst({
       where: {
         order_id: orderId,

@@ -32,6 +32,7 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
   let orderItemFindMany: jest.Mock;
   let orderItemFindFirst: jest.Mock;
   let orderFindMany: jest.Mock;
+  let orderUpdate: jest.Mock;
   let storeFindUnique: jest.Mock;
 
   beforeEach(async () => {
@@ -66,6 +67,14 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
     orderItemFindMany = jest.fn().mockResolvedValue([]);
     orderItemFindFirst = jest.fn().mockResolvedValue(null);
     orderFindMany = jest.fn().mockResolvedValue([]);
+    // Stubbed so a guard-removal regression fails for the real reason: an
+    // unauthorized write reaching the DB and succeeding (200), not an
+    // incidental 500 from an unstubbed Prisma call.
+    orderUpdate = jest.fn().mockResolvedValue({
+      id: VALID_ORDER_ID,
+      status: 'shipped',
+      total: 10,
+    });
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -74,7 +83,7 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
       .useValue({
         store: { findUnique: storeFindUnique },
         orderItem: { findMany: orderItemFindMany, findFirst: orderItemFindFirst },
-        order: { findMany: orderFindMany },
+        order: { findMany: orderFindMany, update: orderUpdate },
       })
       .overrideProvider(SupabaseService)
       .useValue({ client: { auth: { getUser } } })

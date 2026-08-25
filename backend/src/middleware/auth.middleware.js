@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { UUID } = require('../controllers/order.controller');
 
 // Extrae el token de una cabecera Authorization, o devuelve null si la
 // cabecera falta o está malformada.
@@ -255,6 +256,13 @@ const authorizeOrderUpdate = async (req, res, next) => {
 
     if (!SELLER_ORDER_STATUSES.includes(status)) {
       return res.status(403).json({ error: 'No tienes permiso para cambiar este pedido' });
+    }
+
+    // El vendedor sí consulta la base de datos (sellerOwnsOrder), así que un
+    // id malformado debe cortarse aquí con el mismo 400 que usa el
+    // controlador, en vez de llegar a Postgres y convertirse en un 500.
+    if (!UUID.test(req.params.id)) {
+      return res.status(400).json({ error: 'El identificador debe ser un UUID válido' });
     }
 
     if (!(await sellerOwnsOrder(caller.store.id, req.params.id))) {
