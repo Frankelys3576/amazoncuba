@@ -259,6 +259,87 @@ console.log('\n-- listado de tiendas --');
 }
 
 // ===========================================================================
+// Tienda por id y por slug (GET /api/stores/:id)
+// ===========================================================================
+//
+// I5: el hallazgo Critical de la tarea 3 -- esta ruta no filtraba por estado y
+// devolvía la fila entera -- sólo estaba cubierto por pruebas e2e de NestJS
+// con todo simulado, y NestJS no es el backend que sirve el tráfico. I1 es la
+// prueba de que eso no basta: con .single(), un id/slug INEXISTENTE devolvía
+// 500 mientras uno pendiente devolvía 404, así que la ruta confirmaba qué
+// tiendas existen -- justo la propiedad por la que aquí se eligió 404 en vez
+// de 403. Ninguna prueba simulada lo vio; estas comprobaciones sí lo habrían
+// visto (la del slug inexistente habría dado 500 en vez de 404).
+console.log('\n-- tienda por id y por slug --');
+
+{
+  const { json: adminStores } = await call('GET', '/api/stores', { token: admin.token });
+  const pending = (Array.isArray(adminStores) ? adminStores : []).find((s) => s.status === 'pending');
+  check(Boolean(pending?.id), 'hay una tienda pendiente en el listado de administración para probar');
+
+  const { json: publicStores } = await call('GET', '/api/stores');
+  const approved = Array.isArray(publicStores) ? publicStores[0] : null;
+  check(Boolean(approved?.id), 'hay una tienda aprobada en el listado público para probar');
+
+  if (pending?.id) {
+    check((await call('GET', `/api/stores/${pending.id}`)).status === 404,
+      'GET /api/stores/<id de tienda pendiente> (anónimo) responde 404');
+    check(Boolean(pending.slug) &&
+      (await call('GET', `/api/stores/${pending.slug}`)).status === 404,
+      'GET /api/stores/<slug de tienda pendiente> (anónimo) responde 404');
+    check((await call('GET', `/api/stores/${pending.id}`, { token: admin.token })).status === 200,
+      'GET /api/stores/<id de tienda pendiente> con token de administrador responde 200');
+  }
+
+  // I1: una tienda oculta y una que no existe tienen que ser indistinguibles.
+  // Con .single() esto era un 500 y el oráculo quedaba abierto.
+  check((await call('GET', '/api/stores/no-existe-jamas')).status === 404,
+    'GET /api/stores/<slug inexistente> responde 404, no 500 (mismo cuerpo que una tienda oculta)');
+  check((await call('GET', `/api/stores/${FAKE}`)).status === 404,
+    'GET /api/stores/<uuid inexistente> responde 404, no 500');
+
+  if (approved?.id) {
+    const { status: approvedStatus, json: approvedStore } = await call('GET', `/api/stores/${approved.id}`);
+    check(approvedStatus === 200, 'GET /api/stores/<id de tienda aprobada> (anónimo) responde 200');
+    check(Boolean(approvedStore) &&
+      !Object.prototype.hasOwnProperty.call(approvedStore, 'user_id') &&
+      !Object.keys(approvedStore).some((k) => k.startsWith('legacy_')),
+      'GET /api/stores/<id de tienda aprobada>: la respuesta no trae user_id ni ninguna clave legacy_');
+    check(Boolean(approvedStore?.zelle_info) &&
+      Object.keys(approvedStore.zelle_info).every((k) => ['name', 'email_phone', 'description'].includes(k)),
+      'GET /api/stores/<id de tienda aprobada>: zelle_info trae sólo name/email_phone/description');
+    check(Boolean(approved.slug) &&
+      (await call('GET', `/api/stores/${approved.slug}`)).status === 200,
+      'GET /api/stores/<slug de tienda aprobada> (anónimo) responde 200');
+  }
+}
+
+if (MODE === 'local') {
+  console.log('\n-- tienda pendiente vista por su propio dueño --');
+
+  // El vendedor tiene que poder ver SU tienda mientras espera aprobación
+  // (es lo que ve seller-frontend justo después de registrarse). Se pone su
+  // tienda en 'pending' con el token de administrador, se comprueba, y se
+  // restaura a 'approved'. Escribe, así que sólo en modo local.
+  const toPending = await call('PUT', `/api/stores/${seller.storeId}/status`, {
+    token: admin.token, body: { status: 'pending' },
+  });
+  check(toPending.status === 200, 'el administrador pone la tienda del vendedor en "pending"');
+
+  const { status: ownerStatus, json: ownerStore } = await call('GET', `/api/stores/${seller.storeId}`, { token: seller.token });
+  check(ownerStatus === 200 && ownerStore?.id === seller.storeId,
+    'GET /api/stores/<id> de una tienda PENDIENTE, con el token de SU dueño, responde 200');
+  check((await call('GET', `/api/stores/${seller.storeId}`)).status === 404,
+    'la misma tienda pendiente, sin credencial, responde 404');
+
+  const restored = await call('PUT', `/api/stores/${seller.storeId}/status`, {
+    token: admin.token, body: { status: 'approved' },
+  });
+  check(restored.status === 200 && restored.json?.status === 'approved',
+    'la tienda del vendedor vuelve a "approved"');
+}
+
+// ===========================================================================
 // Límite de tasa y validación de reseñas (POST /api/products/:id/reviews)
 // ===========================================================================
 if (MODE === 'local') {
