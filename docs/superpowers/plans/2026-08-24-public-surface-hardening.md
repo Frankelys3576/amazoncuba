@@ -17,7 +17,7 @@
 - All user-facing strings and API error messages in **Spanish**, matching surrounding style.
 - **No database schema change.** Coupling these fixes to a migration is what this batch exists to avoid; migration 002 is still unapplied.
 - `backend/` has **no test runner** (`npm test` is a stub that exits 1). Verification is `backend/smoke_public_surface.mjs` against a local Supabase stack, plus reading. Never claim a test run that did not happen.
-- `backend-nest/` must end green on all three: `npx tsc --noEmit` (0 errors), `npm test`, `npm run test:e2e`. Report real numbers. Baseline entering this plan: **148 unit, 29 e2e**.
+- `backend-nest/` must end green on all three: `npx tsc --noEmit` (0 errors), `npm test`, `npm run test:e2e`. Report real numbers. Baseline entering this plan: **155 unit, 38 e2e**.
 - **Never** connect to, read from, or write to production. All verification runs against a local Supabase stack (`npx supabase@2.115.0 start`). Docker is available.
 - Never commit a key, token, password or `.env`. `backend/` has no `.env` in this worktree and must not get one.
 - The order status allowlist is exactly **`pending`, `shipped`, `delivered`** — the only three values the codebase uses.
