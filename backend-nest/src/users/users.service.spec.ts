@@ -1,4 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
@@ -6,6 +10,21 @@ describe('UsersService', () => {
     ({
       client: { auth: { admin: overrides } },
     }) as any;
+
+  // auth.admin.getUserById stubs: una cuenta normal, la cuenta de
+  // administrador, y un id que no existe.
+  const plainAccount = jest.fn().mockResolvedValue({
+    data: { user: { id: 'u1', app_metadata: { role: 'seller' } } },
+    error: null,
+  });
+  const adminAccount = jest.fn().mockResolvedValue({
+    data: { user: { id: 'admin-1', app_metadata: { role: 'admin' } } },
+    error: null,
+  });
+  const missingAccount = jest.fn().mockResolvedValue({
+    data: { user: null },
+    error: { message: 'User not found' },
+  });
 
   it('findAll maps Supabase auth users into the API shape', async () => {
     const supabase = makeSupabase({
@@ -54,7 +73,7 @@ describe('UsersService', () => {
     const updateUserById = jest
       .fn()
       .mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
-    const supabase = makeSupabase({ updateUserById });
+    const supabase = makeSupabase({ updateUserById, getUserById: plainAccount });
     const service = new UsersService(supabase);
 
     await service.update('u1', {
@@ -71,7 +90,7 @@ describe('UsersService', () => {
     const updateUserById = jest
       .fn()
       .mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
-    const supabase = makeSupabase({ updateUserById });
+    const supabase = makeSupabase({ updateUserById, getUserById: plainAccount });
     const service = new UsersService(supabase);
 
     await service.update('u1', {
@@ -93,5 +112,79 @@ describe('UsersService', () => {
       service.update('u1', { email: null as any, password: null as any }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(updateUserById).not.toHaveBeenCalled();
+  });
+
+  // Bloqueo de autoexclusión. Sólo existe UNA cuenta de administrador y no
+  // hay ninguna otra capaz de devolver el acceso, así que las rutas de
+  // usuarios no pueden tocarla. Cada uno de estos casos falla si se quita la
+  // llamada a rejectIfAdminAccount: no sólo por el código de error, también
+  // porque comprueban que la operación destructiva NUNCA llega a Supabase.
+  describe('self-lockout guard: la cuenta de administrador es intocable', () => {
+    it('remove sobre la cuenta de administrador lanza 403 y no llama a deleteUser', async () => {
+      const deleteUser = jest.fn();
+      const supabase = makeSupabase({ deleteUser, getUserById: adminAccount });
+      const service = new UsersService(supabase);
+
+      await expect(service.remove('admin-1')).rejects.toThrow(
+        new ForbiddenException(
+          'No se puede modificar ni eliminar una cuenta de administrador',
+        ),
+      );
+      expect(deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('update sobre la cuenta de administrador lanza 403 y no llama a updateUserById', async () => {
+      const updateUserById = jest.fn();
+      const supabase = makeSupabase({
+        updateUserById,
+        getUserById: adminAccount,
+      });
+      const service = new UsersService(supabase);
+
+      await expect(
+        service.update('admin-1', { password: 'otra-contrasena' }),
+      ).rejects.toThrow(
+        new ForbiddenException(
+          'No se puede modificar ni eliminar una cuenta de administrador',
+        ),
+      );
+      expect(updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('remove sobre un id inexistente lanza 404, no 200', async () => {
+      const deleteUser = jest.fn();
+      const supabase = makeSupabase({ deleteUser, getUserById: missingAccount });
+      const service = new UsersService(supabase);
+
+      await expect(service.remove('no-existe')).rejects.toThrow(
+        new NotFoundException('Usuario no encontrado'),
+      );
+      expect(deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('update sobre un id inexistente lanza 404', async () => {
+      const updateUserById = jest.fn();
+      const supabase = makeSupabase({
+        updateUserById,
+        getUserById: missingAccount,
+      });
+      const service = new UsersService(supabase);
+
+      await expect(
+        service.update('no-existe', { email: 'x@cubaamazon.com' }),
+      ).rejects.toThrow(new NotFoundException('Usuario no encontrado'));
+      expect(updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('remove sobre una cuenta normal sigue borrando', async () => {
+      const deleteUser = jest.fn().mockResolvedValue({ error: null });
+      const supabase = makeSupabase({ deleteUser, getUserById: plainAccount });
+      const service = new UsersService(supabase);
+
+      await expect(service.remove('u1')).resolves.toEqual({
+        message: 'Usuario eliminado correctamente',
+      });
+      expect(deleteUser).toHaveBeenCalledWith('u1');
+    });
   });
 });
