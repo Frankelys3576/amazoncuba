@@ -363,10 +363,34 @@ const updateZelleInfo = async (req, res) => {
   try {
     const { id } = req.params;
     const { accepts_zelle, zelle_info } = req.body;
-    
+
+    const updates = {};
+    // Sólo se toca accepts_zelle si el llamante lo mandó, para que un
+    // payload que sólo trae zelle_info no anule la columna.
+    if (accepts_zelle !== undefined) updates.accepts_zelle = accepts_zelle;
+
+    // zelle_info es UN blob JSON compartido por dos cosas sin relación: el
+    // beneficiario de Zelle (name/email_phone/description) y la ubicación de
+    // la tienda (province/municipality/address/lat/lng/price_per_night/
+    // gallery). El formulario de Zelle del admin (admin-frontend/src/
+    // AdminStores.jsx) sólo manda las tres claves del beneficiario, así que
+    // escribir zelle_info tal cual encima de la columna -- como hacía esto
+    // antes -- borraba en silencio el pin del mapa, la dirección y las fotos
+    // de un hostal en cada guardado de Zelle desde el admin. Mismo patrón
+    // que updateStoreProfile ya usa para este blob: se lee el actual y se
+    // mezcla en el nivel superior, así `name: ''` sigue borrando el
+    // beneficiario (el formulario lo hace a propósito) mientras un `lat`
+    // ausente queda intacto. Si zelle_info no viene en absoluto, el blob no
+    // se toca.
+    if (zelle_info !== undefined) {
+      const { data: existingStore } = await supabase.from('stores').select('zelle_info').eq('id', id).single();
+      const currentZelleInfo = existingStore?.zelle_info || {};
+      updates.zelle_info = { ...currentZelleInfo, ...zelle_info };
+    }
+
     const { data, error } = await supabase
       .from('stores')
-      .update({ accepts_zelle, zelle_info })
+      .update(updates)
       .eq('id', id)
       .select();
 

@@ -107,9 +107,33 @@ export class StoresService {
 
   async updateZelleInfo(id: string, dto: UpdateZelleInfoDto) {
     try {
+      const updates: Record<string, unknown> = {};
+      // Only touch accepts_zelle when the caller actually sent it, so an
+      // admin payload that only carries zelle_info can't null the column.
+      if (dto.accepts_zelle !== undefined) {
+        updates.accepts_zelle = dto.accepts_zelle;
+      }
+      // zelle_info is a single JSON blob shared by two unrelated things: the
+      // Zelle payee (name/email_phone/description) and a store's location
+      // (province/municipality/address/lat/lng/price_per_night/gallery).
+      // admin-frontend's Zelle form (AdminStores.jsx) only ever sends the
+      // three payee fields, so writing dto.zelle_info straight over the
+      // column — as this used to do — silently deleted a hostal's map pin,
+      // address and photos on every admin Zelle save. Mirrors the merge
+      // updateProfile already does for the same blob (see zelleFields
+      // above): read the current blob, shallow-merge the incoming top-level
+      // keys onto it, so `name: ''` still clears the payee (the admin form
+      // does that deliberately) while an omitted `lat` is left untouched.
+      // When zelle_info is absent entirely, the blob is not touched at all.
+      if (dto.zelle_info !== undefined) {
+        const existing = await this.prisma.store.findUnique({ where: { id } });
+        const current = (existing?.zelle_info as Record<string, unknown>) || {};
+        updates.zelle_info = { ...current, ...dto.zelle_info };
+      }
+
       const store = await this.prisma.store.update({
         where: { id },
-        data: dto as Prisma.StoreUpdateInput,
+        data: updates,
       });
       // Finding 2 (Task 11 review, ruled in scope for this Task 10 method
       // too): this intentionally returns the raw row, not formatStore(store)

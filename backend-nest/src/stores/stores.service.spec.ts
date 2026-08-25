@@ -337,6 +337,123 @@ describe('StoresService', () => {
 
         await expect(service.updateZelleInfo(STORE_ID, { accepts_zelle: true })).rejects.toBe(dbError);
       });
+
+      // Regression coverage for the zelle_info data-loss bug: zelle_info is
+      // one JSON blob shared by the Zelle payee (name/email_phone/
+      // description) and a store's location (province/municipality/address/
+      // lat/lng/price_per_night/gallery). admin-frontend's Zelle form only
+      // ever sends the three payee fields, so writing the incoming
+      // zelle_info straight over the column deleted a hostal's map pin,
+      // address and photos on every admin save. Mirrors updateProfile's
+      // existing merge for the same blob.
+      it('a payee-only zelle_info payload leaves the existing location keys intact', async () => {
+        const existing = {
+          id: STORE_ID,
+          zelle_info: {
+            name: 'Old Name',
+            email_phone: 'old@example.com',
+            province: 'La Habana',
+            municipality: 'Playa',
+            address: 'Calle 1',
+            lat: 23.1,
+            lng: -82.3,
+            price_per_night: 40,
+            gallery: ['a.png', 'b.png'],
+          },
+        };
+        const findUnique = jest.fn().mockResolvedValue(existing);
+        const update = jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({ id: STORE_ID, ...data }),
+        );
+        const prisma = makePrisma({ findUnique, update });
+        const service = new StoresService(prisma, {} as any);
+
+        const result = await service.updateZelleInfo(STORE_ID, {
+          zelle_info: { name: 'New Name', email_phone: 'new@example.com', description: 'desc' },
+        });
+
+        expect(update).toHaveBeenCalledWith({
+          where: { id: STORE_ID },
+          data: {
+            zelle_info: {
+              name: 'New Name',
+              email_phone: 'new@example.com',
+              description: 'desc',
+              province: 'La Habana',
+              municipality: 'Playa',
+              address: 'Calle 1',
+              lat: 23.1,
+              lng: -82.3,
+              price_per_night: 40,
+              gallery: ['a.png', 'b.png'],
+            },
+          },
+        });
+        expect(result.zelle_info).toMatchObject({
+          province: 'La Habana',
+          municipality: 'Playa',
+          gallery: ['a.png', 'b.png'],
+        });
+      });
+
+      it('sending an empty payee name still clears it (deliberate) while leaving location keys untouched', async () => {
+        const existing = {
+          id: STORE_ID,
+          zelle_info: { name: 'Old Name', province: 'La Habana', gallery: ['a.png'] },
+        };
+        const findUnique = jest.fn().mockResolvedValue(existing);
+        const update = jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({ id: STORE_ID, ...data }),
+        );
+        const prisma = makePrisma({ findUnique, update });
+        const service = new StoresService(prisma, {} as any);
+
+        await service.updateZelleInfo(STORE_ID, {
+          zelle_info: { name: '', email_phone: '', description: '' },
+        });
+
+        expect(update).toHaveBeenCalledWith({
+          where: { id: STORE_ID },
+          data: {
+            zelle_info: {
+              name: '',
+              email_phone: '',
+              description: '',
+              province: 'La Habana',
+              gallery: ['a.png'],
+            },
+          },
+        });
+      });
+
+      it('an absent zelle_info leaves the whole blob untouched (no findUnique, no zelle_info in the update)', async () => {
+        const findUnique = jest.fn();
+        const update = jest.fn().mockResolvedValue({ id: STORE_ID, accepts_zelle: true });
+        const prisma = makePrisma({ findUnique, update });
+        const service = new StoresService(prisma, {} as any);
+
+        await service.updateZelleInfo(STORE_ID, { accepts_zelle: true });
+
+        expect(findUnique).not.toHaveBeenCalled();
+        expect(update).toHaveBeenCalledWith({
+          where: { id: STORE_ID },
+          data: { accepts_zelle: true },
+        });
+      });
+
+      it('an absent accepts_zelle does not null the column', async () => {
+        const findUnique = jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: { province: 'La Habana' } });
+        const update = jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({ id: STORE_ID, ...data }),
+        );
+        const prisma = makePrisma({ findUnique, update });
+        const service = new StoresService(prisma, {} as any);
+
+        await service.updateZelleInfo(STORE_ID, { zelle_info: { name: 'X' } });
+
+        const callArgs = update.mock.calls[0][0];
+        expect(callArgs.data).not.toHaveProperty('accepts_zelle');
+      });
     });
   });
 

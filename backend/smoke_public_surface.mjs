@@ -402,6 +402,68 @@ if (MODE === 'local') {
 }
 
 // ===========================================================================
+// Fusión de zelle_info (PUT /api/stores/:id/zelle)
+// ===========================================================================
+if (MODE === 'local') {
+  console.log('\n-- fusión de zelle_info: un guardado sólo del beneficiario no borra la ubicación --');
+
+  // zelle_info es UN blob compartido por el beneficiario de Zelle
+  // (name/email_phone/description) y la ubicación de la tienda
+  // (province/municipality/address/lat/lng/price_per_night/gallery). El
+  // seed no trae beneficiario, así que primero se establece un blob
+  // COMPLETO por la propia API (no se asume que el fixture lo traiga), y
+  // luego se manda un PUT sólo-beneficiario -- exactamente lo que manda
+  // admin-frontend/src/AdminStores.jsx -- para comprobar que las claves de
+  // ubicación sobreviven.
+  const fullZelle = await call('PUT', `/api/stores/${seller.storeId}/zelle`, {
+    token: admin.token,
+    body: {
+      accepts_zelle: true,
+      zelle_info: {
+        name: 'Beneficiario Smoke',
+        email_phone: 'beneficiario-smoke@example.test',
+        description: 'Beneficiario de prueba',
+        province: 'La Habana',
+        municipality: 'Playa',
+        address: 'Calle Smoke 123',
+        lat: 23.12,
+        lng: -82.38,
+        price_per_night: 40,
+        gallery: ['https://example.test/smoke-1.png'],
+      },
+    },
+  });
+  check(fullZelle.status === 200, 'PUT /api/stores/:id/zelle con un blob completo (beneficiario + ubicación) responde 200');
+
+  const payeeOnly = await call('PUT', `/api/stores/${seller.storeId}/zelle`, {
+    token: admin.token,
+    body: {
+      accepts_zelle: true,
+      zelle_info: {
+        name: 'Beneficiario Smoke 2',
+        email_phone: 'beneficiario-smoke-2@example.test',
+        description: 'Beneficiario de prueba actualizado',
+      },
+    },
+  });
+  check(payeeOnly.status === 200, 'PUT /api/stores/:id/zelle sólo con el beneficiario (como manda AdminStores.jsx) responde 200');
+
+  const { status: detailsStatus, json: details } = await call('GET', `/api/stores/${seller.storeId}/admin-details`, { token: admin.token });
+  const blob = details?.store?.zelle_info || {};
+  check(detailsStatus === 200, 'GET /api/stores/:id/admin-details responde 200 tras el guardado sólo-beneficiario');
+  check(blob.name === 'Beneficiario Smoke 2' && blob.email_phone === 'beneficiario-smoke-2@example.test',
+    'el guardado sólo-beneficiario SÍ actualiza el beneficiario');
+  check(blob.province === 'La Habana' && blob.municipality === 'Playa' && blob.address === 'Calle Smoke 123',
+    'el guardado sólo-beneficiario NO borra province/municipality/address');
+  check(blob.lat === 23.12 && blob.lng === -82.38,
+    'el guardado sólo-beneficiario NO borra lat/lng');
+  check(blob.price_per_night === 40 || blob.price_per_night === '40',
+    'el guardado sólo-beneficiario NO borra price_per_night');
+  check(Array.isArray(blob.gallery) && blob.gallery.length === 1 && blob.gallery[0] === 'https://example.test/smoke-1.png',
+    'el guardado sólo-beneficiario NO borra gallery');
+}
+
+// ===========================================================================
 // Límite de tasa y validación de reseñas (POST /api/products/:id/reviews)
 // ===========================================================================
 if (MODE === 'local') {
