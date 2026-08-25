@@ -123,7 +123,14 @@ const getStoreById = async (req, res) => {
       query = query.eq('slug', id);
     }
     
-    const { data, error } = await query.single();
+    // maybeSingle, no single: con .single() PostgREST devuelve un ERROR
+    // cuando no hay filas, así que el `if (error) return 500` de abajo se
+    // disparaba antes que el `if (!data) return 404`, y un id/slug que no
+    // existe respondía 500 mientras uno pendiente respondía 404. Eso rompe
+    // justo la propiedad por la que aquí se eligió 404 en vez de 403: una
+    // tienda oculta tiene que ser indistinguible de una que no existe.
+    // (backend-nest ya respondía 404 en los dos casos.)
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       console.error('Supabase error fetching store:', error.message);
