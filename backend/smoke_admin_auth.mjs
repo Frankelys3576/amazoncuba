@@ -176,6 +176,32 @@ if (MODE === 'local') {
     check(updateStatus === 403, 'PUT /api/users/<id-de-administrador> con nueva contraseña responde 403 (bloqueo de auto-modificación)');
   }
 
+  console.log('\n-- cabecera "Authorization: Bearer" sin token DESPUÉS de iniciar sesión --');
+  // NO SIMPLIFIQUES ESTA COMPROBACIÓN QUITÁNDOLE LOS DOS LOGIN DE ARRIBA.
+  //
+  // El fallo que cubre es este: los dos backends construyen UN SOLO cliente
+  // de Supabase compartido y llaman a signInWithPassword sobre él, con lo que
+  // el cliente se queda con la sesión del último que inició sesión. Como el
+  // token se extraía con authHeader.split(' ')[1], una cabecera "Bearer" a
+  // secas daba undefined, y getUser(undefined) NO falla: recae en esa sesión
+  // guardada. Resultado con el fallo presente: 200 y la lista completa de
+  // usuarios, autenticado como el administrador.
+  //
+  // Por eso el ORDEN es la prueba entera:
+  //   1) inicia sesión el VENDEDOR    -> el cliente compartido guarda su sesión
+  //   2) inicia sesión el ADMINISTRADOR -> la sobreescribe con la de admin
+  //   3) "Authorization: Bearer" sin token -> con el fallo, 200 como admin
+  //
+  // Sin los dos login previos, o con el admin antes que el vendedor, la
+  // comprobación pasa AUNQUE el fallo esté presente (no habría sesión de
+  // administrador que heredar, sólo un 401 o un 403), y deja de valer nada.
+  // Está aquí abajo, y no arriba con el resto de rechazos, precisamente para
+  // controlar ese orden.
+  await login(process.env.SELLER_EMAIL, process.env.SELLER_PASSWORD);
+  await login(process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD);
+  check(await call('GET', '/api/users', { rawAuthHeader: 'Bearer' }) === 401,
+    'GET /api/users con "Authorization: Bearer" tras iniciar sesión vendedor y luego administrador responde 401, no 200');
+
   console.log('\n-- aislamiento de vendedor: pedidos y estadísticas de otra tienda --');
   if (!sellerToken || !seller.storeId) {
     check(false, 'no hay token/tienda de vendedor: no se puede probar el aislamiento de vendedor');

@@ -91,7 +91,26 @@ describe('Users admin routes (e2e) — real AdminGuard chain', () => {
       });
   });
 
-  it('3. GET /api/users with a non-admin (seller) token returns 403', () => {
+  it('3. GET /api/users with a bare "Bearer" (no token) returns 401', () => {
+    // authHeader.split(' ')[1] used to yield undefined here, which was then
+    // handed straight to getUser(). Against a real Supabase client that does
+    // not fail: it falls back to whatever session the shared client holds —
+    // the last user who logged in — which is the actual privilege escalation.
+    // The SupabaseService stub here cannot reproduce that fallback, so what
+    // this case pins down is the other half: over real HTTP, through the real
+    // guard chain, a bare "Bearer" is rejected with 401 before Supabase is
+    // consulted at all. The session fallback itself is covered by the ordered
+    // assertion in backend/smoke_admin_auth.mjs.
+    return request(app.getHttpServer())
+      .get('/api/users')
+      .set('Authorization', 'Bearer')
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.error).toBe('Token no proporcionado');
+      });
+  });
+
+  it('4. GET /api/users with a non-admin (seller) token returns 403', () => {
     return request(app.getHttpServer())
       .get('/api/users')
       .set('Authorization', `Bearer ${SELLER_TOKEN}`)
