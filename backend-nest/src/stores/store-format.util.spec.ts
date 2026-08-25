@@ -51,7 +51,7 @@ describe('formatStore', () => {
       };
 
       const formatted = formatStore(store as any);
-      expect(Object.keys(formatted.zelle_info).sort()).toEqual([
+      expect(Object.keys(formatted.zelle_info!).sort()).toEqual([
         'description',
         'email_phone',
         'name',
@@ -63,12 +63,15 @@ describe('formatStore', () => {
       });
     });
 
-    it('devuelve null en cada clave cuando no hay zelle_info', () => {
-      expect(formatStore({ id: 1, zelle_info: null } as any).zelle_info).toEqual({
-        name: null,
-        email_phone: null,
-        description: null,
-      });
+    it('devuelve null (no un objeto con las tres claves en null) cuando no hay beneficiario configurado', () => {
+      expect(formatStore({ id: 1, zelle_info: null } as any).zelle_info).toBeNull();
+      expect(formatStore({ id: 1, zelle_info: {} } as any).zelle_info).toBeNull();
+      expect(
+        formatStore({
+          id: 1,
+          zelle_info: { province: 'La Habana', gallery: ['a.png'] },
+        } as any).zelle_info,
+      ).toBeNull();
     });
   });
 

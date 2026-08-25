@@ -44,12 +44,13 @@ export type FormattedStore = {
   price_per_night: number | null;
   gallery: string[];
   // Sólo el beneficiario del pago, nunca el blob crudo. Espejo de
-  // formatStore en backend/src/controllers/store.controller.js.
+  // formatStore en backend/src/controllers/store.controller.js. null cuando
+  // no hay beneficiario configurado (ver más abajo).
   zelle_info: {
     name: string | null;
     email_phone: string | null;
     description: string | null;
-  };
+  } | null;
 };
 
 export function formatStore(store: Store): FormattedStore;
@@ -57,6 +58,8 @@ export function formatStore(store: null | undefined): null;
 export function formatStore(store: Store | null | undefined): FormattedStore | null {
   if (!store) return null;
   const info = (store.zelle_info as ZelleInfo) || {};
+  const hasZellePayee =
+    info.name != null || info.email_phone != null || info.description != null;
   return {
     id: store.id,
     name: store.name,
@@ -94,11 +97,16 @@ export function formatStore(store: Store | null | undefined): FormattedStore | n
     // y "Zelle (Correo/Tel)". Sin estas tres claves el bloque de
     // instrucciones de pago no se renderiza nunca, mientras accepts_zelle
     // sigue en true. Son datos que la tienda ya muestra a cualquier cliente
-    // anónimo, así que no son una fuga.
-    zelle_info: {
-      name: info.name ?? null,
-      email_phone: info.email_phone ?? null,
-      description: info.description ?? null,
-    },
+    // anónimo, así que no son una fuga. Si no hay beneficiario configurado
+    // (ninguna de las tres claves), se devuelve null en vez de un objeto con
+    // los tres campos en null: un objeto siempre-verdadero hacía que
+    // Checkout.jsx renderizara el bloque de pago vacío igualmente.
+    zelle_info: hasZellePayee
+      ? {
+          name: info.name ?? null,
+          email_phone: info.email_phone ?? null,
+          description: info.description ?? null,
+        }
+      : null,
   };
 }

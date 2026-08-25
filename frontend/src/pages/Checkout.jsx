@@ -315,7 +315,7 @@ const Checkout = () => {
                 </div>
               </label>
 
-              {acceptsZelle && storeZelleInfo && (
+              {acceptsZelle && storeZelleInfo?.name && (
                 <label className="payment-option" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: formData.paymentMethod === 'zelle' ? '2px solid #7445c6' : '1px solid #e2e8f0' }}>
                   <input 
                     type="radio" 
