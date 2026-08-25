@@ -15,6 +15,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { SpanishParseUuidPipe } from '../common/spanish-parse-uuid.pipe';
 import { OrdersQueryAuthGuard } from '../auth/orders-query-auth.guard';
+import { OrderUpdateAuthGuard } from '../auth/order-update-auth.guard';
 
 @Controller('api/orders')
 export class OrdersController {
@@ -35,6 +36,7 @@ export class OrdersController {
 
   // Express: bare res.json(...) = 200 (order.controller.js:122) = Nest default.
   @Put(':id')
+  @UseGuards(OrderUpdateAuthGuard)
   update(@Param('id', SpanishParseUuidPipe) id: string, @Body() dto: UpdateOrderDto) {
     return this.ordersService.update(id, dto.status);
   }

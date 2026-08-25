@@ -4,6 +4,12 @@ const supabase = require('../config/supabase');
 // getOrders (query ?ids=) y updateOrder (:id) validen exactamente igual.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Los tres únicos estados que usa la aplicación. Antes no se validaba nada:
+// updateOrder escribía la cadena que viniera en el cuerpo, así que el estado
+// de un pedido podía quedar en cualquier texto arbitrario, que luego se
+// mostraba en los paneles del vendedor y del administrador.
+const ORDER_STATUSES = ['pending', 'shipped', 'delivered'];
+
 const getOrders = async (req, res) => {
   try {
     const { storeId, ids } = req.query;
@@ -149,6 +155,10 @@ const updateOrder = async (req, res) => {
       return res.status(400).json({ error: 'El identificador debe ser un UUID válido' });
     }
 
+    if (!ORDER_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Estado de pedido no válido' });
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .update({ status })
@@ -169,6 +179,7 @@ const updateOrder = async (req, res) => {
 };
 
 module.exports = {
+  ORDER_STATUSES,
   getOrders,
   createOrder,
   updateOrder

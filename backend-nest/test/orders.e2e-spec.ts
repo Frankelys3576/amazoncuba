@@ -30,6 +30,7 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
 
   let getUser: jest.Mock;
   let orderItemFindMany: jest.Mock;
+  let orderItemFindFirst: jest.Mock;
   let orderFindMany: jest.Mock;
   let storeFindUnique: jest.Mock;
 
@@ -63,6 +64,7 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
     });
 
     orderItemFindMany = jest.fn().mockResolvedValue([]);
+    orderItemFindFirst = jest.fn().mockResolvedValue(null);
     orderFindMany = jest.fn().mockResolvedValue([]);
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -71,7 +73,7 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
       .overrideProvider(PrismaService)
       .useValue({
         store: { findUnique: storeFindUnique },
-        orderItem: { findMany: orderItemFindMany },
+        orderItem: { findMany: orderItemFindMany, findFirst: orderItemFindFirst },
         order: { findMany: orderFindMany },
       })
       .overrideProvider(SupabaseService)
@@ -164,5 +166,20 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
     // Y no llegó a consultarse ningún pedido.
     expect(orderFindMany).not.toHaveBeenCalled();
     expect(orderItemFindMany).not.toHaveBeenCalled();
+  });
+
+  it('7. PUT /api/orders/:id with no credential and status "shipped" returns 403 — OrderUpdateAuthGuard', () => {
+    // Antes de OrderUpdateAuthGuard, esta ruta no tenía guard alguno:
+    // cualquiera podía fijar cualquier estado en cualquier pedido
+    // recorriendo los ids. Un cliente sin credencial sólo puede marcar
+    // 'delivered' ("marcar como recibido"); cualquier otro estado sin
+    // credencial debe rechazarse.
+    return request(app.getHttpServer())
+      .put(`/api/orders/${VALID_ORDER_ID}`)
+      .send({ status: 'shipped' })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.error).toBe('No tienes permiso para cambiar este pedido');
+      });
   });
 });

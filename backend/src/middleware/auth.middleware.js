@@ -199,11 +199,83 @@ const authorizeOrdersQuery = async (req, res, next) => {
   return authenticateAdmin(req, res, next);
 };
 
+// Estados que un vendedor puede fijar. Un cliente sólo puede marcar
+// 'delivered' ("marcar como recibido"), y un administrador cualquiera de la
+// lista.
+const SELLER_ORDER_STATUSES = ['shipped', 'delivered'];
+
+// ¿Contiene el pedido algún producto de esta tienda?
+const sellerOwnsOrder = async (storeId, orderId) => {
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('order_id, products!inner(store_id)')
+    .eq('order_id', orderId)
+    .eq('products.store_id', storeId)
+    .limit(1);
+
+  if (error) throw error;
+  return Boolean(data && data.length > 0);
+};
+
+// Autorización de PUT /api/orders/:id. Tres llamantes, tres reglas:
+//
+//   cliente        sin credencial. Conocer el id del pedido ES la credencial,
+//                  igual que en ?ids=. Sólo puede marcar 'delivered'.
+//   vendedor       sesión válida Y el pedido contiene un producto suyo.
+//                  Sólo estados de gestión.
+//   administrador  cualquier estado de la lista.
+//
+// Antes de esto la ruta no comprobaba NADA: cualquiera podía fijar cualquier
+// estado en cualquier pedido recorriendo los ids.
+const authorizeOrderUpdate = async (req, res, next) => {
+  try {
+    const { status } = req.body || {};
+
+    if (!req.headers.authorization) {
+      if (status !== 'delivered') {
+        return res.status(403).json({ error: 'No tienes permiso para cambiar este pedido' });
+      }
+      return next();
+    }
+
+    const caller = await resolveOrdersCaller(req);
+
+    if (caller.kind === 'anonymous') {
+      return res.status(401).json({ error: caller.error });
+    }
+
+    if (caller.kind === 'admin') {
+      req.admin = caller.user;
+      return next();
+    }
+
+    if (caller.kind !== 'seller') {
+      return res.status(403).json({ error: 'No se encontró una tienda asociada a este usuario' });
+    }
+
+    if (!SELLER_ORDER_STATUSES.includes(status)) {
+      return res.status(403).json({ error: 'No tienes permiso para cambiar este pedido' });
+    }
+
+    if (!(await sellerOwnsOrder(caller.store.id, req.params.id))) {
+      return res.status(403).json({ error: 'No tienes permiso sobre este pedido' });
+    }
+
+    req.user = caller.user;
+    req.store = caller.store;
+    return next();
+  } catch (error) {
+    console.error('Error in authorizeOrderUpdate:', error.message);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 module.exports = {
   extractBearerToken,
   resolveOrdersCaller,
   authenticateSeller,
   requireStoreOwnership,
   authenticateAdmin,
-  authorizeOrdersQuery
+  authorizeOrdersQuery,
+  authorizeOrderUpdate
 };

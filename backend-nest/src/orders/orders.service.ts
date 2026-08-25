@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -16,6 +16,13 @@ const ORDER_DECIMAL_FIELDS = ['total'] as const;
 // here rather than handed to Prisma, where it would raise a Postgres
 // "invalid input syntax for type uuid" error instead of just being ignored.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Los tres únicos estados que usa la aplicación. Espejo de ORDER_STATUSES en
+// order.controller.js. UpdateOrderDto's @IsIn allows a wider legacy set
+// ('confirmed', 'cancelled') that predates this task -- this check is the
+// real allowlist, enforced here so the admin path (which OrderUpdateAuthGuard
+// lets through unconditionally) can't write an arbitrary status either.
+const ORDER_STATUSES = ['pending', 'shipped', 'delivered'];
 
 @Injectable()
 export class OrdersService {
@@ -146,6 +153,10 @@ export class OrdersService {
   }
 
   async update(id: string, status: string) {
+    if (!ORDER_STATUSES.includes(status)) {
+      throw new BadRequestException('Estado de pedido no válido');
+    }
+
     try {
       const order = await this.prisma.order.update({
         where: { id },
