@@ -177,6 +177,46 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
     expect(orderItemFindMany).not.toHaveBeenCalled();
   });
 
+  // I6: OrderUpdateAuthGuard admite a un administrador sin más comprobación,
+  // así que la lista blanca de estados es LO ÚNICO que hay entre un token de
+  // administrador y un estado arbitrario en la base de datos. Antes ninguna
+  // prueba se ponía en rojo al borrarla: 'confirmed' pasaba el @IsIn del DTO
+  // (que admitía dos estados heredados de más) y llegaba al UPDATE, con lo
+  // que Nest aceptaba dos estados que Express rechaza -- divergencia lista
+  // para abrirse en el cambio de backend.
+  it('8. PUT /api/orders/:id with an ADMIN token and status "confirmed" returns 400, never reaching the update', () => {
+    return request(app.getHttpServer())
+      .put(`/api/orders/${VALID_ORDER_ID}`)
+      .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+      .send({ status: 'confirmed' })
+      .expect(400)
+      .expect(() => {
+        expect(orderUpdate).not.toHaveBeenCalled();
+      });
+  });
+
+  it('9. PUT /api/orders/:id with an ADMIN token and status "cancelled" returns 400, never reaching the update', () => {
+    return request(app.getHttpServer())
+      .put(`/api/orders/${VALID_ORDER_ID}`)
+      .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+      .send({ status: 'cancelled' })
+      .expect(400)
+      .expect(() => {
+        expect(orderUpdate).not.toHaveBeenCalled();
+      });
+  });
+
+  it('10. PUT /api/orders/:id with an ADMIN token and status "shipped" still works', () => {
+    return request(app.getHttpServer())
+      .put(`/api/orders/${VALID_ORDER_ID}`)
+      .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+      .send({ status: 'shipped' })
+      .expect(200)
+      .expect(() => {
+        expect(orderUpdate).toHaveBeenCalled();
+      });
+  });
+
   it('7. PUT /api/orders/:id with no credential and status "shipped" returns 403 — OrderUpdateAuthGuard', () => {
     // Antes de OrderUpdateAuthGuard, esta ruta no tenía guard alguno:
     // cualquiera podía fijar cualquier estado en cualquier pedido

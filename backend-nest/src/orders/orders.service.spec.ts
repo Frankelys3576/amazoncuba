@@ -531,6 +531,41 @@ describe('OrdersService', () => {
       { code: 'P2025', clientVersion: '5.0.0' },
     );
 
+    // I6: OrderUpdateAuthGuard deja pasar a un administrador sin más
+    // comprobación, así que esta lista blanca es LO ÚNICO que hay entre un
+    // token de administrador y un estado arbitrario en la base de datos.
+    // Borrarla no ponía en rojo ninguna de las 228 pruebas. Se comprueba
+    // aquí, en el servicio, y no sólo por HTTP: el @IsIn del DTO rechaza hoy
+    // los mismos tres estados, así que una prueba e2e no distingue qué capa
+    // rechazó -- ésta sí, y se pone en rojo en cuanto la comprobación
+    // desaparece del servicio.
+    describe('lista blanca de estados (I6)', () => {
+      for (const status of ['confirmed', 'cancelled', 'cualquier cosa', '']) {
+        it(`rechaza status: ${JSON.stringify(status)} con 400 y sin tocar la base de datos`, async () => {
+          const update = jest.fn();
+          const prisma = { order: { update } } as any;
+          const service = new OrdersService(prisma);
+
+          await expect(
+            service.update('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', status),
+          ).rejects.toBeInstanceOf(BadRequestException);
+          expect(update).not.toHaveBeenCalled();
+        });
+      }
+
+      for (const status of ['pending', 'shipped', 'delivered']) {
+        it(`acepta status: ${JSON.stringify(status)}`, async () => {
+          const update = jest.fn().mockResolvedValue({ id: 1, status, total: 10 });
+          const prisma = { order: { update } } as any;
+          const service = new OrdersService(prisma);
+
+          await expect(
+            service.update('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', status),
+          ).resolves.toMatchObject({ status });
+        });
+      }
+    });
+
     it('throws NotFoundException on a P2025 (zero-row update)', async () => {
       const prisma = {
         order: { update: jest.fn().mockRejectedValue(notFoundError) },

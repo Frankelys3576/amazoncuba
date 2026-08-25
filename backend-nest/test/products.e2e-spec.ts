@@ -263,4 +263,32 @@ describe('Products (e2e)', () => {
       .send({ customer_name: 'Ana', rating: 999 })
       .expect(400);
   });
+
+  // I6: sólo el 999 estaba cubierto, así que quitar el @Min(1) del DTO dejaba
+  // las 228 pruebas en verde mientras rating: 0 y rating: -1 se guardaban
+  // tan ricamente. La especificación nombra -1 y 2.5 como rechazos
+  // obligatorios; el 0 es el límite exacto que protege @Min(1).
+  it('POST /api/products/:id/reviews with rating: 0 returns 400 (@Min(1))', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: 0 })
+      .expect(400)
+      .expect(() => {
+        expect(prismaMock.productReview.create).not.toHaveBeenCalled();
+      });
+  });
+
+  it('POST /api/products/:id/reviews with rating: -1 returns 400 (@Min(1))', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: -1 })
+      .expect(400);
+  });
+
+  it('POST /api/products/:id/reviews with rating: 2.5 returns 400 (@IsInt)', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: 2.5 })
+      .expect(400);
+  });
 });

@@ -18,10 +18,15 @@ const ORDER_DECIMAL_FIELDS = ['total'] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Los tres únicos estados que usa la aplicación. Espejo de ORDER_STATUSES en
-// order.controller.js. UpdateOrderDto's @IsIn allows a wider legacy set
-// ('confirmed', 'cancelled') that predates this task -- this check is the
-// real allowlist, enforced here so the admin path (which OrderUpdateAuthGuard
-// lets through unconditionally) can't write an arbitrary status either.
+// order.controller.js. UpdateOrderDto's @IsIn now carries the same three
+// (I6: it used to allow a wider legacy set, 'confirmed'/'cancelled'), but
+// this check stays: it is the allowlist the admin path runs into, since
+// OrderUpdateAuthGuard lets an admin through unconditionally, and it is what
+// keeps the two backends returning the same 400 for the same body even if
+// the DTO drifts. Borrar ESTA comprobación se pone en rojo con el bloque
+// "lista blanca de estados (I6)" de orders.service.spec.ts; borrar además el
+// @IsIn del DTO se pone en rojo con las pruebas e2e 8 y 9 de
+// test/orders.e2e-spec.ts.
 const ORDER_STATUSES = ['pending', 'shipped', 'delivered'];
 
 @Injectable()
