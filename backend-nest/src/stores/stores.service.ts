@@ -15,6 +15,13 @@ import { UpdateStoreCredentialsDto } from './dto/update-store-credentials.dto';
 import { UpdateZelleInfoDto } from './dto/update-zelle-info.dto';
 import { RequestWithStore } from '../auth/request-with-store.interface';
 
+// Lo que StoresController#resolveCaller resuelve sobre el llamante de
+// findOne/findAll: si es administrador, y si es vendedor, el id de SU
+// PROPIA tienda (o null). No es un espejo completo de resolveOrdersCaller
+// -- aquí sólo hace falta saber "es admin" y "es dueño de esta tienda concreta",
+// nunca el usuario ni la tienda entera.
+export type StoreCaller = { isAdmin: boolean; storeId: string | null };
+
 // Rethrows a Prisma "record to update not found" error (P2025) as the 404
 // Express returns for a zero-row update, and rethrows everything else
 // unchanged so the global filter renders a 500 — a DB outage or constraint
@@ -65,7 +72,7 @@ export class StoresService {
     return formatted;
   }
 
-  async findOne(idOrSlug: string) {
+  async findOne(idOrSlug: string, caller: StoreCaller) {
     // Store ids are uuid v7 strings post-migration; a slug never matches
     // that shape, so this replaces the old isNumeric-vs-slug check.
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
@@ -74,6 +81,20 @@ export class StoresService {
       : await this.prisma.store.findFirst({ where: { slug: idOrSlug } });
 
     if (!store) throw new NotFoundException('Tienda no encontrada');
+
+    // Una tienda no aprobada (pending/rejected) sólo la puede ver un
+    // administrador o el vendedor dueño de ESA tienda -- por ejemplo, justo
+    // después de registrarse, mientras espera aprobación. Cualquier otro
+    // llamante recibe el mismo 404 que "no existe": un 403 confirmaría que
+    // la tienda existe, que es justo lo que no queremos revelar. El slug es
+    // legible por humanos, así que además de "conocible" es "adivinable".
+    if (store.status !== 'approved') {
+      const isOwner = caller.storeId !== null && caller.storeId === store.id;
+      if (!caller.isAdmin && !isOwner) {
+        throw new NotFoundException('Tienda no encontrada');
+      }
+    }
+
     return formatStore(store);
   }
 

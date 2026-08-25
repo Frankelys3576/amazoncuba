@@ -1,6 +1,7 @@
 import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { StoresService } from './stores.service';
+import type { StoreCaller } from './stores.service';
 
 describe('StoresService', () => {
   const makePrisma = (overrides: any) => ({
@@ -8,6 +9,7 @@ describe('StoresService', () => {
   }) as any;
 
   const STORE_ID = '11111111-1111-1111-1111-111111111111';
+  const OTHER_STORE_ID = '22222222-2222-2222-2222-222222222222';
 
   // Task 3 (public surface hardening): GET /api/stores must not leak
   // pending/rejected stores to a non-admin caller. Mirrors getStores in
@@ -47,24 +49,32 @@ describe('StoresService', () => {
   });
 
   describe('findOne', () => {
+    const ANONYMOUS: StoreCaller = { isAdmin: false, storeId: null };
+    const ADMIN: StoreCaller = { isAdmin: true, storeId: null };
+
     it('looks up by id when the param is uuid-shaped', async () => {
       const prisma = makePrisma({
-        findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, zelle_info: {} }),
+        findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, status: 'approved', zelle_info: {} }),
       });
       const service = new StoresService(prisma, {} as any);
 
-      await service.findOne(STORE_ID);
+      await service.findOne(STORE_ID, ANONYMOUS);
 
       expect(prisma.store.findUnique).toHaveBeenCalledWith({ where: { id: STORE_ID } });
     });
 
     it('looks up by slug when the param is not uuid-shaped', async () => {
       const prisma = makePrisma({
-        findFirst: jest.fn().mockResolvedValue({ id: STORE_ID, slug: 'cafeteria-juan', zelle_info: {} }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: STORE_ID,
+          slug: 'cafeteria-juan',
+          status: 'approved',
+          zelle_info: {},
+        }),
       });
       const service = new StoresService(prisma, {} as any);
 
-      await service.findOne('cafeteria-juan');
+      await service.findOne('cafeteria-juan', ANONYMOUS);
 
       expect(prisma.store.findFirst).toHaveBeenCalledWith({
         where: { slug: 'cafeteria-juan' },
@@ -76,7 +86,7 @@ describe('StoresService', () => {
       const service = new StoresService(prisma, {} as any);
 
       await expect(
-        service.findOne('99999999-9999-9999-9999-999999999999'),
+        service.findOne('99999999-9999-9999-9999-999999999999', ANONYMOUS),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -84,7 +94,67 @@ describe('StoresService', () => {
       const prisma = makePrisma({ findFirst: jest.fn().mockResolvedValue(null) });
       const service = new StoresService(prisma, {} as any);
 
-      await expect(service.findOne('no-such-slug')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne('no-such-slug', ANONYMOUS)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    // Task 3 fix-round (public surface hardening, Critical): GET
+    // /api/stores/:id had no status filter at all -- a pending/rejected
+    // store's whole public profile (name, phone, address, gallery) was
+    // fetchable by id or slug by anyone. The rule: approved -> anyone;
+    // not approved -> admin, or the seller who owns it. Everyone else gets
+    // the SAME 404 as "doesn't exist" (never 403 -- that would confirm the
+    // store exists, which is exactly what must stay hidden).
+    describe('visibility of a non-approved store', () => {
+      const PENDING_STORE = { id: STORE_ID, status: 'pending', zelle_info: {} };
+
+      it('anonymous gets 404 for a pending store', async () => {
+        const prisma = makePrisma({ findUnique: jest.fn().mockResolvedValue(PENDING_STORE) });
+        const service = new StoresService(prisma, {} as any);
+
+        await expect(service.findOne(STORE_ID, ANONYMOUS)).rejects.toBeInstanceOf(
+          NotFoundException,
+        );
+      });
+
+      it('the owning seller (caller.storeId === store.id) gets the store back', async () => {
+        const prisma = makePrisma({ findUnique: jest.fn().mockResolvedValue(PENDING_STORE) });
+        const service = new StoresService(prisma, {} as any);
+
+        const result = await service.findOne(STORE_ID, { isAdmin: false, storeId: STORE_ID });
+
+        expect(result.id).toBe(STORE_ID);
+      });
+
+      it('a different seller (caller.storeId !== store.id) gets 404, not 403', async () => {
+        const prisma = makePrisma({ findUnique: jest.fn().mockResolvedValue(PENDING_STORE) });
+        const service = new StoresService(prisma, {} as any);
+
+        await expect(
+          service.findOne(STORE_ID, { isAdmin: false, storeId: OTHER_STORE_ID }),
+        ).rejects.toBeInstanceOf(NotFoundException);
+      });
+
+      it('an admin gets the store back', async () => {
+        const prisma = makePrisma({ findUnique: jest.fn().mockResolvedValue(PENDING_STORE) });
+        const service = new StoresService(prisma, {} as any);
+
+        const result = await service.findOne(STORE_ID, ADMIN);
+
+        expect(result.id).toBe(STORE_ID);
+      });
+
+      it('an approved store stays public for an anonymous caller', async () => {
+        const prisma = makePrisma({
+          findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, status: 'approved', zelle_info: {} }),
+        });
+        const service = new StoresService(prisma, {} as any);
+
+        const result = await service.findOne(STORE_ID, ANONYMOUS);
+
+        expect(result.id).toBe(STORE_ID);
+      });
     });
   });
 

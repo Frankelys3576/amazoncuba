@@ -118,7 +118,22 @@ const getStoreById = async (req, res) => {
     }
     
     if (!data) return res.status(404).json({ error: 'Tienda no encontrada' });
-    
+
+    // Una tienda no aprobada (pending/rejected) sólo la puede ver un
+    // administrador o el vendedor dueño de ESA tienda -- por ejemplo, justo
+    // después de registrarse, mientras espera aprobación. Cualquier otro
+    // llamante recibe el mismo 404 que "no existe": un 403 confirmaría que
+    // la tienda existe, que es justo lo que no queremos revelar. El slug es
+    // legible por humanos, así que además de "conocible" es "adivinable".
+    if (data.status !== 'approved') {
+      const caller = await resolveOrdersCaller(req);
+      const isAdmin = caller.kind === 'admin';
+      const isOwner = caller.kind === 'seller' && String(caller.store.id) === String(data.id);
+      if (!isAdmin && !isOwner) {
+        return res.status(404).json({ error: 'Tienda no encontrada' });
+      }
+    }
+
     res.json(formatStore(data));
   } catch (error) {
     console.error('Error fetching store:', error.message);
