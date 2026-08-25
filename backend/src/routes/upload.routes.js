@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const supabase = require('../config/supabase');
+const { uploadLimiter } = require('../middleware/rate-limit.middleware');
 
 // Configure multer memory storage (required for Vercel/Serverless and Supabase)
 const storage = multer.memoryStorage();
@@ -25,7 +26,7 @@ const upload = multer({
 });
 
 // Upload endpoint for single image
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', uploadLimiter, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se subió ninguna imagen o formato inválido' });

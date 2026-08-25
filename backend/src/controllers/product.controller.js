@@ -245,12 +245,23 @@ const addProductReview = async (req, res) => {
       return res.status(400).json({ error: 'Name and rating are required' });
     }
 
+    const numericRating = Number(rating);
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ error: 'La valoración debe ser un número entero del 1 al 5' });
+    }
+    if (typeof customer_name !== 'string' || customer_name.length > 100) {
+      return res.status(400).json({ error: 'El nombre no puede superar los 100 caracteres' });
+    }
+    if (comment !== undefined && comment !== null && (typeof comment !== 'string' || comment.length > 1000)) {
+      return res.status(400).json({ error: 'El comentario no puede superar los 1000 caracteres' });
+    }
+
     const { data, error } = await supabase
       .from('product_reviews')
       .insert([{
         product_id: id,
         customer_name,
-        rating,
+        rating: numericRating,
         comment
       }])
       .select();

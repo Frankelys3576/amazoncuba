@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -62,6 +63,8 @@ export class ProductsController {
   // needs an explicit override to match.
   @Post(':id/view')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60 * 60 * 1000 } })
   registerView(@Param('id', SpanishParseUuidPipe) id: string) {
     return this.productsService.registerView(id);
   }
@@ -73,6 +76,8 @@ export class ProductsController {
 
   @Post(':id/reviews')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
   addReview(@Param('id', SpanishParseUuidPipe) id: string, @Body() dto: CreateProductReviewDto) {
     return this.productsService.addReview(id, dto);
   }
