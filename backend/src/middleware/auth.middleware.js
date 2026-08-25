@@ -64,12 +64,11 @@ const extractPhoneFromEmail = (email) => {
 
 const authenticateSeller = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    const token = extractBearerToken(req.headers.authorization);
+    if (!token) {
       return res.status(401).json({ error: 'Token no proporcionado' });
     }
 
-    const token = authHeader.split(' ')[1];
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
