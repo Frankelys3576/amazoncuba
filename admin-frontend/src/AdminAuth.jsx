@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
+import { loginAdmin } from './services/api';
 import './AdminAuth.css';
 
 const AdminAuth = () => {
@@ -14,20 +15,36 @@ const AdminAuth = () => {
     setError(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Simular autenticación maestra
-    setTimeout(() => {
-      if (formData.email === 'admin@tiendacuba.com' && formData.password === 'admin123') {
-        localStorage.setItem('admin_token', 'master_token');
-        navigate('/dashboard');
-      } else {
+    setError(null);
+
+    try {
+      const { ok, data } = await loginAdmin(formData.email, formData.password);
+
+      if (!ok || !data.session || !data.session.access_token) {
         setError('Acceso denegado. Credenciales de administrador inválidas.');
         setLoading(false);
+        return;
       }
-    }, 1000);
+
+      // El permiso real lo comprueba el backend en cada petición. Esto sólo
+      // evita entrar a un panel que va a responder 403 en todo.
+      const role = data.user && data.user.app_metadata && data.user.app_metadata.role;
+      if (role !== 'admin') {
+        setError('Esta cuenta no tiene permisos de administrador.');
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem('admin_token', data.session.access_token);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Admin login error:', err);
+      setError('No se pudo conectar con el servidor.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,7 +71,6 @@ const AdminAuth = () => {
                 name="email" 
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="admin@tiendacuba.com"
                 required
               />
             </div>
@@ -67,7 +83,6 @@ const AdminAuth = () => {
                 name="password" 
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="admin123"
                 required
               />
             </div>
