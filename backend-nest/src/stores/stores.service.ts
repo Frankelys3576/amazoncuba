@@ -229,7 +229,21 @@ export class StoresService {
     });
     const totalSalesCount = orderItems.reduce((acc, item) => acc + item.quantity, 0);
 
-    return { store: formatStore(store), activeProductsCount, totalSalesCount };
+    // El blob zelle_info COMPLETO, no el subconjunto público de formatStore.
+    // Esta ruta va detrás de AdminGuard, y admin-frontend/src/AdminStores.jsx
+    // rellena su formulario de Zelle desde details.store.zelle_info: con el
+    // subconjunto, abrir el modal y pulsar "guardar" mandaba
+    // { name:'', email_phone:'', description:'' } y updateZelleInfo lo
+    // escribía entero encima, borrando los datos de cobro del vendedor.
+    // Espejo de getAdminStoreDetails en
+    // backend/src/controllers/store.controller.js. Se parte de formatStore
+    // (no de la fila cruda) porque ésta lleva legacy_id BigInt y Decimals,
+    // que no serializan igual que en Express.
+    return {
+      store: { ...formatStore(store), zelle_info: store.zelle_info },
+      activeProductsCount,
+      totalSalesCount,
+    };
   }
 
   async updateCredentials(id: string, req: RequestWithStore, dto: UpdateStoreCredentialsDto) {

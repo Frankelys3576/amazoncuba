@@ -213,6 +213,34 @@ describe('StoresService', () => {
     });
   });
 
+  // C2: esta ruta va detrás de AdminGuard y el panel rellena su formulario de
+  // Zelle desde store.zelle_info. Con el subconjunto público de formatStore,
+  // abrir el modal y pulsar "guardar" mandaba las tres claves vacías y
+  // updateZelleInfo las escribía encima del blob real: pérdida de datos.
+  describe('getAdminDetails: devuelve el blob zelle_info completo (C2)', () => {
+    it('conserva todas las claves de zelle_info, no sólo el subconjunto público', async () => {
+      const zelle_info = {
+        name: 'Titular Zelle',
+        email_phone: 'titular@example.com',
+        description: 'Poner el número de pedido',
+        province: 'La Habana',
+        gallery: ['a.png'],
+      };
+      const prisma = {
+        store: { findUnique: jest.fn().mockResolvedValue({ id: STORE_ID, status: 'approved', zelle_info }) },
+        product: { count: jest.fn().mockResolvedValue(3) },
+        orderItem: { findMany: jest.fn().mockResolvedValue([{ quantity: 2 }]) },
+      } as any;
+      const service = new StoresService(prisma, {} as any);
+
+      const result = await service.getAdminDetails(STORE_ID);
+
+      expect(result.store.zelle_info).toEqual(zelle_info);
+      expect(result.activeProductsCount).toBe(3);
+      expect(result.totalSalesCount).toBe(2);
+    });
+  });
+
   // I4: the two backends share one database, so updateProfile must write the
   // phone exactly as Express does — verbatim (store.controller.js:142).
   // Normalizing here previously, while Express did not, meant the same

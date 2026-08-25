@@ -325,7 +325,15 @@ const getAdminStoreDetails = async (req, res) => {
     }
 
     res.json({
-      store: formatStore(store),
+      // El blob zelle_info COMPLETO, no el subconjunto público de
+      // formatStore. Esta ruta va detrás de authenticateAdmin, y el panel
+      // (admin-frontend/src/AdminStores.jsx:62-66) rellena su formulario de
+      // Zelle desde details.store.zelle_info. Con el subconjunto bastaba con
+      // que el administrador abriera el modal y pulsara "guardar" para que
+      // handleSaveZelle mandara { name:'', email_phone:'', description:'' }
+      // y updateZelleInfo lo escribiera ENTERO encima: los datos de cobro
+      // reales del vendedor, borrados.
+      store: { ...formatStore(store), zelle_info: store.zelle_info },
       activeProductsCount: productsCount || 0,
       totalSalesCount: totalSales || 0
     });
