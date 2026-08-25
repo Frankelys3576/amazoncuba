@@ -5,14 +5,21 @@ NULL`. A store with no `user_id` has **no seller access at all** after the
 uuid v7 / seller-ownership migration (`backend/migrations/002_uuid_v7_migration.sql`,
 section F) — there is no fallback authorization path.
 
-This is a manual, operator-run SQL procedure, not an admin API endpoint, and
-that is deliberate. There is no server-side admin authentication anywhere in
-this codebase — `admin-frontend` stores a hardcoded `'master_token'` string
-in `localStorage` that no server ever verifies (see `AdminAuth.jsx`). An
-unauthenticated "assign store to user" endpoint would let anyone reassign
-any store's ownership with one HTTP call — a total-compromise vulnerability
-worse than the one this migration closes. Replace this runbook with an admin
-UI once real admin auth (security finding #3) ships.
+This is a manual, operator-run SQL procedure, not an admin API endpoint.
+
+Admin routes now do have real server-side authentication: they require an
+`Authorization: Bearer <token>` header whose Supabase user carries
+`app_metadata.role === 'admin'` (`authenticateAdmin` in
+`backend/src/middleware/auth.middleware.js`), and the role is granted only
+out-of-band with the service-role key via `node backend/set_admin_role.js
+<correo>`. It lives in `app_metadata` and not `user_metadata` because any
+authenticated user can rewrite their own `user_metadata`, which would let a
+seller promote themselves.
+
+So an "assign store to user" endpoint is now buildable safely, where before
+it would have been an unauthenticated total compromise. It just hasn't been
+built. Until it is, this runbook is the procedure — and if you do build it,
+mount it behind `authenticateAdmin` like every other admin route.
 
 Work through the steps below in order, in the Supabase SQL editor for the
 production project. Most steps are a query to run; step 3 is a manual,
