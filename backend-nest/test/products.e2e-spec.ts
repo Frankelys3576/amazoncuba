@@ -21,6 +21,9 @@ describe('Products (e2e)', () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    productReview: {
+      create: jest.Mock;
+    };
   };
 
   // class-validator's @IsUUID checks the RFC variant nibble too (must be
@@ -37,6 +40,15 @@ describe('Products (e2e)', () => {
         create: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
         findUnique: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
         update: jest.fn().mockResolvedValue({ id: PRODUCT_ID, store_id: STORE_ID }),
+      },
+      productReview: {
+        create: jest.fn().mockResolvedValue({
+          id: '33333333-3333-7333-8333-333333333333',
+          product_id: PRODUCT_ID,
+          customer_name: 'Ana',
+          rating: 5,
+          comment: 'Bien',
+        }),
       },
     };
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -196,5 +208,46 @@ describe('Products (e2e)', () => {
           }),
         );
       });
+  });
+
+  // Task 4 review of task-4: nothing previously exercised ThrottlerGuard or
+  // CreateProductReviewDto's decorators end to end, so a wrong option key,
+  // a dropped @UseGuards, or the whole throttling feature being deleted
+  // would still have shipped with tsc/unit/e2e all green. This pins the
+  // review endpoint's 5-per-hour limit (see products.controller.ts) at the
+  // HTTP boundary: five requests succeed, the sixth is throttled with the
+  // same Spanish message Express returns for the same feature. Confirmed
+  // this goes red without @UseGuards(ThrottlerGuard) on addReview, then
+  // restored it (see task-4-report.md).
+  it('POST /api/products/:id/reviews throttles after 5 requests/hour and returns the Spanish 429 body', async () => {
+    const validReview = { customer_name: 'Ana', rating: 5, comment: 'Bien' };
+
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer())
+        .post(`/api/products/${PRODUCT_ID}/reviews`)
+        .send(validReview)
+        .expect(201);
+    }
+
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send(validReview)
+      .expect(429)
+      .expect((res) => {
+        expect(res.body.error).toBe(
+          'Demasiadas peticiones. Inténtalo de nuevo más tarde.',
+        );
+      });
+  });
+
+  // rating: 999 must be rejected by CreateProductReviewDto's @Max(5) at the
+  // HTTP boundary (ValidationPipe), not just verified against the DTO class
+  // in isolation — whitelist:true silently drops unknown fields but a
+  // present, out-of-range `rating` should 400.
+  it('POST /api/products/:id/reviews with rating: 999 returns 400', () => {
+    return request(app.getHttpServer())
+      .post(`/api/products/${PRODUCT_ID}/reviews`)
+      .send({ customer_name: 'Ana', rating: 999 })
+      .expect(400);
   });
 });

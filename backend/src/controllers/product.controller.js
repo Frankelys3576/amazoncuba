@@ -241,10 +241,15 @@ const addProductReview = async (req, res) => {
     const { id } = req.params;
     const { customer_name, rating, comment } = req.body;
 
-    if (!customer_name || !rating) {
-      return res.status(400).json({ error: 'Name and rating are required' });
+    if (!customer_name) {
+      return res.status(400).json({ error: 'El nombre del cliente es requerido' });
     }
 
+    // Rating is checked separately (not folded into the customer_name
+    // truthiness check above) so `rating: 0` and an absent `rating` both
+    // fall through to this Spanish message instead of the old English
+    // "Name and rating are required" — matches NestJS's class-validator
+    // errors on CreateProductReviewDto for the same inputs.
     const numericRating = Number(rating);
     if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
       return res.status(400).json({ error: 'La valoración debe ser un número entero del 1 al 5' });

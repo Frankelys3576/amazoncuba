@@ -37,7 +37,15 @@ import { OrdersModule } from './orders/orders.module';
     // que solo aplica `ThrottlerGuard` en esas cuatro rutas puntuales
     // (no como APP_GUARD global). Así el resto de la suite e2e —que no
     // toca esas rutas más que un puñado de veces— queda sin tocar.
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60 * 60 * 1000, limit: 60 }]),
+    //
+    // Object form (not the bare array) is required here: only the object
+    // form has `errorMessage`. The array form falls back to the library's
+    // English default ('ThrottlerException: Too Many Requests'), which
+    // would disagree with Express's Spanish 429 body for the same feature.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60 * 60 * 1000, limit: 60 }],
+      errorMessage: 'Demasiadas peticiones. Inténtalo de nuevo más tarde.',
+    }),
   ],
   controllers: [AppController],
   // The `legacy_*` bigint columns schema.prisma still carries are
