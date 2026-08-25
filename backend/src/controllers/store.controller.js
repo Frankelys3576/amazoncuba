@@ -383,8 +383,30 @@ const updateZelleInfo = async (req, res) => {
     // ausente queda intacto. Si zelle_info no viene en absoluto, el blob no
     // se toca.
     if (zelle_info !== undefined) {
-      const { data: existingStore } = await supabase.from('stores').select('zelle_info').eq('id', id).single();
-      const currentZelleInfo = existingStore?.zelle_info || {};
+      // maybeSingle, no single: con .single() un error transitorio de lectura
+      // (una interrupción momentánea de la base de datos, no "no existe la
+      // fila") también deja `data` en falsy, y el código seguía adelante
+      // fusionando contra un currentZelleInfo === {} -- exactamente la
+      // pérdida de datos que este commit existe para evitar, sólo que
+      // disparada por un fallo transitorio en vez de determinista. Con
+      // maybeSingle un error real de lectura sigue siendo `error` (500, no
+      // se escribe nada) y "no existe la fila" es `data: null, error: null`
+      // (404), así que ambos casos quedan distinguidos explícitamente en vez
+      // de colapsar en el mismo `?? {}`. Mismo patrón que getStoreById ya usa
+      // en este archivo.
+      const { data: existingStore, error: existingError } = await supabase
+        .from('stores')
+        .select('zelle_info')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('Supabase error reading zelle info:', existingError.message);
+        return res.status(500).json({ error: 'Error updating zelle info in database' });
+      }
+      if (!existingStore) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+      const currentZelleInfo = existingStore.zelle_info || {};
       updates.zelle_info = { ...currentZelleInfo, ...zelle_info };
     }
 

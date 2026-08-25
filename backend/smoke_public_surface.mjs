@@ -461,6 +461,21 @@ if (MODE === 'local') {
     'el guardado sólo-beneficiario NO borra price_per_night');
   check(Array.isArray(blob.gallery) && blob.gallery.length === 1 && blob.gallery[0] === 'https://example.test/smoke-1.png',
     'el guardado sólo-beneficiario NO borra gallery');
+
+  // El pre-read de zelle_info usa maybeSingle(): un id inexistente da
+  // `data: null, error: null`, así que el controlador responde 404 en vez de
+  // fusionar contra {} y escribir un blob sólo-beneficiario sobre una fila
+  // que no existe. El otro camino que ese cambio distingue -- un error REAL
+  // de lectura (una interrupción transitoria de la base) respondiendo 500 en
+  // vez de fusionar -- no es alcanzable de forma práctica desde este script,
+  // que no tiene manera de forzar un fallo transitorio de Supabase; se deja
+  // sin cubrir aquí a propósito, no por descuido.
+  const missingStoreZelle = await call('PUT', `/api/stores/${FAKE}/zelle`, {
+    token: admin.token,
+    body: { zelle_info: { name: 'No debería escribirse' } },
+  });
+  check(missingStoreZelle.status === 404,
+    'PUT /api/stores/:id/zelle con un id inexistente responde 404 (no 500) en vez de fusionar contra un blob vacío');
 }
 
 // ===========================================================================
