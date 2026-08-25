@@ -113,13 +113,16 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
     expect(getUser).not.toHaveBeenCalled();
   });
 
-  it('3. GET /api/orders?storeId=<id> with a seller token owning that store is not 401/403', () => {
+  it('3. GET /api/orders?storeId=<id> with a seller token owning that store returns 200', () => {
+    // Asserting the real status, not `not.toBe(401)`: a 500 satisfies "not
+    // 401 and not 403" just as happily, so the weaker form passed green with
+    // @UseGuards(OrdersQueryAuthGuard) removed outright.
     return request(app.getHttpServer())
       .get(`/api/orders?storeId=${STORE_ID}`)
       .set('Authorization', `Bearer ${SELLER_TOKEN}`)
+      .expect(200)
       .expect((res) => {
-        expect(res.status).not.toBe(401);
-        expect(res.status).not.toBe(403);
+        expect(res.body).toEqual([]);
       });
   });
 
@@ -133,13 +136,33 @@ describe('Orders query authorization (e2e) — real OrdersQueryAuthGuard chain',
       });
   });
 
-  it('5. GET /api/orders with an admin token and no query is not 401/403', () => {
+  it('5. GET /api/orders with an admin token and no query returns 200', () => {
     return request(app.getHttpServer())
       .get('/api/orders')
       .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+      .expect(200)
       .expect((res) => {
-        expect(res.status).not.toBe(401);
-        expect(res.status).not.toBe(403);
+        expect(res.body).toEqual([]);
       });
+  });
+
+  it('6. GET /api/orders with a valid SELLER token and no query returns 403 — the escalation path', async () => {
+    // Ésta es la escalada real, y hasta ahora sólo existía como prueba
+    // unitaria con un doble que rechazaba porque se le había dicho que
+    // rechazara. Un vendedor con sesión válida pidiendo /api/orders sin
+    // filtro se lleva la tabla ENTERA: nombre, correo, teléfono y dirección
+    // de cada cliente de la plataforma, incluidos los de sus competidores.
+    // Autenticado no es lo mismo que autorizado.
+    await request(app.getHttpServer())
+      .get('/api/orders')
+      .set('Authorization', `Bearer ${SELLER_TOKEN}`)
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.error).toBe('No tienes permisos de administrador');
+      });
+
+    // Y no llegó a consultarse ningún pedido.
+    expect(orderFindMany).not.toHaveBeenCalled();
+    expect(orderItemFindMany).not.toHaveBeenCalled();
   });
 });
