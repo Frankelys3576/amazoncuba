@@ -239,6 +239,45 @@ if (MODE === 'local') {
   }
 }
 
+if (MODE === 'local') {
+  console.log('\n-- totales de los pedidos: carrito con dos monedas --');
+
+  const currencyA = `USD`;
+  const currencyB = `CUP`;
+
+  const { status: statusA, json: productA } = await call('POST', '/api/products', {
+    token: seller.token,
+    body: {
+      name: 'Producto Smoke Moneda A', price: 10, currency: currencyA,
+      store_id: seller.storeId, province: 'La Habana', municipality: 'Playa',
+    },
+  });
+  const { status: statusB, json: productB } = await call('POST', '/api/products', {
+    token: seller.token,
+    body: {
+      name: 'Producto Smoke Moneda B', price: 250, currency: currencyB,
+      store_id: seller.storeId, province: 'La Habana', municipality: 'Playa',
+    },
+  });
+  check(statusA === 201 && statusB === 201, 'se crean dos productos de prueba con monedas distintas');
+
+  if (productA?.id && productB?.id) {
+    const { status: mixStatus, json: mixOrder } = await call('POST', '/api/orders', {
+      body: {
+        customer_name: 'Cliente Smoke Monedas',
+        customer_email: 'monedas-smoke@example.test',
+        items: [
+          { product_id: productA.id, quantity: 1 },
+          { product_id: productB.id, quantity: 1 },
+        ],
+      },
+    });
+    check(mixStatus === 201, 'se crea un pedido con un carrito de dos monedas');
+    const totalsKeys = mixOrder?.totals ? Object.keys(mixOrder.totals) : [];
+    check(totalsKeys.length === 2, `la respuesta trae "totals" con dos claves (tiene ${totalsKeys.length}: ${totalsKeys.join(', ')})`);
+  }
+}
+
 // ===========================================================================
 // Listado de tiendas (GET /api/stores)
 // ===========================================================================
@@ -261,12 +300,15 @@ console.log('\n-- listado de tiendas --');
   // C1: zelle_info vuelve, pero SOLO el beneficiario (lo que Checkout.jsx
   // pinta). Si reapareciera el blob crudo volverían con él las claves de
   // ubicación, la galería y cualquier cosa que se guarde ahí en el futuro.
+  // D1: cuando la tienda no tiene beneficiario configurado, la clave viene
+  // en null -- no un objeto con las tres claves en null -- así que null
+  // también es una forma válida de esta comprobación.
   const ZELLE_PUBLIC_KEYS = ['name', 'email_phone', 'description'];
   const zelleOk = stores.every((s) =>
-    s.zelle_info &&
-    Object.keys(s.zelle_info).every((k) => ZELLE_PUBLIC_KEYS.includes(k))
+    s.zelle_info === null ||
+    (s.zelle_info && Object.keys(s.zelle_info).every((k) => ZELLE_PUBLIC_KEYS.includes(k)))
   );
-  check(zelleOk, 'GET /api/stores (anónimo): zelle_info trae sólo name/email_phone/description');
+  check(zelleOk, 'GET /api/stores (anónimo): zelle_info es null o trae sólo name/email_phone/description');
 
   const { status: adminStatus, json: adminStores } = await call('GET', '/api/stores', { token: admin.token });
   check(adminStatus === 200, 'GET /api/stores (token de administrador) responde 200');
@@ -324,9 +366,10 @@ console.log('\n-- tienda por id y por slug --');
       !Object.prototype.hasOwnProperty.call(approvedStore, 'user_id') &&
       !Object.keys(approvedStore).some((k) => k.startsWith('legacy_')),
       'GET /api/stores/<id de tienda aprobada>: la respuesta no trae user_id ni ninguna clave legacy_');
-    check(Boolean(approvedStore?.zelle_info) &&
-      Object.keys(approvedStore.zelle_info).every((k) => ['name', 'email_phone', 'description'].includes(k)),
-      'GET /api/stores/<id de tienda aprobada>: zelle_info trae sólo name/email_phone/description');
+    check(approvedStore?.zelle_info === null ||
+      (Boolean(approvedStore?.zelle_info) &&
+        Object.keys(approvedStore.zelle_info).every((k) => ['name', 'email_phone', 'description'].includes(k))),
+      'GET /api/stores/<id de tienda aprobada>: zelle_info es null o trae sólo name/email_phone/description');
     check(Boolean(approved.slug) &&
       (await call('GET', `/api/stores/${approved.slug}`)).status === 200,
       'GET /api/stores/<slug de tienda aprobada> (anónimo) responde 200');
