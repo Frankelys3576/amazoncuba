@@ -97,6 +97,23 @@ const authenticateAdmin = async (req, res, next) => {
   }
 };
 
+// GET /api/stores es público y por eso NUNCA responde 401: un token caducado
+// se resuelve como 'anonymous' y la respuesta es un 200 con el listado de
+// tiendas aprobadas. Para el panel de administración eso es una trampa: su
+// handleAuthFailure (admin-frontend/src/services/api.js) sólo reacciona al
+// 401, así que un administrador con la sesión caducada veía CERO tiendas
+// pendientes y ningún error -- exactamente el fallo de "panel vacío
+// indistinguible de uno que funciona" que ese archivo dice haber eliminado.
+//
+// Con ?as=admin el llamante declara que espera datos de administrador, y
+// entonces sí se exige credencial: authenticateAdmin devuelve 401 (o 403) y
+// el panel vuelve al login. Sin el parámetro, la ruta sigue siendo pública
+// para el escaparate.
+const requireAdminWhenRequested = (req, res, next) => {
+  if (req.query.as !== 'admin') return next();
+  return authenticateAdmin(req, res, next);
+};
+
 // Resuelve QUIÉN es el llamante sin tocar `res`.
 //
 // authenticateSeller y authenticateAdmin son middlewares: en cuanto algo no
@@ -284,6 +301,7 @@ module.exports = {
   authenticateSeller,
   requireStoreOwnership,
   authenticateAdmin,
+  requireAdminWhenRequested,
   authorizeOrdersQuery,
   authorizeOrderUpdate
 };

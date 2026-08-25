@@ -9,8 +9,10 @@ import { UpdateStoreCredentialsDto } from './dto/update-store-credentials.dto';
 import { SellerAuthGuard } from '../auth/seller-auth.guard';
 import { StoreOwnershipGuard } from '../auth/store-ownership.guard';
 import { AdminGuard } from '../auth/admin.guard';
+import { AdminWhenRequestedGuard } from '../auth/admin-when-requested.guard';
 import { StoreCallerService } from '../auth/store-caller.service';
 import type { RequestWithStore } from '../auth/request-with-store.interface';
+import type { RequestWithAdmin } from '../auth/request-with-admin.interface';
 
 @Controller('api/stores')
 export class StoresController {
@@ -19,7 +21,10 @@ export class StoresController {
     private readonly storeCaller: StoreCallerService,
   ) {}
 
+  // ?as=admin exige credencial de administrador (401/403); sin el parámetro
+  // la ruta sigue siendo pública. Ver AdminWhenRequestedGuard.
   @Get()
+  @UseGuards(AdminWhenRequestedGuard)
   async findAll(
     @Query() query: { type?: string; province?: string; municipality?: string; q?: string },
     @Req() req: Request,
@@ -31,8 +36,12 @@ export class StoresController {
     // StoreCallerService NUNCA rechaza la petición (a diferencia de
     // AdminGuard), sólo mira la credencial si la hay, para que un llamante
     // anónimo siga viendo el listado público.
-    const caller = await this.storeCaller.resolve(req);
-    return this.storesService.findAll(query, caller.isAdmin);
+    // Con ?as=admin el guard ya validó la credencial y dejó request.admin
+    // puesto: no hace falta volver a preguntarle a Supabase.
+    const isAdmin = (req as RequestWithAdmin).admin
+      ? true
+      : (await this.storeCaller.resolve(req)).isAdmin;
+    return this.storesService.findAll(query, isAdmin);
   }
 
   @Get(':id')

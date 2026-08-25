@@ -62,8 +62,11 @@ const getStores = async (req, res) => {
     // Un administrador ve todas las tiendas; cualquier otro llamante s\u00f3lo las
     // aprobadas. AdminStores.jsx usa ESTE mismo endpoint para aprobar tiendas
     // pendientes, as\u00ed que el filtro sin la excepci\u00f3n romper\u00eda la aprobaci\u00f3n.
-    const caller = await resolveOrdersCaller(req);
-    const isAdmin = caller.kind === 'admin';
+    // Con ?as=admin, requireAdminWhenRequested ya validó la credencial y dejó
+    // req.admin puesto: no hace falta volver a preguntarle a Supabase.
+    const isAdmin = req.admin
+      ? true
+      : (await resolveOrdersCaller(req)).kind === 'admin';
 
     let query = supabase.from('stores').select('*');
     if (!isAdmin) {

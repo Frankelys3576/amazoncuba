@@ -98,7 +98,13 @@ export const getStores = async () => {
     // llamante sea administrador. AdminStores.jsx usa esta misma función para
     // ver (y aprobar) tiendas pendientes, así que sin el token el panel
     // perdería silenciosamente las tiendas pendientes/rechazadas.
-    const response = await fetch(`${API_URL}/stores`, { headers: adminHeaders() });
+    //
+    // ?as=admin: la ruta es pública, así que con un token caducado respondía
+    // 200 con el listado recortado y handleAuthFailure (que sólo mira el 401)
+    // no se enteraba: el panel mostraba CERO tiendas pendientes y ningún
+    // error. Con el parámetro, el backend exige credencial de administrador y
+    // devuelve 401, que sí devuelve al login.
+    const response = await fetch(`${API_URL}/stores?as=admin`, { headers: adminHeaders() });
     if (handleAuthFailure(response)) return [];
     if (!response.ok) throw new Error('Error al obtener tiendas');
     return await response.json();

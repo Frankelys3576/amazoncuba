@@ -149,6 +149,34 @@ describe('GET /api/stores (e2e) — status filter + column whitelist', () => {
       });
   });
 
+  // I3: la ruta pública nunca devuelve 401, así que un administrador con la
+  // sesión caducada veía el listado recortado (cero tiendas pendientes) y
+  // ningún error -- indistinguible de un panel que funciona. Con ?as=admin el
+  // llamante declara que espera datos de administrador y el fallo es ruidoso.
+  describe('?as=admin (I3): la ruta falla fuerte cuando se piden datos de administrador', () => {
+    it('sin credencial responde 401', () => {
+      return request(app.getHttpServer()).get('/api/stores?as=admin').expect(401);
+    });
+
+    it('con un token caducado/ inválido responde 401, no un 200 recortado', () => {
+      return request(app.getHttpServer())
+        .get('/api/stores?as=admin')
+        .set('Authorization', `Bearer ${INVALID_TOKEN}`)
+        .expect(401);
+    });
+
+    it('con token de administrador devuelve el listado completo', () => {
+      return request(app.getHttpServer())
+        .get('/api/stores?as=admin')
+        .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toHaveLength(3);
+          expect(findMany).toHaveBeenCalledWith({ where: {} });
+        });
+    });
+  });
+
   // C1: dropping zelle_info entirely took the Zelle payment block off the
   // air (Checkout.jsx reads store.zelle_info.name / .email_phone). Only the
   // payee subset comes back; the rest of the blob must not.

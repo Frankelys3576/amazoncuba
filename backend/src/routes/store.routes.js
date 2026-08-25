@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const storeController = require('../controllers/store.controller');
 const storeCategoryController = require('../controllers/storeCategory.controller');
-const { authenticateSeller, requireStoreOwnership, authenticateAdmin } = require('../middleware/auth.middleware');
+const { authenticateSeller, requireStoreOwnership, authenticateAdmin, requireAdminWhenRequested } = require('../middleware/auth.middleware');
 
 // Rutas base: /api/stores
-router.get('/', storeController.getStores);
+// ?as=admin exige credencial de administrador (401/403); sin el parámetro la
+// ruta sigue siendo pública. Ver requireAdminWhenRequested.
+router.get('/', requireAdminWhenRequested, storeController.getStores);
 router.get('/:id', storeController.getStoreById);
 router.get('/:id/admin-details', authenticateAdmin, storeController.getAdminStoreDetails);
 router.put('/:id/status', authenticateAdmin, storeController.updateStoreStatus);
