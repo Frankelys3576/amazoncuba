@@ -9,6 +9,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminGuard } from './admin.guard';
 import { RequestWithAdmin } from './request-with-admin.interface';
+import { extractBearerToken } from './bearer-token.util';
 
 // Tres llamantes legítimos, tres comprobaciones distintas. Mantener en
 // sintonía con authorizeOrdersQuery de backend/src/middleware/auth.middleware.js.
@@ -35,12 +36,11 @@ export class OrdersQueryAuthGuard implements CanActivate {
     }
 
     if (storeId) {
-      const authHeader = request.headers.authorization;
-      if (!authHeader) {
+      const token = extractBearerToken(request.headers.authorization);
+      if (!token) {
         throw new UnauthorizedException('Token no proporcionado');
       }
 
-      const token = authHeader.split(' ')[1];
       const {
         data: { user },
         error,

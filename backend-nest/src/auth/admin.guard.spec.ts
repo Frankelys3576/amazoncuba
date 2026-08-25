@@ -19,6 +19,24 @@ describe('AdminGuard', () => {
       .rejects.toThrow(new UnauthorizedException('Token no proporcionado'));
   });
 
+  it('rechaza "Bearer" sin token sin llegar a consultar a Supabase', async () => {
+    // El fallo original: authHeader.split(' ')[1] daba undefined para una
+    // cabecera "Bearer" a secas, y getUser(undefined) NO falla — recae en la
+    // sesión que el cliente compartido tenga guardada y devuelve el último
+    // usuario que inició sesión. Aquí exigimos las dos cosas: 401 con el
+    // mensaje de siempre, y que a Supabase no se le pregunte nada.
+    const getUser = jest.fn();
+    const guard = new AdminGuard({ client: { auth: { getUser } } } as never);
+
+    for (const authorization of ['Bearer', 'Bearer ', '  ', 'Basic abc', 'token']) {
+      await expect(
+        guard.canActivate(contextFor({ headers: { authorization } })),
+      ).rejects.toThrow(new UnauthorizedException('Token no proporcionado'));
+    }
+
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
   it('rechaza un token inválido o expirado', async () => {
     const guard = guardWith({
       data: { user: null },

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RequestWithAdmin } from './request-with-admin.interface';
+import { extractBearerToken } from './bearer-token.util';
 
 // El rol vive en app_metadata, que sólo se puede escribir con la
 // SERVICE_ROLE_KEY. user_metadata NO sirve: cualquier usuario autenticado
@@ -17,13 +18,12 @@ export class AdminGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithAdmin>();
-    const authHeader = request.headers.authorization;
+    const token = extractBearerToken(request.headers.authorization);
 
-    if (!authHeader) {
+    if (!token) {
       throw new UnauthorizedException('Token no proporcionado');
     }
 
-    const token = authHeader.split(' ')[1];
     const {
       data: { user },
       error,

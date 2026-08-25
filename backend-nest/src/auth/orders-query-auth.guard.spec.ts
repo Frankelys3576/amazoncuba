@@ -50,6 +50,30 @@ describe('OrdersQueryAuthGuard', () => {
     ).rejects.toThrow(new UnauthorizedException('Token no proporcionado'));
   });
 
+  it('con query.storeId y cabecera "Bearer" sin token, rechaza sin consultar a Supabase', async () => {
+    // getUser(undefined) recae en la sesión guardada del cliente compartido y
+    // devuelve el último usuario que inició sesión. No debemos llamarlo.
+    const getUser = jest.fn();
+    const supabaseService = { client: { auth: { getUser } } };
+    const prisma = { store: { findUnique: jest.fn() } };
+    const adminGuard = { canActivate: jest.fn() };
+
+    const guard = new OrdersQueryAuthGuard(
+      supabaseService as never,
+      prisma as never,
+      adminGuard as never,
+    );
+
+    await expect(
+      guard.canActivate(
+        contextFor({ query: { storeId: 's1' }, headers: { authorization: 'Bearer' } }),
+      ),
+    ).rejects.toThrow(new UnauthorizedException('Token no proporcionado'));
+
+    expect(getUser).not.toHaveBeenCalled();
+    expect(prisma.store.findUnique).not.toHaveBeenCalled();
+  });
+
   it('con query.storeId, token válido, pero tienda distinta, rechaza con ForbiddenException', async () => {
     const user = { id: 'u1' };
     const supabaseService = {
