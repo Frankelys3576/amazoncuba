@@ -94,7 +94,12 @@ export const createOrder = async (orderData) => {
 
 export const getStores = async () => {
   try {
-    const response = await fetch(`${API_URL}/stores`);
+    // GET /api/stores ahora sólo devuelve tiendas 'approved' salvo que el
+    // llamante sea administrador. AdminStores.jsx usa esta misma función para
+    // ver (y aprobar) tiendas pendientes, así que sin el token el panel
+    // perdería silenciosamente las tiendas pendientes/rechazadas.
+    const response = await fetch(`${API_URL}/stores`, { headers: adminHeaders() });
+    if (handleAuthFailure(response)) return [];
     if (!response.ok) throw new Error('Error al obtener tiendas');
     return await response.json();
   } catch (error) {

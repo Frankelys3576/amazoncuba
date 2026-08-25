@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { resolveOrdersCaller } = require('../middleware/auth.middleware');
 
 const generateSlug = (text) => {
   if (!text) return '';
@@ -8,11 +9,30 @@ const generateSlug = (text) => {
     .replace(/^-+|-+$/g, '');
 };
 
+// Antes hac\u00eda `...store`, as\u00ed que la respuesta p\u00fablica inclu\u00eda todas las
+// columnas: phone, el blob zelle_info, y tras la migraci\u00f3n user_id y las
+// columnas legacy_*. Ahora se enumera lo que el frontal usa.
 const formatStore = (store) => {
   if (!store) return store;
   const info = store.zelle_info || {};
   return {
-    ...store,
+    id: store.id,
+    name: store.name,
+    description: store.description,
+    logo_url: store.logo_url,
+    banner_url: store.banner_url,
+    status: store.status,
+    created_at: store.created_at,
+    store_type: store.store_type,
+    slogan: store.slogan,
+    phone: store.phone,
+    is_open: store.is_open,
+    has_delivery: store.has_delivery,
+    slug: store.slug,
+    opening_time: store.opening_time,
+    closing_time: store.closing_time,
+    accepts_zelle: store.accepts_zelle,
+    store_number: store.store_number,
     province: store.province || info.province || '',
     municipality: store.municipality || info.municipality || '',
     address: store.address || info.address || '',
@@ -26,13 +46,22 @@ const formatStore = (store) => {
 // Obtener todas las tiendas
 const getStores = async (req, res) => {
   try {
+    // Un administrador ve todas las tiendas; cualquier otro llamante s\u00f3lo las
+    // aprobadas. AdminStores.jsx usa ESTE mismo endpoint para aprobar tiendas
+    // pendientes, as\u00ed que el filtro sin la excepci\u00f3n romper\u00eda la aprobaci\u00f3n.
+    const caller = await resolveOrdersCaller(req);
+    const isAdmin = caller.kind === 'admin';
+
     let query = supabase.from('stores').select('*');
-    
+    if (!isAdmin) {
+      query = query.eq('status', 'approved');
+    }
+
     // Si se pasa un type por query string, filtramos (ej. type=business o type=hostal)
     if (req.query.type) {
       query = query.eq('store_type', req.query.type);
     }
-    
+
     const { data, error } = await query;
 
     if (error) {

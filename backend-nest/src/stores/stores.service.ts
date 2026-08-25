@@ -33,10 +33,15 @@ export class StoresService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  async findAll(query: { type?: string; province?: string; municipality?: string; q?: string }) {
-    const stores = await this.prisma.store.findMany({
-      where: query.type ? { store_type: query.type } : undefined,
-    });
+  async findAll(
+    query: { type?: string; province?: string; municipality?: string; q?: string },
+    isAdmin: boolean,
+  ) {
+    const where: Prisma.StoreWhereInput = {};
+    if (query.type) where.store_type = query.type;
+    if (!isAdmin) where.status = 'approved';
+
+    const stores = await this.prisma.store.findMany({ where });
     let formatted = stores.map((s) => formatStore(s));
 
     if (query.province) {

@@ -9,6 +9,43 @@ describe('StoresService', () => {
 
   const STORE_ID = '11111111-1111-1111-1111-111111111111';
 
+  // Task 3 (public surface hardening): GET /api/stores must not leak
+  // pending/rejected stores to a non-admin caller. Mirrors getStores in
+  // backend/src/controllers/store.controller.js.
+  describe('findAll: status filter', () => {
+    it('restricts to approved stores for a non-admin caller', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const prisma = makePrisma({ findMany });
+      const service = new StoresService(prisma, {} as any);
+
+      await service.findAll({}, false);
+
+      expect(findMany).toHaveBeenCalledWith({ where: { status: 'approved' } });
+    });
+
+    it('does not restrict by status for an admin caller', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const prisma = makePrisma({ findMany });
+      const service = new StoresService(prisma, {} as any);
+
+      await service.findAll({}, true);
+
+      expect(findMany).toHaveBeenCalledWith({ where: {} });
+    });
+
+    it('combines the status restriction with an explicit type filter for a non-admin caller', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const prisma = makePrisma({ findMany });
+      const service = new StoresService(prisma, {} as any);
+
+      await service.findAll({ type: 'hostal' }, false);
+
+      expect(findMany).toHaveBeenCalledWith({
+        where: { store_type: 'hostal', status: 'approved' },
+      });
+    });
+  });
+
   describe('findOne', () => {
     it('looks up by id when the param is uuid-shaped', async () => {
       const prisma = makePrisma({
