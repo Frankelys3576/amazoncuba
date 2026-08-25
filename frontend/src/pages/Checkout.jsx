@@ -3,13 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { createOrder, getStoreById, uploadImage } from '../services/api';
 import ZelleWarningModal from '../components/ZelleWarningModal';
+import { getOrderTotalDisplay } from '../utils/orderTotals';
 import './Checkout.css';
-
-// Renders the server-authoritative per-currency totals, e.g. "45.00 USD + 12000.00 CUP"
-const formatTotals = (totals) =>
-  Object.entries(totals || {})
-    .map(([currency, amount]) => `${Number(amount).toFixed(2)} ${currency}`)
-    .join(' + ');
 
 const Checkout = () => {
   const { cart, cartTotal, clearCart } = useCart();
@@ -168,7 +163,7 @@ const Checkout = () => {
     });
     
     receiptText += `--------------------------------------\n`;
-    receiptText += `TOTAL: ${formatTotals(currentOrder.totals)}\n`;
+    receiptText += `TOTAL: ${getOrderTotalDisplay(currentOrder)}\n`;
     receiptText += `======================================\n`;
     receiptText += `¡Gracias por su compra!\n`;
 
@@ -210,7 +205,7 @@ const Checkout = () => {
               </ul>
               <div className="modal-total">
                 <strong>Total Pagado:</strong>
-                <span className="bold-price">{formatTotals(currentOrder.totals)}</span>
+                <span className="bold-price">{getOrderTotalDisplay(currentOrder)}</span>
               </div>
               
               <div className="modal-customer-info">
@@ -242,7 +237,7 @@ const Checkout = () => {
                     
                   let msg = `¡Hola! Me interesa hacer este pedido ahora.\n\n`;
                   msg += `*Orden ID:* #${currentOrder.id}\n`;
-                  msg += `*Total a pagar:* ${formatTotals(currentOrder.totals)}\n\n`;
+                  msg += `*Total a pagar:* ${getOrderTotalDisplay(currentOrder)}\n\n`;
                   msg += `*Mis datos para el envío:*\n`;
                   msg += `Nombre: ${currentOrder.customerInfo.fullName}\n`;
                   msg += `Dirección: ${currentOrder.customerInfo.address}, ${currentOrder.customerInfo.municipio}, ${currentOrder.customerInfo.province}\n`;
