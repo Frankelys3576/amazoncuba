@@ -1,6 +1,12 @@
 const getBaseApiUrl = () => {
   if (import.meta.env.PROD) {
-    return 'https://backend-lilac-xi-77.vercel.app/api';
+    // Mismo origen. El vercel.json de la raíz despliega frontend y backend
+    // juntos y enruta /api/(.*) a backend/src/index.js, así que la API vive
+    // en este mismo dominio. Antes esto apuntaba a
+    // https://backend-lilac-xi-77.vercel.app/api, un despliegue distinto que
+    // NO se actualiza desde main: la tienda servía código nuevo hablando con
+    // un backend viejo. Relativo además evita CORS.
+    return '/api';
   }
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return `http://${window.location.hostname}:5001/api`;

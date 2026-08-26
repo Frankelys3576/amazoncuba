@@ -1,6 +1,11 @@
 const getBaseApiUrl = () => {
   if (import.meta.env.PROD) {
-    return 'https://backend-lilac-xi-77.vercel.app/api';
+    // Esta app se despliega como proyecto propio, en otro dominio, así que no
+    // puede usar una ruta relativa: apunta al dominio donde el vercel.json de
+    // la raíz publica el backend. Antes apuntaba a
+    // https://backend-lilac-xi-77.vercel.app/api, un despliegue que ya no se
+    // actualiza desde main.
+    return 'https://www.amasoncubano.com/api';
   }
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return `http://${window.location.hostname}:5001/api`;

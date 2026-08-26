@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DealProductCard from '../components/DealProductCard';
 import { getProducts, getCategories } from '../services/api';
 import './DailyDeals.css';
+import { idNumber } from '../utils/productId';
 
 // Los botones de filtro están rotulados "Electrónica" y "Hogar"; las
 // categorías vienen de la API con su nombre tal cual está en la base de
@@ -12,10 +13,6 @@ const normalizeName = (name) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
-
-// Último dígito hexadecimal del id, sea un entero o un UUID v7. Se usa para
-// escoger ofertas de forma estable por producto.
-const dealDigit = (id) => parseInt(String(id).replace(/-/g, '').slice(-1), 16);
 
 // Si la categoría no existe en la base de datos no hay nada que mostrar:
 // sin esta guarda, comparar contra `undefined` devolvería los productos que
@@ -48,7 +45,7 @@ const DailyDeals = () => {
         // la base de datos se despliegan por separado, así que esta página
         // tiene que servir las dos formas mientras dure la ventana.
         const selectedDeals = allProducts
-          .filter(p => p.id != null && dealDigit(p.id) % 4 === 0)
+          .filter(p => p.id != null && idNumber(p.id) % 4 === 0)
           .slice(0, 12);
 
         // Los filtros por categoría comparaban category_id con 1 y 4, los
