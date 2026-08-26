@@ -28,7 +28,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/backend/src/index.js"
+      "dest": "https://backend-cuba-amazon.vercel.app/api/$1"
     },
     {
       "src": "/images/(.*)",
