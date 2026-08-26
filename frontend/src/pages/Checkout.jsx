@@ -234,7 +234,7 @@ const Checkout = () => {
                   // Format the WhatsApp message
                   const sellerPanelUrl = window.location.origin.includes('localhost') 
                     ? `http://localhost:3001/orders` 
-                    : `https://seller-cuba-amazon.vercel.app/orders`;
+                    : `https://seller.amasoncubano.com/orders`;
                     
                   let msg = `¡Hola! Me interesa hacer este pedido ahora.\n\n`;
                   msg += `*Orden ID:* #${currentOrder.id}\n`;

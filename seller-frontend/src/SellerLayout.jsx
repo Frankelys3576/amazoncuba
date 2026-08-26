@@ -5,7 +5,7 @@ import { getStoreById } from './services/api';
 import './SellerLayout.css';
 
 const getClientStoreUrl = (id) => {
-  if (import.meta.env.PROD) return `https://tienda-cuba-amazon.vercel.app/negocio/${id}`;
+  if (import.meta.env.PROD) return `https://www.amasoncubano.com/negocio/${id}`;
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return `http://${window.location.hostname}:5173/negocio/${id}`;
   }

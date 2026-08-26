@@ -1,8 +1,10 @@
 const getBaseApiUrl = () => {
   if (import.meta.env.PROD) {
-    // Mismo origen. El vercel.json de la raíz despliega frontend y backend
-    // juntos y enruta /api/(.*) a backend/src/index.js, así que la API vive
-    // en este mismo dominio. Antes esto apuntaba a
+    // Mismo origen. El vercel.json de la raíz despliega el frontend y enruta
+    // /api/(.*) por proxy a https://api02.amasoncubano.com/api/$1 -- es decir
+    // a backend-nest (NestJS) --, así que la API vive en este mismo dominio.
+    // Ese proxy es el punto de cambio: para volver a Express basta reapuntar
+    // ese `dest` a /backend/src/index.js. Antes esto apuntaba a
     // https://backend-lilac-xi-77.vercel.app/api, un despliegue distinto que
     // NO se actualiza desde main: la tienda servía código nuevo hablando con
     // un backend viejo. Relativo además evita CORS.

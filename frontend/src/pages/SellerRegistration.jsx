@@ -92,7 +92,7 @@ const SellerRegistration = () => {
         const fullName = response.user?.user_metadata?.full_name || response.user?.email || 'Vendedor';
         localStorage.setItem('seller_name', fullName);
         
-        window.location.href = "https://seller-cuba-amazon.vercel.app/dashboard";
+        window.location.href = "https://seller.amasoncubano.com/dashboard";
       } else {
         const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
         const formattedEmail = `${cleanPhone}@cubaamazon.com`;
@@ -115,7 +115,7 @@ const SellerRegistration = () => {
         
         if (regResponse.autoApproved) {
           alert('¡Tu cuenta ha sido registrada con éxito! Ya puedes acceder a tu panel.');
-          window.location.href = "https://seller-cuba-amazon.vercel.app/login";
+          window.location.href = "https://seller.amasoncubano.com/login";
         } else {
           alert('Solicitud enviada correctamente. Tu cuenta está en proceso de activación.');
           setIsLogin(true);

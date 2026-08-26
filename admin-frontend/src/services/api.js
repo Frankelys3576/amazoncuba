@@ -2,7 +2,8 @@ const getBaseApiUrl = () => {
   if (import.meta.env.PROD) {
     // Esta app se despliega como proyecto propio, en otro dominio, así que no
     // puede usar una ruta relativa: apunta al dominio donde el vercel.json de
-    // la raíz publica el backend. Antes apuntaba a
+    // la raíz publica la API, que hace de proxy hacia backend-nest (NestJS)
+    // en https://api02.amasoncubano.com. Antes apuntaba a
     // https://backend-lilac-xi-77.vercel.app/api, un despliegue que ya no se
     // actualiza desde main.
     return 'https://www.amasoncubano.com/api';
