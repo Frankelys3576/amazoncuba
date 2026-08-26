@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard';
 import CategoryCard from '../components/CategoryCard';
 import ZelleWarningModal from '../components/ZelleWarningModal';
 import './StoreDetails.css';
+import { idNumber } from '../utils/productId';
 
 const StoreDetails = () => {
   const { id } = useParams();
@@ -49,10 +50,10 @@ const StoreDetails = () => {
       let filteredProducts = storeProducts;
       if (filterQuery === 'bestsellers') {
         // Simular los más vendidos (solo con id par o algo así)
-        filteredProducts = storeProducts.filter(p => p.id % 2 === 0);
+        filteredProducts = storeProducts.filter(p => idNumber(p.id) % 2 === 0);
       } else if (filterQuery === 'deals') {
         // Simular ofertas (productos con precio terminado en .99 o similar, o random)
-        filteredProducts = storeProducts.filter(p => p.id % 3 === 0);
+        filteredProducts = storeProducts.filter(p => idNumber(p.id) % 3 === 0);
       } else if (filterQuery === 'new') {
         // Simular nuevos (los últimos agregados)
         filteredProducts = storeProducts.slice(0, 10);

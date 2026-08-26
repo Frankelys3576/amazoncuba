@@ -102,10 +102,11 @@ const Checkout = () => {
       const enrichedCart = await Promise.all(cart.map(async (item) => {
         if (!item.store_phone && item.store_id) {
           try {
-            // Reutilizamos el endpoint existente, import getStoreById
-            const response = await fetch(`https://backend-lilac-xi-77.vercel.app/api/stores/${item.store_id}`);
-            if (response.ok) {
-              const storeData = await response.json();
+            // getStoreById ya estaba importado arriba: este fetch traía la URL
+            // del backend a mano, saltándose services/api.js, y apuntaba a un
+            // despliegue que ya no se actualiza desde main.
+            const storeData = await getStoreById(item.store_id);
+            if (storeData) {
               return { ...item, store_name: storeData.name, store_phone: storeData.phone };
             }
           } catch (e) {

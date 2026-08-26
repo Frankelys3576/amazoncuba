@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import './DealProductCard.css';
+import { idNumber } from '../utils/productId';
 
 const DealProductCard = ({ product }) => {
   const { addToCart } = useCart();
   
   // Simulated discount logic (15% to 40%)
   // Using the product id to generate a consistent but pseudo-random discount
-  const discountPercentage = 15 + ((product.id * 7) % 25);
+  // idNumber: los ids son uuid, y `product.id * 7` daba NaN -> "NaN%".
+  const discountPercentage = 15 + ((idNumber(product.id) * 7) % 25);
   
   const originalPrice = product.price / (1 - (discountPercentage / 100));
 
