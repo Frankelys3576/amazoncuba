@@ -4,19 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Tienda Cuba Amazon — a marketplace platform for Cuban businesses/hostales, comprised of one Express/Supabase backend and three independent Vite/React single-page apps (customer-facing storefront, seller dashboard, admin panel). Product copy, comments, and API error messages are in Spanish; keep new user-facing strings and comments consistent with that.
+Tienda Cuba Amazon — a marketplace platform for Cuban businesses/hostales, comprised of a NestJS/Prisma backend (with the original Express backend still in the tree as a rollback) and three independent Vite/React single-page apps (customer-facing storefront, seller dashboard, admin panel). Product copy, comments, and API error messages are in Spanish; keep new user-facing strings and comments consistent with that.
 
 ## Repo layout
 
 This is a multi-app repo, NOT a workspace/monorepo tool (no root `package.json`, no Turborepo/Nx/Lerna). Each app has its own `package.json`, `node_modules`, and is deployed as a **separate Vercel project**:
 
-- `backend/` — Express REST API, deployed as Vercel serverless functions. Talks to Supabase (Postgres + Auth + Storage).
+- `backend-nest/` — **the backend that serves production.** NestJS + Prisma REST API. Talks to the same Supabase (Postgres via Prisma; Auth + Storage via `@supabase/supabase-js`).
+- `backend/` — the original Express REST API. **No longer serves traffic**; it stays deployed purely as the rollback target (see Deployment).
 - `frontend/` — the public storefront (customers browse stores/products, place orders, "CubaBnB" hostal listings).
 - `seller-frontend/` — dashboard for store owners (manage products, orders, profile).
 - `admin-frontend/` — internal admin panel (approve stores, manage users, marketing, settings).
 - `easyWeb/` — currently empty.
 
-Run any command from inside the relevant app directory (`backend/`, `frontend/`, `seller-frontend/`, `admin-frontend/`) — there is no root install/build/lint script.
+Run any command from inside the relevant app directory (`backend-nest/`, `backend/`, `frontend/`, `seller-frontend/`, `admin-frontend/`) — there is no root install/build/lint script.
 
 ## Commands
 
@@ -30,7 +31,20 @@ npm run lint      # oxlint
 npm run preview   # preview production build
 ```
 
-Backend:
+Backend (NestJS — the one that serves production):
+
+```bash
+cd backend-nest
+npm install
+npx prisma generate  # required after any schema.prisma change, and after a fresh install
+npm run start:dev    # nest start --watch (PORT from .env, default 5001)
+npm run build        # nest build -> dist/
+npm test             # jest unit tests
+npm run test:e2e     # supertest e2e tests
+npm run lint         # eslint -- NOTE: this runs with --fix and will rewrite files
+```
+
+Backend (Express — rollback only):
 
 ```bash
 cd backend
@@ -39,9 +53,22 @@ npm run dev        # nodemon src/index.js (reads PORT from .env, default 5001 lo
 npm start           # node src/index.js
 ```
 
-There is no configured test runner in any app (`backend`'s `npm test` is a stub, frontends have no test script) — do not assume Jest/Vitest exists unless you check.
+`backend-nest` is the only app with tests (Jest unit + Supertest e2e; Prisma and Supabase are mocked, nothing hits a live database). `backend`'s `npm test` is a stub and the frontends have no test script — do not assume a runner exists elsewhere without checking.
 
 ## Backend architecture
+
+Two backends implement the same API and are kept behaviour-compatible: `backend-nest/` serves production, `backend/` is the rollback. **A behavioural change to one almost always needs the same change to the other** — several past fixes shipped to both in a single commit. The contract described below is what both implement; paths are given for the Express side, with the NestJS equivalent noted where it differs.
+
+### NestJS (`backend-nest/`) — the deployed backend
+
+- One module per resource under `src/<resource>/` (Controller + Service + DTOs), mirroring the Express routers. `PrismaModule` is global; Supabase Auth and Storage stay reachable through `SupabaseModule`.
+- Prisma points at the same Supabase Postgres. `prisma/schema.prisma` is the source of truth and matches the live database. There is **no** `prisma/migrations` directory and `prisma migrate` is not used — schema changes still happen through the ad hoc SQL described below, then get reflected into the schema by hand or with `prisma db pull`.
+- The Express middleware map onto guards in `src/auth/`: `authenticateSeller` → `SellerAuthGuard` (+ `SellerAuthStrategy`), `requireStoreOwnership` → `StoreOwnershipGuard`, `authenticateAdmin` → `AdminGuard`, `authorizeOrdersQuery` → `OrdersQueryAuthGuard`, `authorizeOrderUpdate` → `OrderUpdateAuthGuard`, `requireAdminWhenRequested` → `AdminWhenRequestedGuard`. **Any new admin route must be mounted behind `AdminGuard`**, exactly as on the Express side.
+- Rate limits use `@nestjs/throttler` with per-route `@Throttle` overrides matching Express's numbers, and carry the same per-instance in-memory caveat. `trust proxy` is `1` in `src/main.ts` and **stays `1`** even though `/api` now arrives through a proxy hop — that was measured, and the extra hop does not collapse the per-IP buckets.
+- A global interceptor (`common/legacy-fields.interceptor.ts`) strips the `legacy_*` bigint columns from every response: they are migration-rollback scaffolding, and `JSON.stringify` cannot serialize a bigint at all. This is the one visible response difference from Express, which still leaks them.
+- `src/main.ts` must call `app.listen()` unconditionally — Vercel's NestJS preset runs the listening server as a single function. Do not reintroduce a `NODE_ENV`/`VERCEL` gate or an exported serverless handler.
+
+### Express (`backend/`) — retained as the rollback
 
 Plain Express app in `backend/src/`, `routes/*.routes.js` → `controllers/*.controller.js` → Supabase client (`config/supabase.js`). No service/model layer — controllers talk to Supabase directly.
 
@@ -65,7 +92,7 @@ Plain Express app in `backend/src/`, `routes/*.routes.js` → `controllers/*.con
 All three frontends share the same shape: Vite + React 19 + `react-router-dom` v7, plain CSS files per component (one `.css` alongside each `.jsx`, no CSS-in-JS or Tailwind), `lucide-react` for icons, oxlint for linting (react-hooks rules enforced).
 
 - Each app has its own `src/services/api.js` with hand-rolled `fetch` wrappers (no axios, no react-query/SWR) — these three files are near-duplicates of each other; when adding an endpoint, add the fetch wrapper to every app's `api.js` that needs it, keeping the same error-handling shape (catch, `console.error`, return `[]`/`null`/`{}` fallback for GETs, rethrow for mutations).
-- API base URL logic is duplicated in each `api.js`: in production it points at the fixed backend Vercel URL (`https://backend-lilac-xi-77.vercel.app/api`); in dev it targets `localhost:5001/api` (or the current hostname on port 5001 for LAN testing); `VITE_API_URL` env var overrides both. When the backend's deployed URL changes, update it in all three `api.js` files.
+- API base URL logic is duplicated in each `api.js`, but in production all three resolve to the same origin: `frontend/` (served from that domain) uses the same-origin path `/api`, while `seller-frontend` and `admin-frontend` use the absolute `https://www.amasoncubano.com/api`. In dev each targets `localhost:5001/api` (or the current hostname on port 5001 for LAN testing); `VITE_API_URL` overrides both. **No frontend points at a backend deployment directly** — `/api` is a proxy (see Deployment), so changing which backend serves the API is one line in the root `vercel.json`, not an edit across three `api.js` files.
 - `frontend/` (storefront) uses React Context for cross-page state: `context/CartContext.jsx` (cart) and `context/LocationContext.jsx` (selected province/municipality for filtering stores/products).
 - `frontend/`, `seller-frontend/` and `admin-frontend/` each keep their own copy of `cubaLocations.js` (province/municipality data) and `AddressInputWithAutocomplete` / `LocationPinPicker` components — these are duplicated per app rather than shared.
 - `seller-frontend` and `admin-frontend` are flat: page components live directly under `src/` (e.g. `SellerDashboard.jsx`, `AdminStores.jsx`) rather than in a `pages/` subfolder like `frontend` uses.
@@ -73,16 +100,31 @@ All three frontends share the same shape: Vite + React 19 + `react-router-dom` v
 
 ## Deployment
 
-Each app deploys as its own Vercel project (`.vercel/` present in each, plus per-app `vercel.json` for SPA rewrites). The root `vercel.json` is a legacy/alternate combined-deploy config (builds `frontend` + `backend` together with routing rules) — the four apps have since diverged into independent Vercel projects, so prefer checking each app's own `vercel.json` over the root one when reasoning about deployment behavior.
+Four Vercel projects deploy from this one repo, all on pushes to `main`:
 
-Backend env vars (`backend/.env`, see `backend/.env.example` for the shape): `PORT`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+| Project | Serves | Root directory |
+|---|---|---|
+| `tienda-cuba-amazon` | storefront at `amasoncubano.com` / `www.amasoncubano.com`, **and `/api`** | repo root (root `vercel.json`) |
+| `backend-cuba-amazon` | the NestJS API at `api02.amasoncubano.com` | `backend-nest/` |
+| `seller-cuba-amazon` | seller dashboard at `seller.amasoncubano.com` | `seller-frontend/` |
+| `admin-cuba-amazon` | admin panel at `admin.amasoncubano.com` | `admin-frontend/` |
 
-### Deploy ordering for admin auth (do this in this order)
+**How `/api` reaches the backend.** The root `vercel.json` is *not* legacy — it is the live config for `tienda-cuba-amazon`. It builds `frontend/` and routes `/api/(.*)` to `https://api02.amasoncubano.com/api/$1`, an external proxy (legacy `routes` accept an absolute `dest`, which proxies rather than redirects). All three frontends therefore reach one origin, and swapping backends is that single `dest` line.
 
-1. **Run `node backend/set_admin_role.js <correo-del-admin>` against production first**, before `backend/` and `admin-frontend/` ship. The panel now requires a Supabase user carrying `app_metadata.role === 'admin'`; if the deploy lands before the role is granted, **nobody can log into the admin panel** — the login screen rejects the account, and there is no admin API to grant the role because granting it needs the service-role key.
-2. Then deploy `backend/` and `admin-frontend/` (either order).
+- The proxy target is deliberately the **custom domain**, not the project's `*.vercel.app` name. `*.vercel.app` names are released when a project is deleted or renamed, and because this is a same-origin proxy that forwards `Authorization`, whoever claimed the name next would receive every admin and seller bearer token.
+- `backend/src/index.js` is still built by the root `vercel.json` on purpose. That is the rollback lever: point `dest` back at `/backend/src/index.js` and Express serves again without a rebuild. Only remove that build once the NestJS backend has soaked.
+- `backend-nest/vercel.json` contains only `"framework": "nestjs"`. That pin is **required**: a Vercel project created through the API has no framework preset, and without it the build fails with `No Output Directory named "public" found`.
 
-Two consequences worth knowing before you start:
+Env vars:
+
+- `backend-nest/.env` (see `backend-nest/.env.example`): `PORT`, `DATABASE_URL` (pooled Supavisor connection, port 6543, `pgbouncer=true` — serverless fan-out exhausts the direct connection limit), `DIRECT_URL` (direct connection, port 5432, schema operations only), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. On Vercel, the three `SUPABASE_*` values in Production are supplied by an attached Supabase Marketplace integration rather than from this file — check there before assuming a missing key.
+- `backend/.env` (see `backend/.env.example`): `PORT`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+### Admin access
+
+Per-admin auth is already live in production, so the one-time ordering step below is history — it is recorded because the same sequence applies to any *new* environment: grant the role **before** the backend and `admin-frontend` ship there. `node backend/set_admin_role.js <correo-del-admin>` is what grants it, using the service-role key directly against Supabase (it is independent of which backend is serving). If a deploy lands before the role exists, **nobody can log into the admin panel** — the login screen rejects the account, and there is no admin API to grant the role.
+
+Two consequences that remain permanently true:
 
 - **Recovering the admin password is a Supabase dashboard job.** Once the role is set, `PUT /api/users/:id` refuses to act on that account, so the admin's own password can no longer be reset through the panel. Supabase's own dashboard (Authentication → Users) is the only recovery path. Confirm the credentials work before locking the account down.
 - There is exactly one admin account. Deleting it through the panel is likewise refused (403), for the same reason: nothing else could restore access.
