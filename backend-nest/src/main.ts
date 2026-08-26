@@ -18,36 +18,26 @@ async function createApp(): Promise<INestApplication> {
   return app;
 }
 
-// Local/dev: listen on a port like a normal Node server.
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  createApp().then(async (app) => {
-    const port = process.env.PORT || 5001;
-    await app.listen(port);
-    console.log(`🚀 Servidor backend-nest corriendo en el puerto ${port}`);
-  });
-}
-
-// Vercel: reuse one initialized app instance across invocations on the same
-// Fluid Compute worker instead of rebuilding the whole Nest graph per request.
+// One bootstrap for both local dev and Vercel.
 //
-// M5: cache the in-flight *promise*, not the resolved app. Caching the
-// resolved value left a window between the `!cachedApp` check and the
-// `cachedApp = await createApp()` assignment — two concurrent requests
-// arriving in that window both see `cachedApp` as undefined and each call
-// createApp(), building two separate Nest graphs (and two Prisma
-// connections) and orphaning one. Caching the promise means the second
-// concurrent request awaits the same in-flight createApp() call instead of
-// starting its own.
-let cachedApp: Promise<INestApplication> | undefined;
-
-export default async function handler(req: any, res: any) {
-  if (!cachedApp) {
-    cachedApp = createApp().then(async (app) => {
-      await app.init();
-      return app;
-    });
-  }
-  const app = await cachedApp;
-  const instance = app.getHttpAdapter().getInstance();
-  return instance(req, res);
+// Vercel's NestJS preset detects this file by name (`src/main.ts` is on its
+// entrypoint list), compiles it, and runs the *listening server* as a single
+// Fluid Compute Function — so `app.listen()` must run unconditionally. The
+// previous version gated it behind `NODE_ENV !== 'production' && !VERCEL`
+// and exported a serverless handler instead, which is the older
+// `builds: [{ use: '@vercel/node' }]` contract. Under the preset that gate
+// would leave the function with no server at all.
+//
+// The handler also memoized the Nest app in a module-scoped promise so
+// concurrent invocations on one worker shared a single Nest graph and Prisma
+// connection. Fluid Compute runs this as a normal long-lived Node process,
+// so the graph is built exactly once at boot and the memoization has nothing
+// left to guard — do not reintroduce it along with a handler export.
+async function bootstrap() {
+  const app = await createApp();
+  const port = process.env.PORT || 5001;
+  await app.listen(port);
+  console.log(`🚀 Servidor backend-nest corriendo en el puerto ${port}`);
 }
+
+void bootstrap();
