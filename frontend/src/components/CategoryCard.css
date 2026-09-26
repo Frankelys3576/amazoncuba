@@ -9,7 +9,16 @@
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
+
+/* Cada categoría con su propio color de acento -- mismo set vivo que las
+   etiquetas de los carruseles del home, para que se sienta un sistema y no
+   colores sueltos. */
+.category-card--green .category-card-icon-container { background: linear-gradient(135deg, var(--neon-green) 0%, #00e676 100%); }
+.category-card--orange .category-card-icon-container { background: linear-gradient(135deg, var(--neon-orange) 0%, #ffab40 100%); }
+.category-card--violet .category-card-icon-container { background: linear-gradient(135deg, var(--neon-violet) 0%, #b388ff 100%); }
+.category-card--pink .category-card-icon-container { background: linear-gradient(135deg, var(--neon-pink) 0%, #ff8fc7 100%); }
 
 @media (min-width: 576px) {
   .category-card {
@@ -50,18 +59,25 @@
   }
 }
 
-.category-card-image-container {
+.category-card-image-container,
+.category-card-icon-container {
   flex-grow: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   overflow: hidden;
   margin-bottom: 10px;
   border-radius: var(--border-radius-sm);
+  transition: transform 0.3s ease;
+}
+
+.category-card-image-container {
+  align-items: flex-start;
 }
 
 @media (min-width: 576px) {
-  .category-card-image-container {
+  .category-card-image-container,
+  .category-card-icon-container {
     margin-bottom: 20px;
   }
 }
@@ -70,11 +86,23 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
 }
 
-.category-card:hover .category-card-image {
-  transform: scale(1.03);
+.category-card:hover .category-card-image-container,
+.category-card:hover .category-card-icon-container {
+  transform: scale(1.04);
+}
+
+.category-card-icon {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+}
+
+@media (min-width: 576px) {
+  .category-card-icon {
+    font-size: 84px;
+  }
 }
 
 .category-card-link {

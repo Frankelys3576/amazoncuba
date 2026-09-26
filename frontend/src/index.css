@@ -23,8 +23,24 @@
   
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
   --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
-  
+
   --border-color: #e2e8f0;
+
+  /* Acentos vibrantes para carruseles/etiquetas de recomendación en la
+     página pública (home para abajo) -- cada sección de producto lleva uno
+     como identidad de color, igual que los rieles de recomendaciones de la
+     app de Amazon. Nunca se usan para el precio ni el descuento (eso se
+     queda en rojo/dorado, que es la señal universal de oferta). */
+  --neon-green: #00c853;
+  --neon-green-soft: #e3fbea;
+  --neon-orange: #ff6a00;
+  --neon-orange-soft: #fff0e3;
+  --neon-violet: #8b5cf6;
+  --neon-violet-soft: #f1eaff;
+  --neon-pink: #ff2d8c;
+  --neon-pink-soft: #ffe6f2;
+
+  --gold-accent: #d4a017;
 }
 
 * {

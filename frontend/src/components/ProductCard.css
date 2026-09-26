@@ -28,7 +28,7 @@
 
   .product-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 12px 24px -8px rgba(10, 31, 68, 0.18);
   }
 }
 
@@ -137,8 +137,8 @@
 }
 
 .star-filled {
-  color: #f59e0b;
-  fill: #f59e0b;
+  color: var(--gold-accent);
+  fill: var(--gold-accent);
 }
 
 .star-empty {
