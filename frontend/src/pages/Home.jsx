@@ -7,6 +7,19 @@ import { getProducts } from '../services/api';
 import { useLocation } from '../context/LocationContext';
 import './Home.css';
 
+// Los enlaces de categoría de esta página llevaban ids legacy ("1", "2",
+// "3", "4") de antes de la migración a uuid v7 -- ProductsService.findAll
+// pasa ese valor tal cual a `where.category_id`, una columna uuid, así que
+// Prisma tiraba un error de tipo y /search?category=1 respondía 500 en vez
+// de una lista de productos (o vacía). Estos son los uuid reales de
+// public.categories a día de hoy; si esas filas se vuelven a crear (otra
+// migración, un reseed), estos valores hay que actualizarlos a mano.
+const CATEGORY_IDS = {
+  electronica: '01a03bc3-8639-7bb8-82f1-6dd5d09433f7',
+  hogar: '01a03bc3-863b-7e33-a6f7-7f7ca79b4106',
+  bellezaYCuidadoPersonal: '01a03bc3-863b-7fb9-a760-78463876f72c',
+};
+
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,10 +74,10 @@ const Home = () => {
         <Link to="/ofertas" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px', textDecoration: 'none' }}>
           🔥 Ofertas del Día
         </Link>
-        <Link to="/search?category=1" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: '500', fontSize: '13px', textDecoration: 'none' }}>
+        <Link to={`/search?category=${CATEGORY_IDS.electronica}`} style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: '500', fontSize: '13px', textDecoration: 'none' }}>
           📱 Electrónica
         </Link>
-        <Link to="/search?category=2" style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: '500', fontSize: '13px', textDecoration: 'none' }}>
+        <Link to={`/search?category=${CATEGORY_IDS.hogar}`} style={{ background: '#f1f5f9', color: '#1e293b', padding: '8px 14px', borderRadius: '20px', fontWeight: '500', fontSize: '13px', textDecoration: 'none' }}>
           🏠 Hogar
         </Link>
       </div>
@@ -119,25 +132,29 @@ const Home = () => {
             title="Electrónica"
             image="https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=400&q=80"
             linkText="Explorar"
-            linkUrl="/search?category=1"
+            linkUrl={`/search?category=${CATEGORY_IDS.electronica}`}
           />
           <CategoryCard
             title="Ropa y Accesorios"
             image="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=400&q=80"
             linkText="Ver novedades"
-            linkUrl="/search?category=3"
+            // No existe todavía una categoría real "Ropa y Accesorios" --
+            // por ahora apunta a donde esos productos SÍ están archivados
+            // (chancletas, guantes, pasamontañas), hasta que se decida crear
+            // la categoría propia.
+            linkUrl={`/search?category=${CATEGORY_IDS.bellezaYCuidadoPersonal}`}
           />
           <CategoryCard
             title="Hogar y Cocina"
             image="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=400&q=80"
             linkText="Explorar"
-            linkUrl="/search?category=2"
+            linkUrl={`/search?category=${CATEGORY_IDS.hogar}`}
           />
           <CategoryCard
             title="Belleza y Cuidado Personal"
             image="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=400&q=80"
             linkText="Comprar"
-            linkUrl="/search?category=4"
+            linkUrl={`/search?category=${CATEGORY_IDS.bellezaYCuidadoPersonal}`}
           />
         </div>
 
