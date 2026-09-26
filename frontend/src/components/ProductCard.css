@@ -100,6 +100,12 @@
    compitiendo entre sí, distinto en cada línea. */
 .product-card-info {
   flex-grow: 1;
+  /* Sin esto, un flex item no encoge más allá del ancho de su contenido
+     (min-width: auto por defecto) -- así que un precio largo o el botón
+     empujaban esta columna, y con ella la tarjeta entera, más ancha que
+     el espacio disponible junto a la imagen en el layout de fila (móvil).
+     Eso era lo que se veía como el botón "saliéndose" de la tarjeta. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -229,10 +235,15 @@
   gap: 4px;
 }
 
-/* === Mobile Add to Cart button === */
+/* === Add to Cart button === */
+/* align-self: stretch + box-sizing: border-box, en vez de flex-start:
+   así el botón siempre llena el ancho real de la columna de info (nunca
+   más, nunca menos) y su padding/borde cuentan DENTRO de ese ancho -- no
+   hay forma de que sobresalga de la tarjeta, en ningún tamaño de pantalla. */
 .add-to-cart-btn-mobile {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   margin-top: 8px;
   padding: 7px 16px;
@@ -244,7 +255,8 @@
   border-radius: 20px;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  align-self: flex-start;
+  align-self: stretch;
+  box-sizing: border-box;
   font-family: inherit;
 }
 
@@ -268,8 +280,6 @@
 
 @media (min-width: 576px) {
   .add-to-cart-btn-mobile {
-    width: 100%;
-    justify-content: center;
     border-radius: 8px;
     padding: 10px;
     font-size: 14px;
