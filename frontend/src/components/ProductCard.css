@@ -10,6 +10,7 @@
   width: 100%;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.15s ease;
+  cursor: pointer;
 }
 
 .product-card:active {
@@ -93,18 +94,37 @@
 }
 
 /* === Info === */
+/* Un solo gap gobierna el espacio vertical entre título, estrellas, precio,
+   entrega y ubicación -- antes cada <p> traía su propio margin-top/bottom
+   inline, así que el espaciado real era la suma (o la resta) de dos reglas
+   compitiendo entre sí, distinto en cada línea. */
 .product-card-info {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+
+/* Insignias de estado (reservación, etc.) -- una sola clase base con
+   modificadores de color, en vez de un style={{...}} distinto por caso. */
+.product-card-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.product-card-badge--reservation {
+  background: #ffe4e6;
+  color: #e11d48;
 }
 
 /* === Title === */
 .product-card-title {
   font-size: 14px;
   font-weight: 400;
-  margin-bottom: 2px;
   color: var(--text-main);
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -117,7 +137,6 @@
 @media (min-width: 576px) {
   .product-card-title {
     font-size: 16px;
-    margin-bottom: 10px;
     line-height: 1.4;
   }
 }
@@ -127,7 +146,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 2px 0;
 }
 
 .stars {
@@ -154,10 +172,10 @@
 /* === Price (Amazon split style) === */
 .product-card-price {
   font-weight: 400;
-  margin-top: 4px;
   color: var(--text-main);
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .price-symbol {
@@ -178,21 +196,37 @@
   margin-top: 2px;
 }
 
+.price-currency {
+  font-size: 12px;
+  color: var(--amazon-text-light);
+  margin-left: 4px;
+  align-self: flex-start;
+}
+
+.price-zelle {
+  font-size: 14px;
+  color: var(--amazon-price-red);
+  margin-left: 8px;
+}
+
 @media (min-width: 576px) {
   .price-whole {
     font-size: 24px;
   }
 }
 
-/* === Delivery tag === */
+/* === Delivery / location === */
 .product-card-delivery {
   font-size: 12px;
   color: var(--text-main);
-  margin-top: 2px;
 }
 
-.product-card-delivery::before {
-  content: '';
+.product-card-location {
+  font-size: 12px;
+  color: var(--amazon-text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* === Mobile Add to Cart button === */
@@ -220,6 +254,16 @@
 
 .add-to-cart-btn-mobile:active {
   background-color: #e7b800;
+}
+
+.add-to-cart-btn-mobile--reservation {
+  background-color: #ff385c;
+  color: white;
+  border-color: #ff385c;
+}
+
+.add-to-cart-btn-mobile--reservation:hover {
+  background-color: #e11d48;
 }
 
 @media (min-width: 576px) {
