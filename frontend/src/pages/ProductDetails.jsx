@@ -260,6 +260,12 @@ const ProductDetails = () => {
             <div className="buy-panel-stock">
               {product.store_is_open === false ? (
                 <span className="out-of-stock" style={{color: '#991b1b'}}>Tienda Cerrada Temporalmente</span>
+              ) : product.is_paused ? (
+                // El vendedor lo quitó del inventario (SellerProducts.jsx):
+                // sigue en el catálogo, pero se ve exactamente como agotado
+                // y el backend rechaza el pedido igual, así que no hay
+                // ninguna vía para comprarlo mientras esté así.
+                <span className="out-of-stock">No disponible</span>
               ) : product.stock > 0 ? (
                 <span className="in-stock">En Stock</span>
               ) : (
@@ -280,29 +286,29 @@ const ProductDetails = () => {
               </select>
             </div>
 
-            <button 
+            <button
               className="btn btn-primary btn-block buy-btn"
               onClick={handleAddToCart}
-              disabled={product.stock === 0 || product.store_is_open === false}
+              disabled={product.stock === 0 || product.is_paused || product.store_is_open === false}
               style={{marginBottom: '10px'}}
             >
               Agregar al Carrito
             </button>
-            <button 
+            <button
               className="btn btn-secondary btn-block buy-now-btn"
               onClick={() => {
                 handleAddToCart();
                 navigate('/checkout');
               }}
-              disabled={product.stock === 0}
+              disabled={product.stock === 0 || product.is_paused}
               style={{marginBottom: '10px'}}
             >
               Hacer Pedido
             </button>
-            <button 
+            <button
               className="btn btn-secondary btn-block contact-btn"
               onClick={openContactModal}
-              disabled={product.stock === 0}
+              disabled={product.stock === 0 || product.is_paused}
               style={{backgroundColor: '#25d366', color: 'white', borderColor: '#25d366'}}
             >
               Contactar al Vendedor

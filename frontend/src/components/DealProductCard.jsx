@@ -47,8 +47,13 @@ const DealProductCard = ({ product }) => {
           <h3 className="deal-title">{product.name}</h3>
         </div>
       </Link>
-      <button onClick={handleAddToCart} className="btn btn-primary add-to-cart-btn">
-        Agregar al Carrito
+      <button
+        onClick={handleAddToCart}
+        className="btn btn-primary add-to-cart-btn"
+        disabled={product.is_paused}
+        style={product.is_paused ? { backgroundColor: '#e2e8f0', color: '#94a3b8', cursor: 'not-allowed' } : undefined}
+      >
+        {product.is_paused ? 'No disponible' : 'Agregar al Carrito'}
       </button>
     </div>
   );

@@ -465,6 +465,59 @@ describe('OrdersService', () => {
       });
     });
 
+    // El vendedor puede "quitar del inventario" un producto sin borrarlo
+    // (is_paused: true) -- el catálogo público ya lo pinta como agotado y
+    // desactiva el botón de comprar, pero esa es solo la UI. Esto prueba el
+    // candado real: un POST directo con ese producto en el carrito no debe
+    // crear el pedido.
+    it('rejects an order containing a paused product, inserting nothing', async () => {
+      const createMany = jest.fn();
+      const prisma = {
+        product: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: PRODUCT_1, price: new Prisma.Decimal(10), currency: 'USD', is_paused: true },
+          ]),
+        },
+        order: { create: jest.fn() },
+        orderItem: { createMany },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity: 1, price: 10 }],
+        } as any),
+      ).rejects.toMatchObject({
+        response: { message: 'Uno o más productos ya no están disponibles' },
+      });
+      expect(createMany).not.toHaveBeenCalled();
+    });
+
+    it('accepts an order where only the other line items are paused-free', async () => {
+      const create = jest.fn().mockResolvedValue({ id: 9, total: new Prisma.Decimal(10) });
+      const createMany = jest.fn().mockResolvedValue({ count: 1 });
+      const prisma = {
+        product: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: PRODUCT_1, price: new Prisma.Decimal(10), currency: 'USD', is_paused: false },
+          ]),
+        },
+        order: { create },
+        orderItem: { createMany },
+      } as any;
+      const service = new OrdersService(prisma);
+
+      await expect(
+        service.create({
+          customer_name: 'Juan',
+          customer_email: 'juan@example.com',
+          items: [{ product_id: PRODUCT_1, quantity: 1, price: 10 }],
+        } as any),
+      ).resolves.toMatchObject({ totals: { USD: 10 } });
+    });
+
     it.each([0, -1, 1.5])('rejects a quantity of %s', async (quantity) => {
       const prisma = {
         product: {

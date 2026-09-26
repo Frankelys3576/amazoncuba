@@ -92,4 +92,11 @@ export class CreateProductDto {
   @IsOptional()
   @IsBoolean({ message: 'El campo destacado debe ser verdadero o falso' })
   is_featured?: boolean;
+
+  // Same reasoning as is_featured just above: SellerProducts.jsx's "Quitar
+  // producto del inventario" toggle PUTs { is_paused: !product.is_paused }.
+  // Without this on the DTO, whitelist:true strips it silently.
+  @IsOptional()
+  @IsBoolean({ message: 'El campo de pausa debe ser verdadero o falso' })
+  is_paused?: boolean;
 }

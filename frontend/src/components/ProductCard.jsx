@@ -59,20 +59,35 @@ const ProductCard = ({ product }) => {
               </span>
             )}
           </p>
-          <p className="product-card-delivery">
-            {product.description?.startsWith('[RESERVACIÓN]') 
-              ? '🏡 Disponibilidad inmediata en Cuba' 
-              : product.store_has_delivery 
-                ? '🚚 Tenemos domicilio' 
-                : '🏬 Recogida en tienda (No tenemos domicilio)'}
-          </p>
+          {product.is_paused ? (
+            <p className="product-card-delivery" style={{ color: '#991b1b', fontWeight: 600 }}>
+              No disponible
+            </p>
+          ) : (
+            <p className="product-card-delivery">
+              {product.description?.startsWith('[RESERVACIÓN]')
+                ? '🏡 Disponibilidad inmediata en Cuba'
+                : product.store_has_delivery
+                  ? '🚚 Tenemos domicilio'
+                  : '🏬 Recogida en tienda (No tenemos domicilio)'}
+            </p>
+          )}
           <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
             📍 {product.municipality && product.municipality !== 'Toda la provincia' ? product.municipality : (product.province || 'Toda Cuba')}
             {product.province && product.province !== 'Toda Cuba' && product.municipality && product.municipality !== 'Toda la provincia' ? `, ${product.province}` : ''}
           </p>
-          <button onClick={handleAddToCart} className="add-to-cart-btn-mobile" style={{ backgroundColor: product.description?.startsWith('[RESERVACIÓN]') ? '#ff385c' : undefined, color: product.description?.startsWith('[RESERVACIÓN]') ? 'white' : undefined }}>
+          <button
+            onClick={handleAddToCart}
+            className="add-to-cart-btn-mobile"
+            disabled={product.is_paused}
+            style={{
+              backgroundColor: product.is_paused ? '#e2e8f0' : product.description?.startsWith('[RESERVACIÓN]') ? '#ff385c' : undefined,
+              color: product.is_paused ? '#94a3b8' : product.description?.startsWith('[RESERVACIÓN]') ? 'white' : undefined,
+              cursor: product.is_paused ? 'not-allowed' : 'pointer'
+            }}
+          >
             <ShoppingCart size={16} />
-            {product.description?.startsWith('[RESERVACIÓN]') ? 'Reservar' : 'Agregar'}
+            {product.is_paused ? 'No disponible' : product.description?.startsWith('[RESERVACIÓN]') ? 'Reservar' : 'Agregar'}
           </button>
         </div>
       </div>

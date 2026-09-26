@@ -142,12 +142,25 @@ export class OrdersService {
     const productIds = [...new Set(dto.items.map((item) => item.product_id))];
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, price: true, currency: true },
+      select: { id: true, price: true, currency: true, is_paused: true },
     });
 
     const byId = new Map(products.map((p) => [p.id, p]));
     if (productIds.some((id) => !byId.has(id))) {
       throw new BadRequestException('Uno o más productos no existen');
+    }
+
+    // El vendedor puede "quitar del inventario" un producto sin borrarlo
+    // (SellerProducts.jsx sigue mostrándoselo, is_paused: true). El
+    // catálogo público ya lo pinta como agotado y desactiva el botón de
+    // comprar, pero eso es solo la UI -- esta es la comprobación real: un
+    // POST /api/orders directo, con un carrito viejo o un link guardado, no
+    // puede colar un pedido de algo que el vendedor marcó como no
+    // disponible.
+    if (products.some((p) => p.is_paused)) {
+      throw new BadRequestException(
+        'Uno o más productos ya no están disponibles',
+      );
     }
 
     // Los importes se calculan por moneda: cada producto lleva la suya y un

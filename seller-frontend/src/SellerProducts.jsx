@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, X, Heart } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Heart, PauseCircle, PlayCircle } from 'lucide-react';
 import { getProducts, createProduct, getCategories, deleteProduct, updateProduct, uploadImage, getStoreCategories, getStoreById } from './services/api';
 import { cubaLocations } from './utils/cubaLocations';
 import './SellerProducts.css';
@@ -198,6 +198,21 @@ const SellerProducts = () => {
     }
   };
 
+  // "Quitar del inventario" no borra el producto -- sigue en esta lista para
+  // que el vendedor lo reactive cuando quiera. Mientras is_paused es true, el
+  // catálogo público lo pinta como agotado y el backend rechaza cualquier
+  // pedido que lo incluya (orders.service.ts), así que no hay forma de
+  // comprarlo hasta que se reactive.
+  const handleTogglePaused = async (product) => {
+    try {
+      const updatedProduct = await updateProduct(product.id, { is_paused: !product.is_paused });
+      setProducts(products.map(p => p.id === product.id ? updatedProduct : p));
+    } catch (error) {
+      alert('Error al actualizar la disponibilidad del producto');
+      console.error(error);
+    }
+  };
+
   return (
     <div className="seller-products">
       <div className="seller-page-header">
@@ -246,7 +261,11 @@ const SellerProducts = () => {
                       <span className="badge featured" style={{ background: '#0284c7', color: 'white' }}>📦 Producto</span>
                     )}
                     {product.is_featured && <span className="badge featured">★ Destacado</span>}
-                    <span className="badge status active">Activo</span>
+                    {product.is_paused ? (
+                      <span className="badge status" style={{ background: '#fef3c7', color: '#92400e' }}>⏸ En pausa</span>
+                    ) : (
+                      <span className="badge status active">Activo</span>
+                    )}
                   </div>
                 </div>
                 
@@ -269,13 +288,21 @@ const SellerProducts = () => {
                   </div>
                   
                   <div className="product-card-actions">
-                    <button 
-                      className="btn-card-action btn-feature" 
+                    <button
+                      className="btn-card-action btn-feature"
                       style={{ color: product.is_featured ? '#e11d48' : '#64748b', backgroundColor: product.is_featured ? '#ffe4e6' : '#f1f5f9' }}
                       onClick={() => handleToggleFeatured(product)}
                       title={product.is_featured ? "Quitar destacado" : "Destacar producto"}
                     >
                       <Heart size={16} fill={product.is_featured ? "currentColor" : "none"} />
+                    </button>
+                    <button
+                      className="btn-card-action btn-pause"
+                      style={{ color: product.is_paused ? '#92400e' : '#64748b', backgroundColor: product.is_paused ? '#fef3c7' : '#f1f5f9' }}
+                      onClick={() => handleTogglePaused(product)}
+                      title={product.is_paused ? "Reactivar producto" : "Quitar producto del inventario"}
+                    >
+                      {product.is_paused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
                     </button>
                     <button 
                       className="btn-card-action btn-edit" 

@@ -69,6 +69,7 @@ model Product {
   delivery_locations       String[]        @default([])
   currency                 String?         @default("USD") @db.VarChar
   is_featured              Boolean?        @default(false)
+  is_paused                Boolean         @default(false)
   rating_avg               Decimal?        @default(0.00)
   review_count             Int?            @default(0)
   legacy_store_category_id BigInt?
