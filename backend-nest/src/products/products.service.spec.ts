@@ -46,7 +46,7 @@ describe('ProductsService', () => {
         await service.findAll({}, ANON);
 
         expect(findMany.mock.calls[0][0].where).toEqual({
-          OR: [{ store: { status: 'approved' } }],
+          OR: [{ store: { status: 'approved' }, is_paused: false }],
         });
       });
 
@@ -59,8 +59,25 @@ describe('ProductsService', () => {
 
         expect(findMany.mock.calls[0][0].where).toEqual({
           store_id: 'store-1',
-          OR: [{ store: { status: 'approved' } }, { store_id: 'store-1' }],
+          OR: [{ store: { status: 'approved' }, is_paused: false }, { store_id: 'store-1' }],
         });
+      });
+
+      // El vendedor "quita del inventario" un producto sin borrarlo
+      // (is_paused: true): debe seguir viéndolo en su propio panel (rama
+      // store_id), pero desaparecer del todo del catálogo público (rama
+      // store aprobada) -- no basta con marcarlo agotado.
+      it('excluye los productos pausados de la rama pública, pero no de la del vendedor dueño', async () => {
+        const findMany = jest.fn().mockResolvedValue([]);
+        const prisma = { product: { findMany } } as any;
+        const service = new ProductsService(prisma);
+
+        await service.findAll({}, SELLER);
+
+        expect(findMany.mock.calls[0][0].where.OR).toEqual([
+          { store: { status: 'approved' }, is_paused: false },
+          { store_id: 'store-1' },
+        ]);
       });
 
       it('no filtra por estado para un administrador', async () => {
@@ -258,6 +275,79 @@ describe('ProductsService', () => {
 
       expect(result.price_usd).toBeNull();
       expect(result.rating_avg).toBeNull();
+    });
+  });
+
+  describe('findOne', () => {
+    it('throws NotFoundException when the product does not exist', async () => {
+      const prisma = { product: { findUnique: jest.fn().mockResolvedValue(null) } } as any;
+      const service = new ProductsService(prisma);
+
+      await expect(service.findOne('1', ANON)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns a non-paused product to an anonymous caller', async () => {
+      const prisma = {
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ id: '1', store_id: 'store-1', is_paused: false }),
+        },
+      } as any;
+      const service = new ProductsService(prisma);
+
+      const result = await service.findOne('1', ANON);
+      expect(result.id).toBe('1');
+    });
+
+    // El vendedor "quitó del inventario" este producto (is_paused: true):
+    // ni siquiera por su link directo debe existir para nadie que no sea su
+    // dueño o un administrador -- mismo criterio que StoresService.findOne
+    // usa para una tienda no aprobada, y por la misma razón se responde 404
+    // y no 403 (un 403 confirmaría que el producto existe).
+    it('throws NotFoundException for a paused product when the caller is anonymous', async () => {
+      const prisma = {
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ id: '1', store_id: 'store-1', is_paused: true }),
+        },
+      } as any;
+      const service = new ProductsService(prisma);
+
+      await expect(service.findOne('1', ANON)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws NotFoundException for a paused product when the caller is a different seller', async () => {
+      const prisma = {
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ id: '1', store_id: 'store-1', is_paused: true }),
+        },
+      } as any;
+      const service = new ProductsService(prisma);
+      const otherSeller: StoreCaller = { isAdmin: false, storeId: 'store-2' };
+
+      await expect(service.findOne('1', otherSeller)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns a paused product to its owning seller', async () => {
+      const prisma = {
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ id: '1', store_id: 'store-1', is_paused: true }),
+        },
+      } as any;
+      const service = new ProductsService(prisma);
+
+      const result = await service.findOne('1', SELLER);
+      expect(result.id).toBe('1');
+    });
+
+    it('returns a paused product to an admin', async () => {
+      const prisma = {
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ id: '1', store_id: 'store-1', is_paused: true }),
+        },
+      } as any;
+      const service = new ProductsService(prisma);
+
+      const result = await service.findOne('1', ADMIN);
+      expect(result.id).toBe('1');
     });
   });
 

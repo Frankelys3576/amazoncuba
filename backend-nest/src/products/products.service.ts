@@ -52,7 +52,15 @@ export class ProductsService {
     // tampoco pasa el filtro relacional de Prisma, igual que no pasa el INNER
     // JOIN de PostgREST.
     if (!caller.isAdmin) {
-      const visible: Record<string, unknown>[] = [{ store: { status: 'approved' } }];
+      // A la puerta de la tienda aprobada se le suma is_paused: false -- un
+      // producto que su vendedor "quitó del inventario" no debe aparecer en
+      // el catálogo público en absoluto (no basta con marcarlo agotado). La
+      // rama de "es mi propia tienda" no lleva esa condición a propósito:
+      // SellerProducts.jsx necesita seguir viendo sus propios productos
+      // pausados para poder reactivarlos.
+      const visible: Record<string, unknown>[] = [
+        { store: { status: 'approved' }, is_paused: false },
+      ];
       if (caller.storeId) visible.push({ store_id: caller.storeId });
       where.OR = visible;
     }
@@ -91,12 +99,25 @@ export class ProductsService {
     return products.map(formatProduct);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, caller: StoreCaller) {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: STORE_INCLUDE,
     });
     if (!product) throw new NotFoundException('Producto no encontrado');
+
+    // Mismo criterio que findAll: un producto pausado no existe para nadie
+    // que no sea su dueño o un administrador -- ni siquiera por su propio
+    // link directo. Un 404 (no un 403) para no confirmar que el producto
+    // existe pero está oculto, igual que StoresService.findOne hace con una
+    // tienda no aprobada.
+    if (product.is_paused) {
+      const isOwner = caller.storeId !== null && caller.storeId === product.store_id;
+      if (!caller.isAdmin && !isOwner) {
+        throw new NotFoundException('Producto no encontrado');
+      }
+    }
+
     return formatProduct(product);
   }
 

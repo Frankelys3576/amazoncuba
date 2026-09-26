@@ -39,8 +39,9 @@ export class ProductsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', SpanishParseUuidPipe) id: string) {
-    return this.productsService.findOne(id);
+  async findOne(@Param('id', SpanishParseUuidPipe) id: string, @Req() req: Request) {
+    const caller = await this.storeCaller.resolve(req);
+    return this.productsService.findOne(id, caller);
   }
 
   @Post()
