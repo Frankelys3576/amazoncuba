@@ -110,10 +110,19 @@ const ProductDetails = () => {
     return `${formattedHour}:${m} ${ampm}`;
   };
 
-  if (loading) return <div className="container" style={{padding: '40px 20px'}}>Cargando producto...</div>;
-  if (!product) return <div className="container" style={{padding: '40px 20px'}}>Producto no encontrado.</div>;
+  if (loading) return <div className="container product-details-status">Cargando producto...</div>;
+  if (!product) return <div className="container product-details-status">Producto no encontrado.</div>;
 
   const isStoreCurrentlyOpen = checkStoreIsOpen(product);
+  const isReservation = product.description?.startsWith('[RESERVACIÓN]');
+  const descriptionText = (product.description || '').replace(/^\[RESERVACIÓN\]\s*/i, '');
+  const showZellePrice = product.store_accepts_zelle && product.price_usd;
+
+  // El teléfono de la tienda se guarda a veces con el código de país (53) y a
+  // veces sin él -- este cálculo se repetía igual para el link de llamada y
+  // el de WhatsApp, así que vive una sola vez aquí.
+  const storePhoneDigits = product.store_phone?.replace(/[^0-9]/g, '') || '';
+  const storePhoneWithCountryCode = storePhoneDigits.startsWith('53') ? storePhoneDigits : `53${storePhoneDigits}`;
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -182,34 +191,34 @@ const ProductDetails = () => {
 
         {/* Columna Central: Información */}
         <div className="product-info-section">
-          {product.description?.startsWith('[RESERVACIÓN]') && (
-            <div style={{ marginBottom: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 'bold', background: '#ffe4e6', color: '#e11d48', padding: '4px 10px', borderRadius: '15px' }}>
+          {isReservation && (
+            <div className="product-badge-row">
+              <span className="product-badge product-badge--reservation">
                 🏡 Reservación / Estancia en CubaAirbnb
               </span>
             </div>
           )}
           <h1 className="product-title">{product.name}</h1>
-          <div className="product-card-rating" style={{marginBottom: '15px', cursor: 'pointer'}} onClick={() => document.getElementById('reviews-section').scrollIntoView({behavior: 'smooth'})}>
+          <div className="product-rating-row" onClick={() => document.getElementById('reviews-section').scrollIntoView({behavior: 'smooth'})}>
             <div className="stars">
               {[1,2,3,4,5].map(i => (
-                <Star 
-                  key={i} 
-                  size={16} 
-                  className={i <= Math.round(product.rating_avg || 0) ? 'star-filled' : 'star-empty'} 
+                <Star
+                  key={i}
+                  size={16}
+                  className={i <= Math.round(product.rating_avg || 0) ? 'star-filled' : 'star-empty'}
                 />
               ))}
             </div>
-            <span className="review-count" style={{fontSize: '14px', color: '#007185'}}>{product.review_count || 0} calificaciones</span>
+            <span className="product-rating-count">{product.review_count || 0} calificaciones</span>
           </div>
           <hr className="divider" />
           <div className="product-price-large">
             <span className="price-symbol">$</span>
             <span className="price-whole">{Math.floor(parseFloat(product.price || 0))}</span>
             <span className="price-fraction">{(((parseFloat(product.price || 0)) % 1) * 100).toFixed(0).padStart(2, '0')}</span>
-            <span style={{ fontSize: '14px', color: '#565959', marginLeft: '6px', verticalAlign: 'top' }}>{product.currency || 'USD'}</span>
-            {product.store_accepts_zelle && product.price_usd && (
-              <div style={{ fontSize: '18px', color: '#B12704', marginTop: '8px' }}>
+            <span className="price-currency">{product.currency || 'USD'}</span>
+            {showZellePrice && (
+              <div className="price-zelle-alt">
                 También disponible por: ${Number(product.price_usd).toFixed(2)} USD (Zelle)
               </div>
             )}
@@ -217,61 +226,61 @@ const ProductDetails = () => {
           <hr className="divider" />
           <div className="product-description">
             <h3>Acerca de este artículo</h3>
-            <div style={{marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', border: '1px solid #eee'}}>
-              <Link to={`/${product.store_slug}`} className="product-store-link" style={{fontSize: '16px', fontWeight: 'bold'}}>
+            <div className="product-store-box">
+              <Link to={`/${product.store_slug}`} className="product-store-link">
                 Visitar la tienda {product.store_name}
               </Link>
-              <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center'}}>
+              <div className="store-badges-row">
                 {product.store_has_delivery && (
-                  <span style={{backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '15px', fontSize: '12px', fontWeight: 'bold'}}>
+                  <span className="store-badge store-badge--delivery">
                     🚚 Con Envío
                   </span>
                 )}
-                <span className={isStoreCurrentlyOpen ? "status-indicator open" : "status-indicator closed"} style={{fontSize: '12px', padding: '3px 8px', borderRadius: '15px', backgroundColor: isStoreCurrentlyOpen ? '#dcfce7' : '#fee2e2'}}>
+                <span className={`status-indicator ${isStoreCurrentlyOpen ? 'open' : 'closed'}`}>
                   {product.store_is_open === false ? 'Pausada' : isStoreCurrentlyOpen ? 'Abierto Ahora' : 'Cerrado Ahora'}
                 </span>
                 {product.store_opening_time && product.store_closing_time && (
-                  <span style={{fontSize: '12px', color: '#666'}}>
+                  <span className="store-hours">
                     🕒 {formatTime(product.store_opening_time)} - {formatTime(product.store_closing_time)}
                   </span>
                 )}
               </div>
             </div>
-            <p>{(product.description || '').replace(/^\[RESERVACIÓN\]\s*/i, '')}</p>
+            <p>{descriptionText}</p>
           </div>
         </div>
 
         {/* Columna Derecha: Panel de Compra */}
         <div className="product-buy-section">
           {product.store_has_delivery && (
-            <div style={{backgroundColor: '#e0f2fe', color: '#0369a1', padding: '10px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px', textAlign: 'center'}}>
+            <div className="delivery-banner">
               🚚 Esta tienda ofrece servicio a domicilio
             </div>
           )}
           <div className="buy-panel">
             <div className="buy-panel-price">
               ${parseFloat(product.price || 0).toFixed(2)} {product.currency || 'USD'}
-              {product.store_accepts_zelle && product.price_usd && (
-                <div style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
+              {showZellePrice && (
+                <div className="buy-panel-zelle">
                   / ${Number(product.price_usd).toFixed(2)} USD
                 </div>
               )}
             </div>
             <div className="buy-panel-stock">
               {product.store_is_open === false ? (
-                <span className="out-of-stock" style={{color: '#991b1b'}}>Tienda Cerrada Temporalmente</span>
+                <span className="out-of-stock">Tienda Cerrada Temporalmente</span>
               ) : product.stock > 0 ? (
                 <span className="in-stock">En Stock</span>
               ) : (
                 <span className="out-of-stock">Agotado</span>
               )}
             </div>
-            
+
             <div className="quantity-selector">
               <label htmlFor="quantity">Cantidad: </label>
-              <select 
-                id="quantity" 
-                value={quantity} 
+              <select
+                id="quantity"
+                value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
               >
                 {[...Array(Math.max(1, Math.min(10, Number(product.stock) || 1))).keys()].map(n => (
@@ -284,7 +293,6 @@ const ProductDetails = () => {
               className="btn btn-primary btn-block buy-btn"
               onClick={handleAddToCart}
               disabled={product.stock === 0 || product.store_is_open === false}
-              style={{marginBottom: '10px'}}
             >
               Agregar al Carrito
             </button>
@@ -295,19 +303,17 @@ const ProductDetails = () => {
                 navigate('/checkout');
               }}
               disabled={product.stock === 0}
-              style={{marginBottom: '10px'}}
             >
               Hacer Pedido
             </button>
             <button
-              className="btn btn-secondary btn-block contact-btn"
+              className="btn btn-block contact-btn"
               onClick={openContactModal}
               disabled={product.stock === 0}
-              style={{backgroundColor: '#25d366', color: 'white', borderColor: '#25d366'}}
             >
               Contactar al Vendedor
             </button>
-            
+
             <div className="secure-transaction">
               <span>Transacción segura</span>
             </div>
@@ -318,9 +324,9 @@ const ProductDetails = () => {
 
       {/* Related Products Section */}
       {relatedProducts.length > 0 && (
-        <div className="related-products-section" style={{ marginTop: '50px', borderTop: '1px solid #ddd', paddingTop: '30px' }}>
-          <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#0F1111' }}>Productos que te podrían interesar</h2>
-          <div className="home-products-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+        <div className="related-products-section section-with-divider">
+          <h2 className="section-heading">Productos que te podrían interesar</h2>
+          <div className="related-products-grid">
             {relatedProducts.map(p => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -329,47 +335,45 @@ const ProductDetails = () => {
       )}
 
       {/* Reviews Section */}
-      <div id="reviews-section" className="product-reviews-section" style={{ marginTop: '50px', borderTop: '1px solid #ddd', paddingTop: '30px' }}>
-        <h2 style={{ fontSize: '24px', marginBottom: '20px', color: '#0F1111' }}>Reseñas de clientes</h2>
-        
-        <div className="reviews-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px' }}>
+      <div id="reviews-section" className="product-reviews-section section-with-divider">
+        <h2 className="section-heading">Reseñas de clientes</h2>
+
+        <div className="reviews-layout">
           <div className="reviews-summary">
             <h3>Valoración promedio</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0' }}>
-              <span style={{ fontSize: '32px', fontWeight: 'bold' }}>{product.rating_avg || 0}</span>
+            <div className="rating-summary-row">
+              <span className="rating-summary-number">{product.rating_avg || 0}</span>
               <div className="stars">
                 {[1,2,3,4,5].map(i => (
-                  <Star 
-                    key={i} 
-                    size={20} 
-                    className={i <= Math.round(product.rating_avg || 0) ? 'star-filled' : 'star-empty'} 
+                  <Star
+                    key={i}
+                    size={20}
+                    className={i <= Math.round(product.rating_avg || 0) ? 'star-filled' : 'star-empty'}
                   />
                 ))}
               </div>
             </div>
-            <p style={{ color: '#565959' }}>{product.review_count || 0} calificaciones globales</p>
-            
-            <hr style={{ margin: '20px 0' }} />
-            
-            <h4 style={{ marginBottom: '15px' }}>Dejar una reseña</h4>
-            <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px' }}>Tu Nombre</label>
-                <input 
-                  type="text" 
-                  value={newReview.name} 
+            <p className="reviews-count-text">{product.review_count || 0} calificaciones globales</p>
+
+            <hr className="divider" />
+
+            <h4 className="review-form-heading">Dejar una reseña</h4>
+            <form onSubmit={handleReviewSubmit} className="review-form">
+              <div className="form-field">
+                <label>Tu Nombre</label>
+                <input
+                  type="text"
+                  value={newReview.name}
                   onChange={e => setNewReview({...newReview, name: e.target.value})}
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
                   placeholder="Ej. Juan Pérez"
                 />
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px' }}>Calificación</label>
-                <select 
-                  value={newReview.rating} 
+              <div className="form-field">
+                <label>Calificación</label>
+                <select
+                  value={newReview.rating}
                   onChange={e => setNewReview({...newReview, rating: Number(e.target.value)})}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
                 >
                   <option value="5">5 - Excelente</option>
                   <option value="4">4 - Muy bueno</option>
@@ -378,50 +382,49 @@ const ProductDetails = () => {
                   <option value="1">1 - Pésimo</option>
                 </select>
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px' }}>Comentario (Opcional)</label>
-                <textarea 
-                  value={newReview.comment} 
+              <div className="form-field">
+                <label>Comentario (Opcional)</label>
+                <textarea
+                  value={newReview.comment}
                   onChange={e => setNewReview({...newReview, comment: e.target.value})}
                   rows="4"
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', resize: 'vertical' }}
                   placeholder="¿Qué te pareció el producto?"
                 ></textarea>
               </div>
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
+              <button
+                type="submit"
+                className="btn btn-primary"
                 disabled={submittingReview || !newReview.name}
               >
                 {submittingReview ? 'Enviando...' : 'Enviar Reseña'}
               </button>
             </form>
           </div>
-          
+
           <div className="reviews-list">
             <h3>Reseñas escritas</h3>
             {reviews.length === 0 ? (
-              <p style={{ color: '#565959', marginTop: '15px' }}>Todavía no hay reseñas para este producto. ¡Sé el primero en calificarlo!</p>
+              <p className="reviews-empty-text">Todavía no hay reseñas para este producto. ¡Sé el primero en calificarlo!</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' }}>
+              <div className="review-item-list">
                 {reviews.map(review => (
-                  <div key={review.id} className="review-item" style={{ padding: '15px', border: '1px solid #eee', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div key={review.id} className="review-item">
+                    <div className="review-item-header">
                       <div className="stars">
                         {[1,2,3,4,5].map(i => (
-                          <Star 
-                            key={i} 
-                            size={14} 
-                            className={i <= review.rating ? 'star-filled' : 'star-empty'} 
+                          <Star
+                            key={i}
+                            size={14}
+                            className={i <= review.rating ? 'star-filled' : 'star-empty'}
                           />
                         ))}
                       </div>
-                      <span style={{ fontWeight: 'bold' }}>{review.customer_name}</span>
+                      <span className="review-author">{review.customer_name}</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#565959', marginBottom: '8px' }}>
+                    <div className="review-date">
                       {new Date(review.created_at).toLocaleDateString()}
                     </div>
-                    {review.comment && <p style={{ margin: 0, lineHeight: '1.4' }}>{review.comment}</p>}
+                    {review.comment && <p className="review-comment">{review.comment}</p>}
                   </div>
                 ))}
               </div>
@@ -431,41 +434,39 @@ const ProductDetails = () => {
       </div>
 
       {showContactModal && (
-        <div className="contact-modal-overlay" onClick={closeContactModal} style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-          <div className="contact-modal-content" onClick={(e) => e.stopPropagation()} style={{backgroundColor: 'white', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '90%', textAlign: 'center'}}>
-            <h2 style={{marginTop: 0, marginBottom: '20px', color: '#333'}}>Contactar Vendedor</h2>
-            <p style={{marginBottom: '30px', color: '#666'}}>¿Cómo prefieres comunicarte con la tienda para adquirir este producto?</p>
-            
-            <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
+        <div className="contact-modal-overlay" onClick={closeContactModal}>
+          <div className="contact-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Contactar Vendedor</h2>
+            <p className="contact-modal-desc">¿Cómo prefieres comunicarte con la tienda para adquirir este producto?</p>
+
+            <div className="contact-modal-options">
               {product.store_phone && (
                 <>
-                  <a 
-                    href={`tel:+${product.store_phone.replace(/[^0-9]/g, '').startsWith('53') ? product.store_phone.replace(/[^0-9]/g, '') : `53${product.store_phone.replace(/[^0-9]/g, '')}`}`} 
-                    className="btn" 
-                    style={{backgroundColor: '#007bff', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}
+                  <a
+                    href={`tel:+${storePhoneWithCountryCode}`}
+                    className="btn contact-call-btn"
                   >
                     📞 Llamar por Teléfono
                   </a>
-                  
-                  <a 
-                    href={`https://wa.me/${product.store_phone.replace(/[^0-9]/g, '').startsWith('53') ? product.store_phone.replace(/[^0-9]/g, '') : `53${product.store_phone.replace(/[^0-9]/g, '')}`}?text=Hola,%20estoy%20interesado%20en%20el%20producto:%20${encodeURIComponent(product.name)}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="btn" 
-                    style={{backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}
+
+                  <a
+                    href={`https://wa.me/${storePhoneWithCountryCode}?text=Hola,%20estoy%20interesado%20en%20el%20producto:%20${encodeURIComponent(product.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn contact-whatsapp-btn"
                   >
                     💬 Escribir por WhatsApp
                   </a>
                 </>
               )}
               {!product.store_phone && (
-                <p style={{color: '#d9534f', fontWeight: 'bold'}}>Este vendedor no ha registrado un número de teléfono.</p>
+                <p className="contact-no-phone-text">Este vendedor no ha registrado un número de teléfono.</p>
               )}
             </div>
 
-            <button 
-              onClick={closeContactModal} 
-              style={{marginTop: '25px', background: 'none', border: 'none', color: '#999', cursor: 'pointer', textDecoration: 'underline'}}
+            <button
+              onClick={closeContactModal}
+              className="contact-cancel-btn"
             >
               Cancelar
             </button>
