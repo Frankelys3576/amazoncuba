@@ -10,8 +10,8 @@
   --brand-accent: #cc0000;       
   --brand-accent-hover: #e60000; 
   
-  --brand-link: #2563eb;         
-  --bg-gray: #f8fafc;            
+  --brand-link: #2563eb;
+  --bg-gray: #eaeded;
   
   --text-main: #0f172a;
   --text-light: #64748b;
@@ -26,21 +26,22 @@
 
   --border-color: #e2e8f0;
 
-  /* Acentos vibrantes para carruseles/etiquetas de recomendación en la
-     página pública (home para abajo) -- cada sección de producto lleva uno
-     como identidad de color, igual que los rieles de recomendaciones de la
-     app de Amazon. Nunca se usan para el precio ni el descuento (eso se
-     queda en rojo/dorado, que es la señal universal de oferta). */
-  --neon-green: #00c853;
-  --neon-green-soft: #e3fbea;
-  --neon-orange: #ff6a00;
-  --neon-orange-soft: #fff0e3;
-  --neon-violet: #8b5cf6;
-  --neon-violet-soft: #f1eaff;
-  --neon-pink: #ff2d8c;
-  --neon-pink-soft: #ffe6f2;
-
-  --gold-accent: #d4a017;
+  /* Paleta real de amazon.com (confirmada contra referencias de marca, no
+     inventada): fondo gris claro, texto casi negro, acento naranja/amarillo
+     para comprar, rojo para ofertas, teal para enlaces. Un intento anterior
+     de "colores llamativos propios" (verde/violeta/rosado) se descartó a
+     pedido expreso -- la idea era copiar Amazon tal cual, no reinterpretarlo. */
+  --amazon-bg-gray: #eaeded;
+  --amazon-text: #0f1111;
+  --amazon-orange: #ff9900;
+  --amazon-yellow: #ffd814;
+  --amazon-yellow-hover: #f7ca00;
+  --amazon-buynow-orange: #ffa41c;
+  --amazon-price-red: #b12704;
+  --amazon-deal-red: #cc0c39;
+  --amazon-link: #007185;
+  --amazon-link-hover: #c7511f;
+  --amazon-border: #d5d9d9;
 }
 
 * {

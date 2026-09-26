@@ -28,7 +28,7 @@
 
   .product-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px -8px rgba(10, 31, 68, 0.18);
+    box-shadow: var(--shadow-md);
   }
 }
 
@@ -137,8 +137,8 @@
 }
 
 .star-filled {
-  color: var(--gold-accent);
-  fill: var(--gold-accent);
+  color: var(--amazon-buynow-orange);
+  fill: var(--amazon-buynow-orange);
 }
 
 .star-empty {

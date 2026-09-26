@@ -7,13 +7,11 @@
   height: 100%;
   transition: box-shadow 0.2s, transform 0.2s;
   border: 1px solid #e2e8f0;
-  position: relative;
-  overflow: hidden;
 }
 
 .deal-card:hover {
-  box-shadow: 0 14px 28px -8px rgba(214, 40, 57, 0.25);
-  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .deal-card-link {
@@ -54,24 +52,18 @@
   margin-bottom: 8px;
 }
 
-/* Listón en vez de rectángulo plano: la oferta es la señal más importante
-   de la tarjeta, así que se gana un tratamiento con más cuerpo. El rojo se
-   queda -- es la señal universal de descuento -- pero con degradado y
-   sombra en vez de un color sólido sin profundidad. */
 .deal-badge {
-  background: linear-gradient(135deg, #ff3b5c 0%, #d62839 100%);
+  background-color: var(--amazon-deal-red);
   color: white;
   font-size: 11px;
-  font-weight: 800;
-  padding: 5px 10px 5px 8px;
-  border-radius: 3px 10px 10px 3px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 2px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
   display: inline-block;
   white-space: normal;
   word-wrap: break-word;
   line-height: 1.2;
-  box-shadow: 0 3px 8px rgba(214, 40, 57, 0.35);
 }
 
 .deal-price-row {

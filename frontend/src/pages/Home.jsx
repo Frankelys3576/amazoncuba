@@ -73,11 +73,8 @@ const Home = () => {
       <div className="home-content">
         {/* Carousel: Lo más vendido hoy */}
         {!loading && products.length > 0 && (
-          <div className="home-carousel-section home-carousel-section--green">
-            <div className="home-carousel-header">
-              <span className="home-carousel-tag home-carousel-tag--green">🔥 Tendencia</span>
-              <h2 className="home-carousel-title">Lo más vendido hoy</h2>
-            </div>
+          <div className="home-carousel-section">
+            <h2 className="home-carousel-title">Lo más vendido hoy</h2>
             <div className="home-carousel">
               {products.slice(0, 6).map(product => (
                 <ProductCard key={`vendido-${product.id}`} product={product} />
@@ -113,33 +110,32 @@ const Home = () => {
         </div>
         */}
 
-        {/* Primera Fila de Categorías Generales */}
+        {/* Primera Fila de Categorías Generales. Antes hotlinkeaba fotos de
+            marketing directo del CDN de Amazon.com -- material de un
+            competidor en un dominio que no controlamos. Estas son fotos de
+            stock (Unsplash) por categoría en su lugar. */}
         <div className="home-row">
           <CategoryCard
             title="Electrónica"
-            icon="📱"
-            accent="violet"
+            image="https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=400&q=80"
             linkText="Explorar"
             linkUrl="/search?category=1"
           />
           <CategoryCard
             title="Ropa y Accesorios"
-            icon="👕"
-            accent="pink"
+            image="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=400&q=80"
             linkText="Ver novedades"
             linkUrl="/search?category=3"
           />
           <CategoryCard
             title="Hogar y Cocina"
-            icon="🏠"
-            accent="green"
+            image="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=400&q=80"
             linkText="Explorar"
             linkUrl="/search?category=2"
           />
           <CategoryCard
             title="Belleza y Cuidado Personal"
-            icon="💄"
-            accent="orange"
+            image="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=400&q=80"
             linkText="Comprar"
             linkUrl="/search?category=4"
           />
@@ -147,11 +143,8 @@ const Home = () => {
 
         {/* Carousel: Productos populares */}
         {!loading && products.length > 2 && (
-          <div className="home-carousel-section home-carousel-section--violet">
-            <div className="home-carousel-header">
-              <span className="home-carousel-tag home-carousel-tag--violet">⭐ Popular</span>
-              <h2 className="home-carousel-title">Productos populares</h2>
-            </div>
+          <div className="home-carousel-section">
+            <h2 className="home-carousel-title">Productos populares</h2>
             <div className="home-carousel">
               {[...products].reverse().slice(0, 8).map(product => (
                 <ProductCard key={`popular-${product.id}`} product={product} />
@@ -162,11 +155,8 @@ const Home = () => {
 
         {/* Carousel: Ofertas Especiales */}
         {!loading && products.length > 4 && (
-          <div className="home-carousel-section home-carousel-section--orange">
-            <div className="home-carousel-header">
-              <span className="home-carousel-tag home-carousel-tag--orange">⚡ Oferta</span>
-              <h2 className="home-carousel-title">Ofertas Especiales</h2>
-            </div>
+          <div className="home-carousel-section">
+            <h2 className="home-carousel-title">Ofertas Especiales</h2>
             <div className="home-carousel">
               {[...products].sort(() => 0.5 - Math.random()).slice(0, 6).map(product => (
                 <ProductCard key={`oferta-${product.id}`} product={product} />
@@ -174,13 +164,10 @@ const Home = () => {
             </div>
           </div>
         )}
-        
+
         {/* Dynamic Products Section */}
         <div className="home-section-title">
-          <div className="home-carousel-header" style={{ marginBottom: 0 }}>
-            <span className="home-carousel-tag home-carousel-tag--pink">✨ Para ti</span>
-            <h2>Artículos que te pudieran interesar</h2>
-          </div>
+          <h2>Artículos que te pudieran interesar</h2>
         </div>
         
         {loading ? (

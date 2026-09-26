@@ -112,8 +112,6 @@
   background-color: var(--white);
   padding: 15px;
   margin-bottom: 20px;
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-sm);
 }
 
 @media (min-width: 576px) {
@@ -123,69 +121,19 @@
   }
 }
 
-.home-carousel-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-@media (min-width: 576px) {
-  .home-carousel-header {
-    margin-bottom: 20px;
-  }
-}
-
 .home-carousel-title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--text-main);
+  margin-bottom: 15px;
+  color: var(--amazon-text);
 }
 
 @media (min-width: 576px) {
   .home-carousel-title {
     font-size: 21px;
+    margin-bottom: 20px;
   }
 }
-
-/* Cada carrusel lleva un color de identidad, como los rieles
-   personalizados de la app de Amazon (Comprar de nuevo, Recomendado...).
-   El pill va en la etiqueta de la sección, nunca en el precio. */
-.home-carousel-tag {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.home-carousel-tag--green {
-  background: var(--neon-green-soft);
-  color: var(--neon-green);
-}
-
-.home-carousel-tag--orange {
-  background: var(--neon-orange-soft);
-  color: var(--neon-orange);
-}
-
-.home-carousel-tag--violet {
-  background: var(--neon-violet-soft);
-  color: var(--neon-violet);
-}
-
-.home-carousel-tag--pink {
-  background: var(--neon-pink-soft);
-  color: var(--neon-pink);
-}
-
-.home-carousel-section--green { border-top: 3px solid var(--neon-green); }
-.home-carousel-section--orange { border-top: 3px solid var(--neon-orange); }
-.home-carousel-section--violet { border-top: 3px solid var(--neon-violet); }
-.home-carousel-section--pink { border-top: 3px solid var(--neon-pink); }
 
 .home-carousel {
   display: flex;
