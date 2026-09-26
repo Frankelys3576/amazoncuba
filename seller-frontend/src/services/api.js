@@ -16,6 +16,51 @@ const getBaseApiUrl = () => {
 
 const API_URL = import.meta.env.VITE_API_URL || getBaseApiUrl();
 
+const SESSION_MESSAGE_KEY = 'seller_session_message';
+
+const clearSellerSession = () => {
+  localStorage.removeItem('seller_token');
+  localStorage.removeItem('seller_store_id');
+  localStorage.removeItem('seller_name');
+};
+
+// This app stores only Supabase's short-lived access_token (~1h) and never
+// its refresh_token -- there's no @supabase/supabase-js client here, just
+// hand-rolled fetch, so an expired token has no way to renew itself. Every
+// guarded endpoint then starts returning 401, which callers used to funnel
+// into the same generic `alert('Error al ...')` as any other failure, so a
+// seller mid-session saw every action fail with no indication they just
+// needed to log in again.
+const redirectToLogin = (message) => {
+  clearSellerSession();
+  try {
+    sessionStorage.setItem(SESSION_MESSAGE_KEY, message);
+  } catch {
+    // Private browsing / storage disabled: the redirect below still runs,
+    // just without the friendly message on the login screen.
+  }
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+};
+
+// fetch wrapper for endpoints that require the seller's session: attaches
+// the Bearer token and, on a 401, clears the stale session and bounces to
+// /login instead of letting the caller show a generic error.
+const authFetch = async (url, options = {}) => {
+  const token = localStorage.getItem('seller_token');
+  const headers = { ...(options.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    redirectToLogin('Tu sesión expiró. Inicia sesión de nuevo para continuar.');
+  }
+
+  return response;
+};
+
 export const getProducts = async (params = {}) => {
   try {
     const query = new URLSearchParams();
@@ -48,13 +93,9 @@ export const getCategories = async () => {
 
 export const createProduct = async (productData) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/products`, {
+    const response = await authFetch(`${API_URL}/products`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productData)
     });
     if (!response.ok) throw new Error('Error al crear el producto');
@@ -67,13 +108,9 @@ export const createProduct = async (productData) => {
 
 export const updateProduct = async (id, productData) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/products/${id}`, {
+    const response = await authFetch(`${API_URL}/products/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productData)
     });
     if (!response.ok) throw new Error('Error al actualizar producto');
@@ -86,12 +123,8 @@ export const updateProduct = async (id, productData) => {
 
 export const deleteProduct = async (id) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/products/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await authFetch(`${API_URL}/products/${id}`, {
+      method: 'DELETE'
     });
     if (!response.ok) throw new Error('Error al eliminar producto');
     return await response.json();
@@ -134,10 +167,8 @@ export const getStoreOrders = async (storeId) => {
     // El backend exige sesión de vendedor para ?storeId=: la ruta devolvía
     // antes los pedidos de cualquier tienda (con nombre, correo, teléfono y
     // dirección del cliente) a quien preguntara.
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/orders?storeId=${storeId}&t=${Date.now()}`, {
+    const response = await authFetch(`${API_URL}/orders?storeId=${storeId}&t=${Date.now()}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
       }
@@ -152,10 +183,7 @@ export const getStoreOrders = async (storeId) => {
 
 export const getStoreStats = async (storeId) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/stores/${storeId}/stats`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await authFetch(`${API_URL}/stores/${storeId}/stats`);
     if (!response.ok) throw new Error('Error al obtener estadísticas de la tienda');
     return await response.json();
   } catch (error) {
@@ -183,13 +211,9 @@ export const updateOrder = async (id, status) => {
 
 export const deleteAccount = async (storeId) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/auth/delete`, {
+    const response = await authFetch(`${API_URL}/auth/delete`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ storeId })
     });
     if (!response.ok) throw new Error('Error al eliminar la cuenta');
@@ -266,13 +290,9 @@ export const registerSeller = async (userData) => {
 };
 
 export const updateStoreProfile = async (id, profileData) => {
-  const token = localStorage.getItem('seller_token');
-  const response = await fetch(`${API_URL}/stores/${id}`, {
+  const response = await authFetch(`${API_URL}/stores/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profileData)
   });
   
@@ -320,10 +340,9 @@ export const getStoreCategories = async (storeId) => {
 
 export const createStoreCategory = async (storeId, categoryData) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/stores/${storeId}/categories`, {
+    const response = await authFetch(`${API_URL}/stores/${storeId}/categories`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(categoryData),
     });
     if (!response.ok) throw new Error('Error creating store category');
@@ -336,10 +355,9 @@ export const createStoreCategory = async (storeId, categoryData) => {
 
 export const updateStoreCategory = async (storeId, categoryId, categoryData) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
+    const response = await authFetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(categoryData),
     });
     if (!response.ok) throw new Error('Error updating store category');
@@ -352,10 +370,8 @@ export const updateStoreCategory = async (storeId, categoryId, categoryData) => 
 
 export const deleteStoreCategory = async (storeId, categoryId) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
+    const response = await authFetch(`${API_URL}/stores/${storeId}/categories/${categoryId}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!response.ok) throw new Error('Error deleting store category');
     return await response.json();
@@ -367,13 +383,9 @@ export const deleteStoreCategory = async (storeId, categoryId) => {
 
 export const updateCredentials = async (storeId, credentialsData) => {
   try {
-    const token = localStorage.getItem('seller_token');
-    const response = await fetch(`${API_URL}/stores/${storeId}/credentials`, {
+    const response = await authFetch(`${API_URL}/stores/${storeId}/credentials`, {
       method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentialsData),
     });
     if (!response.ok) {

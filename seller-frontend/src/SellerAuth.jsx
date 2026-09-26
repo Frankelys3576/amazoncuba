@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginSeller, registerSeller } from './services/api';
 import { cubaLocations, defaultCoordinates } from './utils/cubaLocations';
 import LocationPinPicker from './components/LocationPinPicker';
 import AddressInputWithAutocomplete from './components/AddressInputWithAutocomplete';
 import './SellerAuth.css';
+
+const SESSION_MESSAGE_KEY = 'seller_session_message';
 
 const SellerAuth = () => {
   const navigate = useNavigate();
@@ -29,6 +31,22 @@ const SellerAuth = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // api.js's authFetch redirects here (window.location.href, a full
+  // navigation) on any 401 from a seller-guarded endpoint, since this app
+  // has no way to refresh an expired Supabase token. It leaves the reason in
+  // sessionStorage because a hard navigation can't hand a component a prop.
+  useEffect(() => {
+    try {
+      const message = sessionStorage.getItem(SESSION_MESSAGE_KEY);
+      if (message) {
+        setError(message);
+        sessionStorage.removeItem(SESSION_MESSAGE_KEY);
+      }
+    } catch {
+      // Private browsing / storage disabled: just skip the message.
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
