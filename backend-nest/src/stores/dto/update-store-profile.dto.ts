@@ -41,9 +41,15 @@ export class UpdateStoreProfileDto {
   @IsString({ message: 'La hora de cierre debe ser texto' })
   closing_time?: string;
 
+  // Express (backend/src/controllers/store.controller.js:222) never validated
+  // this field -- it wrote whatever the client sent -- and
+  // SellerProfile.jsx's store_type <select> has always offered a third
+  // option, "individual" ("Vendedor Independiente"), alongside business and
+  // hostal. Omitting it here (as this list originally did) 400s every save
+  // for any of the sellers already stored with that type.
   @IsOptional()
-  @IsIn(['business', 'hostal'], {
-    message: 'El tipo de tienda debe ser "business" u "hostal"',
+  @IsIn(['business', 'hostal', 'individual'], {
+    message: 'El tipo de tienda debe ser "business", "hostal" o "individual"',
   })
   store_type?: string;
 

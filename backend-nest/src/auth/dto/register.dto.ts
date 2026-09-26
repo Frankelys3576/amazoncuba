@@ -22,9 +22,12 @@ export class RegisterDto {
   @IsString({ message: 'El nombre de la tienda debe ser texto' })
   store_name?: string;
 
+  // Kept in sync with UpdateStoreProfileDto.store_type: Express never
+  // validated this field, and seller-frontend's profile editor has always
+  // offered "individual" as a third option alongside business and hostal.
   @IsOptional()
-  @IsIn(['business', 'hostal'], {
-    message: 'El tipo de tienda debe ser "business" u "hostal"',
+  @IsIn(['business', 'hostal', 'individual'], {
+    message: 'El tipo de tienda debe ser "business", "hostal" o "individual"',
   })
   store_type?: string;
 
