@@ -250,7 +250,12 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 8px;
+  /* margin-top: auto, no un valor fijo: empuja el botón hasta el fondo de
+     .product-card-info sin importar cuánto texto haya arriba (título largo,
+     precio con Zelle, etc.). Como las tarjetas de una misma fila ya quedan
+     con la misma altura (grid/flex stiran por defecto), esto hace que el
+     botón caiga siempre a la misma altura entre productos distintos. */
+  margin-top: auto;
   padding: 7px 16px;
   font-size: 13px;
   font-weight: 500;
