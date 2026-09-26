@@ -21,7 +21,12 @@
 @media (min-width: 576px) {
   .product-card {
     padding: 20px;
-    height: 420px;
+    /* min-height, no height: un título de 3 líneas + precio con Zelle podía
+       superar los 420px fijos, y el botón de comprar quedaba empujado por
+       debajo del borde visible de la tarjeta -- visible solo deslizando la
+       página. Con min-height la tarjeta crece lo que su contenido necesite
+       y el botón siempre queda dentro. */
+    min-height: 420px;
     border-radius: var(--border-radius-md);
     box-shadow: var(--shadow-sm);
     border-bottom: none;

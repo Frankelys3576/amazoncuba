@@ -163,7 +163,10 @@
     min-width: 180px;
     width: 180px;
     flex-direction: column; /* Vertical layout in carousel to save space */
-    height: 320px;
+    /* min-height, no height: un título largo o el precio con Zelle podían
+       superar los 320px fijos y empujar el botón de comprar por debajo del
+       borde visible de la tarjeta -- solo se veía deslizando la página. */
+    min-height: 320px;
     padding: 12px;
   }
   
