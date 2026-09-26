@@ -405,3 +405,28 @@
 .nav-location:hover {
   outline: 1px solid white;
 }
+
+/* Llama la atención hacia el selector de ubicación mientras el cliente
+   todavía no eligió provincia/municipio -- se apaga en cuanto elige, así
+   que no sigue "vibrando" para alguien que ya lo usó. */
+.nav-location--attention {
+  border-radius: 20px;
+  animation: nav-location-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes nav-location-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 153, 0, 0.55);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 6px rgba(255, 153, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-location--attention {
+    animation: none;
+  }
+}

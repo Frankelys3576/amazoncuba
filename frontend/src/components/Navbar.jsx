@@ -116,7 +116,11 @@ const Navbar = () => {
         
         {/* Location (Interactive) - Oculto en vista de tienda */}
         {!isStoreView && (
-          <div className="nav-location nav-item" onClick={() => setShowLocationModal(true)} style={{ marginLeft: '10px' }}>
+          <div
+            className={`nav-location nav-item${!location.province ? ' nav-location--attention' : ''}`}
+            onClick={() => setShowLocationModal(true)}
+            style={{ marginLeft: '10px' }}
+          >
             <MapPin size={16} />
             <div className="location-text" style={{ padding: '0 4px', lineHeight: '1.2' }}>
               <span className="text-bold location-name" style={{ fontSize: '13px' }}>
