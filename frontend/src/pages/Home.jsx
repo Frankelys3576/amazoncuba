@@ -73,8 +73,11 @@ const Home = () => {
       <div className="home-content">
         {/* Carousel: Lo más vendido hoy */}
         {!loading && products.length > 0 && (
-          <div className="home-carousel-section">
-            <h2 className="home-carousel-title">Lo más vendido hoy</h2>
+          <div className="home-carousel-section home-carousel-section--green">
+            <div className="home-carousel-header">
+              <span className="home-carousel-tag home-carousel-tag--green">🔥 Tendencia</span>
+              <h2 className="home-carousel-title">Lo más vendido hoy</h2>
+            </div>
             <div className="home-carousel">
               {products.slice(0, 6).map(product => (
                 <ProductCard key={`vendido-${product.id}`} product={product} />
@@ -112,27 +115,31 @@ const Home = () => {
 
         {/* Primera Fila de Categorías Generales */}
         <div className="home-row">
-          <CategoryCard 
+          <CategoryCard
             title="Electrónica"
-            image="https://images-na.ssl-images-amazon.com/images/G/01/AmazonExports/Fuji/2020/May/Dashboard/Fuji_Dash_Electronics_1x._SY304_CB432774322_.jpg"
+            icon="📱"
+            accent="violet"
             linkText="Explorar"
             linkUrl="/search?category=1"
           />
-          <CategoryCard 
+          <CategoryCard
             title="Ropa y Accesorios"
-            image="https://images-na.ssl-images-amazon.com/images/G/01/AmazonExports/Fuji/2022/February/DashboardCards/GW_CONS_AUS_HPC_HPCEssentials_CatCard_Desktop1x._SY304_CB627424361_.jpg"
+            icon="👕"
+            accent="pink"
             linkText="Ver novedades"
             linkUrl="/search?category=3"
           />
-          <CategoryCard 
+          <CategoryCard
             title="Hogar y Cocina"
-            image="https://images-na.ssl-images-amazon.com/images/G/01/AmazonExports/Fuji/2020/May/Dashboard/Fuji_Dash_HomeBedding_Single_Cat_1x._SY304_CB418596953_.jpg"
+            icon="🏠"
+            accent="green"
             linkText="Explorar"
             linkUrl="/search?category=2"
           />
-          <CategoryCard 
+          <CategoryCard
             title="Belleza y Cuidado Personal"
-            image="https://images-na.ssl-images-amazon.com/images/G/01/AmazonExports/Fuji/2020/May/Dashboard/Fuji_Dash_Beauty_1x._SY304_CB432774351_.jpg"
+            icon="💄"
+            accent="orange"
             linkText="Comprar"
             linkUrl="/search?category=4"
           />
@@ -140,8 +147,11 @@ const Home = () => {
 
         {/* Carousel: Productos populares */}
         {!loading && products.length > 2 && (
-          <div className="home-carousel-section">
-            <h2 className="home-carousel-title">Productos populares</h2>
+          <div className="home-carousel-section home-carousel-section--violet">
+            <div className="home-carousel-header">
+              <span className="home-carousel-tag home-carousel-tag--violet">⭐ Popular</span>
+              <h2 className="home-carousel-title">Productos populares</h2>
+            </div>
             <div className="home-carousel">
               {[...products].reverse().slice(0, 8).map(product => (
                 <ProductCard key={`popular-${product.id}`} product={product} />
@@ -152,8 +162,11 @@ const Home = () => {
 
         {/* Carousel: Ofertas Especiales */}
         {!loading && products.length > 4 && (
-          <div className="home-carousel-section">
-            <h2 className="home-carousel-title">Ofertas Especiales</h2>
+          <div className="home-carousel-section home-carousel-section--orange">
+            <div className="home-carousel-header">
+              <span className="home-carousel-tag home-carousel-tag--orange">⚡ Oferta</span>
+              <h2 className="home-carousel-title">Ofertas Especiales</h2>
+            </div>
             <div className="home-carousel">
               {[...products].sort(() => 0.5 - Math.random()).slice(0, 6).map(product => (
                 <ProductCard key={`oferta-${product.id}`} product={product} />
@@ -164,7 +177,10 @@ const Home = () => {
         
         {/* Dynamic Products Section */}
         <div className="home-section-title">
-          <h2>Artículos que te pudieran interesar</h2>
+          <div className="home-carousel-header" style={{ marginBottom: 0 }}>
+            <span className="home-carousel-tag home-carousel-tag--pink">✨ Para ti</span>
+            <h2>Artículos que te pudieran interesar</h2>
+          </div>
         </div>
         
         {loading ? (
