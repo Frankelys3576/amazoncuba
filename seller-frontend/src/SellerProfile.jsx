@@ -243,8 +243,8 @@ const SellerProfile = () => {
               <div className="preview-details">
                 <h2>{formData.name || 'Nombre de la Tienda'}</h2>
                 <p className="preview-slogan">{formData.slogan || 'Eslogan de tu tienda...'}</p>
-                <div style={{ fontSize: '13px', color: '#ff385c', fontWeight: 'bold', margin: '4px 0 8px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  🔗 Enlace público: <a href={`https://amasoncubano.com/${formData.slug || (formData.name ? formData.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '')}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>amasoncubano.com/{formData.slug || (formData.name ? formData.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '')}</a>
+                <div className="preview-link-row">
+                  🔗 Enlace público: <a href={`https://amasoncubano.com/${formData.slug || (formData.name ? formData.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '')}`} target="_blank" rel="noopener noreferrer" className="preview-link">amasoncubano.com/{formData.slug || (formData.name ? formData.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '')}</a>
                 </div>
                 {formData.phone && (
                   <div className="preview-phone">
@@ -256,7 +256,14 @@ const SellerProfile = () => {
           </div>
         </div>
 
-        {/* Formulario de edición */}
+        {/* Formulario de edición + credenciales + zona de peligro, agrupados
+            en una sola columna -- .profile-container es un grid de 2
+            columnas, y sin este envoltorio cada uno de estos tres bloques
+            contaba como su propio elemento del grid, así que el segundo y
+            el tercero (credenciales, zona de peligro) caían repartidos
+            entre columna izquierda/derecha en vez de apilarse bajo el
+            formulario principal. */}
+        <div className="profile-main-column">
         <form className="profile-form card" onSubmit={handleSubmit}>
           
           <div className="profile-header" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '20px'}}>
@@ -608,6 +615,7 @@ const SellerProfile = () => {
               <Trash2 size={18}/> Eliminar cuenta para siempre
             </button>
           </div>
+        </div>
       </div>
     </div>
   );
