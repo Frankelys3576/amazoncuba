@@ -251,8 +251,16 @@
 
 .form-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
   padding-top: 20px;
+}
+
+.upload-in-progress-hint {
+  font-size: 13px;
+  color: #b45309;
+  margin: 0;
 }
 
 .save-btn {

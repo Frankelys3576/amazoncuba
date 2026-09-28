@@ -136,11 +136,20 @@ const SellerProfile = () => {
     }));
   };
 
+  // La subida de imagen es asíncrona (handleImageUpload/handleGalleryUpload);
+  // si el vendedor guarda antes de que termine, formData todavía no tiene la
+  // URL nueva y el PUT persiste logo_url/banner_url vacíos -- el guardado
+  // responde 200 (nada falla), pero la foto nunca llega a la tienda. El botón
+  // ya se desactiva mientras uploading.* es true; esto es el mismo candado
+  // por si el submit se dispara de otra forma (Enter, etc.).
+  const isUploadingAnything = uploading.logo || uploading.banner || uploading.gallery;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isUploadingAnything) return;
     setSaving(true);
     setMessage({ text: '', type: '' });
-    
+
     try {
       await updateStoreProfile(storeId, formData);
       setMessage({ text: 'Perfil de tienda actualizado correctamente.', type: 'success' });
@@ -563,7 +572,10 @@ const SellerProfile = () => {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary save-btn" disabled={saving}>
+            {isUploadingAnything && (
+              <p className="upload-in-progress-hint">Espera a que termine de subirse la imagen antes de guardar...</p>
+            )}
+            <button type="submit" className="btn btn-primary save-btn" disabled={saving || isUploadingAnything}>
               {saving ? 'Guardando...' : <><Save size={18}/> Guardar Cambios del Perfil</>}
             </button>
           </div>
