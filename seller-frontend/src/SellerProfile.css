@@ -5,7 +5,11 @@
 
 .profile-container {
   display: grid;
-  grid-template-columns: 350px 1fr;
+  /* minmax en vez de 350px fijo: una columna fija no encoge por debajo de
+     su ancho aunque el contenedor tenga menos espacio, así que en anchos
+     intermedios (tablet, justo antes del quiebre a una sola columna) podía
+     forzar desbordamiento horizontal. */
+  grid-template-columns: minmax(0, 350px) minmax(0, 1fr);
   gap: 30px;
   margin-top: 20px;
 }
