@@ -89,12 +89,15 @@ const SellerProfile = () => {
     }));
   };
 
-  // Mismo tope que el backend (upload.controller.ts: 5 * 1024 * 1024).
-  // Revisarlo aquí antes de intentar subir evita depender de que la
-  // petición viaje entera solo para que el servidor la rechace -- en una
-  // conexión lenta eso puede tardar bastante y, si falla a medio camino,
-  // fetch() a veces ni siquiera rechaza limpio con un mensaje claro.
-  const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+  // 4MB, igual que el backend (upload.controller.ts). No es el límite de
+  // Multer lo que importa acá -- confirmado en vivo que Vercel rechaza el
+  // cuerpo de la petición con 413 FUNCTION_PAYLOAD_TOO_LARGE alrededor de
+  // 4.5MB, antes de que la función siquiera arranque, sea llamando directo
+  // a la función o por el proxy de www.amasoncubano.com. Con eso, un banner
+  // de 4.8MB fallaba en el navegador como "Load failed" -- un error genérico
+  // de red, sin ningún mensaje útil -- así que revisarlo aquí antes de
+  // intentar la subida evita ese viaje fallido y avisa con el tamaño real.
+  const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
 
   const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
@@ -104,7 +107,7 @@ const SellerProfile = () => {
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setUploadError(prev => ({ ...prev, [type]: `La imagen pesa ${sizeMb}MB, el máximo permitido es 5MB. Prueba con una foto más liviana.` }));
+      setUploadError(prev => ({ ...prev, [type]: `La imagen pesa ${sizeMb}MB, el máximo permitido es 4MB. Prueba con una foto más liviana.` }));
       e.target.value = '';
       return;
     }
@@ -135,7 +138,7 @@ const SellerProfile = () => {
     const oversized = files.find(f => f.size > MAX_IMAGE_SIZE_BYTES);
     if (oversized) {
       const sizeMb = (oversized.size / (1024 * 1024)).toFixed(1);
-      setUploadError(prev => ({ ...prev, gallery: `"${oversized.name}" pesa ${sizeMb}MB, el máximo permitido es 5MB por foto.` }));
+      setUploadError(prev => ({ ...prev, gallery: `"${oversized.name}" pesa ${sizeMb}MB, el máximo permitido es 4MB por foto.` }));
       e.target.value = '';
       return;
     }
@@ -551,7 +554,7 @@ const SellerProfile = () => {
                 onChange={(e) => handleImageUpload(e, 'logo')}
                 disabled={uploading.logo}
               />
-              <small>Recomendado: Imagen cuadrada (1:1), máximo 5MB. {uploading.logo && 'Subiendo...'}</small>
+              <small>Recomendado: Imagen cuadrada (1:1), máximo 4MB. {uploading.logo && 'Subiendo...'}</small>
 
               {/* Mantener input oculto para los datos del formulario si se requiere */}
               {formData.logo_url && <small style={{color: '#25d366'}}>✓ Logo cargado</small>}
@@ -567,7 +570,7 @@ const SellerProfile = () => {
                 onChange={(e) => handleImageUpload(e, 'banner')}
                 disabled={uploading.banner}
               />
-              <small>Recomendado: Imagen ancha (16:9 o 21:9), máximo 5MB. {uploading.banner && 'Subiendo...'}</small>
+              <small>Recomendado: Imagen ancha (16:9 o 21:9), máximo 4MB. {uploading.banner && 'Subiendo...'}</small>
 
               {formData.banner_url && <small style={{color: '#25d366'}}>✓ Banner cargado</small>}
               {uploadError.banner && <small className="upload-error-text">⚠ {uploadError.banner}</small>}
@@ -583,7 +586,7 @@ const SellerProfile = () => {
                   onChange={handleGalleryUpload}
                   disabled={uploading.gallery || formData.gallery.length >= 10}
                 />
-                <small>Selecciona múltiples imágenes a la vez (máximo 5MB por foto). {uploading.gallery && 'Subiendo galería...'}</small>
+                <small>Selecciona múltiples imágenes a la vez (máximo 4MB por foto). {uploading.gallery && 'Subiendo galería...'}</small>
                 {uploadError.gallery && <small className="upload-error-text">⚠ {uploadError.gallery}</small>}
                 
                 {formData.gallery.length > 0 && (

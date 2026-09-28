@@ -25,7 +25,13 @@ export class UploadController {
   @Throttle({ default: { limit: 20, ttl: 60 * 60 * 1000 } })
   @UseInterceptors(
     FileInterceptor('image', {
-      limits: { fileSize: 5 * 1024 * 1024 },
+      // 4MB, no 5: Vercel rechaza el cuerpo de la petición con 413
+      // FUNCTION_PAYLOAD_TOO_LARGE alrededor de 4.5MB, antes de que este
+      // límite de Multer llegue a evaluarse -- confirmado en vivo con una
+      // imagen de 4.8MB, que falla igual yendo directo a esta función que
+      // por el proxy de www.amasoncubano.com (ninguno de los dos era la
+      // causa; el techo real es la función misma). 4MB deja margen real.
+      limits: { fileSize: 4 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         if (['image/png', 'image/jpeg', 'image/jpg'].includes(file.mimetype)) {
           cb(null, true);
