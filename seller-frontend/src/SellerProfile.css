@@ -233,6 +233,11 @@
   font-size: 12px;
 }
 
+.upload-error-text {
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+
 .input-with-icon {
   position: relative;
 }

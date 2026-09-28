@@ -14,6 +14,11 @@ const SellerProfile = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [uploading, setUploading] = useState({ logo: false, banner: false });
+  // Error por campo, mostrado justo al lado del input que falló -- el
+  // mensaje general (`message`) se pinta arriba del todo de la página, y en
+  // un formulario largo un error ahí pasa inadvertido si el vendedor está
+  // desplazado hacia abajo, viendo la sección de imágenes.
+  const [uploadError, setUploadError] = useState({ logo: '', banner: '', gallery: '' });
   
   const [credentials, setCredentials] = useState({ phone: '', password: '' });
   const [credentialsSaving, setCredentialsSaving] = useState(false);
@@ -84,9 +89,25 @@ const SellerProfile = () => {
     }));
   };
 
+  // Mismo tope que el backend (upload.controller.ts: 5 * 1024 * 1024).
+  // Revisarlo aquí antes de intentar subir evita depender de que la
+  // petición viaje entera solo para que el servidor la rechace -- en una
+  // conexión lenta eso puede tardar bastante y, si falla a medio camino,
+  // fetch() a veces ni siquiera rechaza limpio con un mensaje claro.
+  const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
   const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    setUploadError(prev => ({ ...prev, [type]: '' }));
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      setUploadError(prev => ({ ...prev, [type]: `La imagen pesa ${sizeMb}MB, el máximo permitido es 5MB. Prueba con una foto más liviana.` }));
+      e.target.value = '';
+      return;
+    }
 
     setUploading(prev => ({ ...prev, [type]: true }));
     try {
@@ -95,7 +116,7 @@ const SellerProfile = () => {
       setMessage({ text: `Imagen subida correctamente.`, type: 'success' });
     } catch (error) {
       console.error(error);
-      setMessage({ text: error.message || 'Error al subir la imagen.', type: 'error' });
+      setUploadError(prev => ({ ...prev, [type]: error.message || 'Error al subir la imagen. Intenta de nuevo.' }));
     } finally {
       setUploading(prev => ({ ...prev, [type]: false }));
     }
@@ -107,6 +128,15 @@ const SellerProfile = () => {
 
     if (formData.gallery.length + files.length > 10) {
       alert('Puedes subir un máximo de 10 imágenes para tu galería.');
+      return;
+    }
+
+    setUploadError(prev => ({ ...prev, gallery: '' }));
+    const oversized = files.find(f => f.size > MAX_IMAGE_SIZE_BYTES);
+    if (oversized) {
+      const sizeMb = (oversized.size / (1024 * 1024)).toFixed(1);
+      setUploadError(prev => ({ ...prev, gallery: `"${oversized.name}" pesa ${sizeMb}MB, el máximo permitido es 5MB por foto.` }));
+      e.target.value = '';
       return;
     }
 
@@ -123,7 +153,7 @@ const SellerProfile = () => {
       setMessage({ text: `Imágenes subidas correctamente.`, type: 'success' });
     } catch (error) {
       console.error(error);
-      setMessage({ text: error.message || 'Error al subir las imágenes.', type: 'error' });
+      setUploadError(prev => ({ ...prev, gallery: error.message || 'Error al subir las imágenes. Intenta de nuevo.' }));
     } finally {
       setUploading(prev => ({ ...prev, gallery: false }));
     }
@@ -521,12 +551,13 @@ const SellerProfile = () => {
                 onChange={(e) => handleImageUpload(e, 'logo')}
                 disabled={uploading.logo}
               />
-              <small>Recomendado: Imagen cuadrada (1:1). {uploading.logo && 'Subiendo...'}</small>
-              
+              <small>Recomendado: Imagen cuadrada (1:1), máximo 5MB. {uploading.logo && 'Subiendo...'}</small>
+
               {/* Mantener input oculto para los datos del formulario si se requiere */}
               {formData.logo_url && <small style={{color: '#25d366'}}>✓ Logo cargado</small>}
+              {uploadError.logo && <small className="upload-error-text">⚠ {uploadError.logo}</small>}
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="banner_upload">Subir Banner</label>
               <input 
@@ -536,9 +567,10 @@ const SellerProfile = () => {
                 onChange={(e) => handleImageUpload(e, 'banner')}
                 disabled={uploading.banner}
               />
-              <small>Recomendado: Imagen ancha (16:9 o 21:9). {uploading.banner && 'Subiendo...'}</small>
-              
+              <small>Recomendado: Imagen ancha (16:9 o 21:9), máximo 5MB. {uploading.banner && 'Subiendo...'}</small>
+
               {formData.banner_url && <small style={{color: '#25d366'}}>✓ Banner cargado</small>}
+              {uploadError.banner && <small className="upload-error-text">⚠ {uploadError.banner}</small>}
             </div>
 
             {formData.store_type === 'hostal' && (
@@ -551,7 +583,8 @@ const SellerProfile = () => {
                   onChange={handleGalleryUpload}
                   disabled={uploading.gallery || formData.gallery.length >= 10}
                 />
-                <small>Selecciona múltiples imágenes a la vez. {uploading.gallery && 'Subiendo galería...'}</small>
+                <small>Selecciona múltiples imágenes a la vez (máximo 5MB por foto). {uploading.gallery && 'Subiendo galería...'}</small>
+                {uploadError.gallery && <small className="upload-error-text">⚠ {uploadError.gallery}</small>}
                 
                 {formData.gallery.length > 0 && (
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
