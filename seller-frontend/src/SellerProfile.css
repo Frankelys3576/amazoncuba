@@ -214,6 +214,18 @@
   transition: border-color 0.2s;
 }
 
+/* Sin esto, un input de archivo no tiene ancho propio -- crece lo que haga
+   falta para mostrar el nombre completo del archivo elegido (una foto de
+   cámara suele traer un nombre largo), y eso se salía de la pantalla en
+   móvil. width: 100% + box-sizing hace que el navegador recorte el nombre
+   dentro del ancho real de la tarjeta en vez de desbordarlo. */
+.form-group input[type="file"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
