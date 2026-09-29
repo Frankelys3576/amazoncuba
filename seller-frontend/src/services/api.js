@@ -304,26 +304,129 @@ export const updateStoreProfile = async (id, profileData) => {
   return await response.json();
 };
 
-export const uploadImage = async (imageFile) => {
-  const formData = new FormData();
-  formData.append('image', imageFile);
+// Debe coincidir con el límite real de Multer en el backend
+// (backend-nest/src/upload/upload.controller.ts) y con el techo de ~4.5MB
+// de Vercel para el cuerpo de la petición.
+export const MAX_UPLOAD_SIZE_BYTES = 4 * 1024 * 1024;
 
-  const response = await fetch(`${API_URL}/upload`, {
-    method: 'POST',
-    // No need to set Content-Type header, fetch will automatically set it to multipart/form-data with the correct boundary
-    body: formData
-  });
+const MAX_UPLOAD_RETRIES = 3;
+const UPLOAD_RETRY_DELAY_MS = 1200;
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.details 
-      ? `${errorData.error} - Detalles: ${JSON.stringify(errorData.details)}` 
-      : (errorData.error || 'Error al subir la imagen');
-    throw new Error(errorMessage);
+// fetch() lanza un TypeError sin respuesta HTTP cuando la conexión se corta
+// a mitad de la subida (Safari: "Load failed", Chrome: "Failed to fetch").
+// Con el internet lento/inestable de Cuba esto pasa seguido y no es un error
+// del servidor -- vale la pena reintentar. Un error real (4xx/5xx del
+// backend) llega como un Error normal, no un TypeError, y ese no se reintenta.
+const isNetworkError = (err) => err instanceof TypeError;
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Reduce el archivo en el navegador ANTES de subirlo -- en una conexión
+// lenta, la parte más frágil es la transferencia misma, así que subir menos
+// bytes reduce tanto el tiempo de subida como la probabilidad de que la
+// conexión se corte a la mitad. El backend igual re-comprime con sharp, así
+// que esto es una optimización adicional, no un reemplazo.
+const MAX_UPLOAD_DIMENSION = 1600;
+
+export const compressImageForUpload = (file) => new Promise((resolve) => {
+  if (!file.type.startsWith('image/')) {
+    resolve(file);
+    return;
   }
 
-  const data = await response.json();
-  return data;
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+
+  img.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+
+    let { width, height } = img;
+    if (width > MAX_UPLOAD_DIMENSION || height > MAX_UPLOAD_DIMENSION) {
+      if (width > height) {
+        height = Math.round((height / width) * MAX_UPLOAD_DIMENSION);
+        width = MAX_UPLOAD_DIMENSION;
+      } else {
+        width = Math.round((width / height) * MAX_UPLOAD_DIMENSION);
+        height = MAX_UPLOAD_DIMENSION;
+      }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // PNG se mantiene como PNG (logos con fondo transparente pierden la
+    // transparencia si se convierten a JPEG); todo lo demás sale como JPEG.
+    const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const quality = outputType === 'image/jpeg' ? 0.8 : undefined;
+
+    canvas.toBlob((blob) => {
+      if (!blob || blob.size >= file.size) {
+        resolve(file);
+        return;
+      }
+      resolve(new File([blob], file.name, { type: outputType }));
+    }, outputType, quality);
+  };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    resolve(file);
+  };
+
+  img.src = objectUrl;
+});
+
+export const uploadImage = async (imageFile) => {
+  const fileToUpload = await compressImageForUpload(imageFile);
+
+  // Revisar el tamaño DESPUÉS de comprimir, no antes -- una foto de celular
+  // que pesa 6MB original puede quedar en 400KB tras comprimir, así que
+  // rechazarla por su peso original la bloquearía sin necesidad. Solo si
+  // sigue pesando demasiado después de comprimir (foto de altísima
+  // resolución/detalle) se lo decimos al vendedor con el número real.
+  if (fileToUpload.size > MAX_UPLOAD_SIZE_BYTES) {
+    const sizeMb = (fileToUpload.size / (1024 * 1024)).toFixed(1);
+    const maxMb = (MAX_UPLOAD_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+    throw new Error(`La imagen pesa ${sizeMb}MB incluso comprimida, el máximo permitido es ${maxMb}MB.`);
+  }
+
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
+    const formData = new FormData();
+    formData.append('image', fileToUpload);
+
+    try {
+      const response = await fetch(`${API_URL}/upload`, {
+        method: 'POST',
+        // No need to set Content-Type header, fetch will automatically set it to multipart/form-data with the correct boundary
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.details
+          ? `${errorData.error} - Detalles: ${JSON.stringify(errorData.details)}`
+          : (errorData.error || 'Error al subir la imagen');
+        throw new Error(errorMessage);
+      }
+
+      return await response.json();
+    } catch (err) {
+      lastError = err;
+      if (!isNetworkError(err) || attempt === MAX_UPLOAD_RETRIES) {
+        break;
+      }
+      await sleep(UPLOAD_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  if (isNetworkError(lastError)) {
+    throw new Error('Tu conexión se interrumpió al subir la foto. Verifica tu internet e intenta de nuevo.');
+  }
+  throw lastError;
 };
 
 // --- Store Categories ---

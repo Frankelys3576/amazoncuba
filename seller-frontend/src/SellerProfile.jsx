@@ -89,29 +89,17 @@ const SellerProfile = () => {
     }));
   };
 
-  // 4MB, igual que el backend (upload.controller.ts). No es el límite de
-  // Multer lo que importa acá -- confirmado en vivo que Vercel rechaza el
-  // cuerpo de la petición con 413 FUNCTION_PAYLOAD_TOO_LARGE alrededor de
-  // 4.5MB, antes de que la función siquiera arranque, sea llamando directo
-  // a la función o por el proxy de www.amasoncubano.com. Con eso, un banner
-  // de 4.8MB fallaba en el navegador como "Load failed" -- un error genérico
-  // de red, sin ningún mensaje útil -- así que revisarlo aquí antes de
-  // intentar la subida evita ese viaje fallido y avisa con el tamaño real.
-  const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
-
   const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setUploadError(prev => ({ ...prev, [type]: '' }));
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setUploadError(prev => ({ ...prev, [type]: `La imagen pesa ${sizeMb}MB, el máximo permitido es 4MB. Prueba con una foto más liviana.` }));
-      e.target.value = '';
-      return;
-    }
-
+    // uploadImage() comprime la foto en el navegador antes de subirla y
+    // recién ahí revisa el tamaño real que se va a transmitir -- un chequeo
+    // aquí sobre el archivo original rechazaría fotos de celular que, ya
+    // comprimidas, entran perfectamente. Si igual queda muy pesada tras
+    // comprimir, uploadImage() lanza el error con el tamaño real.
     setUploading(prev => ({ ...prev, [type]: true }));
     try {
       const result = await uploadImage(file);
@@ -135,13 +123,6 @@ const SellerProfile = () => {
     }
 
     setUploadError(prev => ({ ...prev, gallery: '' }));
-    const oversized = files.find(f => f.size > MAX_IMAGE_SIZE_BYTES);
-    if (oversized) {
-      const sizeMb = (oversized.size / (1024 * 1024)).toFixed(1);
-      setUploadError(prev => ({ ...prev, gallery: `"${oversized.name}" pesa ${sizeMb}MB, el máximo permitido es 4MB por foto.` }));
-      e.target.value = '';
-      return;
-    }
 
     setUploading(prev => ({ ...prev, gallery: true }));
     try {

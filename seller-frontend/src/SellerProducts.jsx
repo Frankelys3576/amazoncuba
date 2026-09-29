@@ -78,24 +78,16 @@ const SellerProducts = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Mismo tope que el backend (upload.controller.ts): Vercel rechaza el
-  // cuerpo de la petición alrededor de 4.5MB antes de que la función
-  // siquiera arranque, así que revisarlo aquí evita ese viaje fallido.
-  const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
-
   const handleImageUpload = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setUploadError(prev => ({ ...prev, [field]: '' }));
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setUploadError(prev => ({ ...prev, [field]: `La imagen pesa ${sizeMb}MB, el máximo permitido es 4MB.` }));
-      e.target.value = '';
-      return;
-    }
-
+    // uploadImage() comprime la foto en el navegador antes de subirla y
+    // recién ahí revisa el tamaño real que se va a transmitir -- un chequeo
+    // aquí sobre el archivo original rechazaría fotos de celular que, ya
+    // comprimidas, entran perfectamente.
     setUploadingField(prev => ({ ...prev, [field]: true }));
     try {
       const data = await uploadImage(file);
