@@ -1,3 +1,10 @@
+.upload-error-text {
+  display: block;
+  color: #dc2626 !important;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
 .seller-page-header {
   display: flex;
   justify-content: space-between;

@@ -33,6 +33,14 @@ const SellerProducts = () => {
     delivery_locations: []
   });
   const [addingProduct, setAddingProduct] = useState(false);
+  // Estado por campo: antes una sola bandera (addingProduct) se usaba tanto
+  // para "subiendo una foto" como para "guardando el producto", así que
+  // nada impedía enviar el formulario mientras una foto todavía se estaba
+  // subiendo -- el producto se creaba con el valor viejo de ese campo
+  // (vacío, o el placeholder de stock) porque la URL real todavía no había
+  // llegado. Mismo bug que ya se arregló en SellerProfile.jsx (Mi Tienda).
+  const [uploadingField, setUploadingField] = useState({});
+  const [uploadError, setUploadError] = useState({});
   const [tempProv, setTempProv] = useState('La Habana');
   const [tempMun, setTempMun] = useState('Plaza de la Revolución');
   const [storeInfo, setStoreInfo] = useState(null);
@@ -70,23 +78,40 @@ const SellerProducts = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Mismo tope que el backend (upload.controller.ts): Vercel rechaza el
+  // cuerpo de la petición alrededor de 4.5MB antes de que la función
+  // siquiera arranque, así que revisarlo aquí evita ese viaje fallido.
+  const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
+
   const handleImageUpload = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setUploadError(prev => ({ ...prev, [field]: '' }));
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      setUploadError(prev => ({ ...prev, [field]: `La imagen pesa ${sizeMb}MB, el máximo permitido es 4MB.` }));
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingField(prev => ({ ...prev, [field]: true }));
     try {
-      setAddingProduct(true);
       const data = await uploadImage(file);
       setNewProduct(prev => ({ ...prev, [field]: data.url }));
     } catch (error) {
-      alert(error.message || 'Error al subir la imagen');
+      setUploadError(prev => ({ ...prev, [field]: error.message || 'Error al subir la imagen. Intenta de nuevo.' }));
     } finally {
-      setAddingProduct(false);
+      setUploadingField(prev => ({ ...prev, [field]: false }));
     }
   };
 
+  const isUploadingAnyImage = Object.values(uploadingField).some(Boolean);
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
+    if (isUploadingAnyImage) return;
     if (!newProduct.delivery_locations || newProduct.delivery_locations.length === 0) {
       alert("Debes agregar al menos una ubicación de entrega.");
       return;
@@ -168,10 +193,16 @@ const SellerProducts = () => {
     setNewProduct({
       item_type: 'product',
       name: '', price: '', price_usd: '', currency: 'USD', stock: '', category_id: '', store_category_id: '',
-      image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
+      // Vacío, no una foto de stock: con un placeholder de Unsplash ya
+      // puesto ahí, `required={!newProduct.image_url}` en el input de la
+      // imagen principal nunca se activaba (el campo nunca estaba "vacío"),
+      // así que se podía guardar un producto sin foto real y sin ningún
+      // aviso -- la publicación quedaba con esa foto de stock genérica.
+      image_url: '',
       image_url_2: '', image_url_3: '', image_url_4: '', image_url_5: '',
       description: '', delivery_locations: []
     });
+    setUploadError({});
     setTempProv('La Habana');
     setTempMun('Plaza de la Revolución');
   };
@@ -478,14 +509,17 @@ const SellerProducts = () => {
                 </div>
               </div>
               <div className="form-group">
-                <label>Imagen Principal (JPG/PNG)</label>
-                <input 
-                  type="file" 
+                <label>Imagen Principal (JPG/PNG, máximo 4MB)</label>
+                <input
+                  type="file"
                   accept="image/jpeg, image/jpg, image/png"
                   onChange={e => handleImageUpload(e, 'image_url')}
                   required={!newProduct.image_url}
+                  disabled={uploadingField.image_url}
                 />
-                {newProduct.image_url && newProduct.image_url !== 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80' && (
+                {uploadingField.image_url && <small>Subiendo...</small>}
+                {uploadError.image_url && <small className="upload-error-text">⚠ {uploadError.image_url}</small>}
+                {newProduct.image_url && (
                   <div style={{marginTop: '10px'}}>
                     <img src={newProduct.image_url} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} />
                   </div>
@@ -493,23 +527,29 @@ const SellerProducts = () => {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Imagen 2 (Opcional)</label>
-                  <input 
-                    type="file" 
+                  <label>Imagen 2 (Opcional, máximo 4MB)</label>
+                  <input
+                    type="file"
                     accept="image/jpeg, image/jpg, image/png"
                     onChange={e => handleImageUpload(e, 'image_url_2')}
+                    disabled={uploadingField.image_url_2}
                   />
+                  {uploadingField.image_url_2 && <small>Subiendo...</small>}
+                  {uploadError.image_url_2 && <small className="upload-error-text">⚠ {uploadError.image_url_2}</small>}
                   {newProduct.image_url_2 && (
                     <div style={{marginTop: '10px'}}><img src={newProduct.image_url_2} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Imagen 3 (Opcional)</label>
-                  <input 
-                    type="file" 
+                  <label>Imagen 3 (Opcional, máximo 4MB)</label>
+                  <input
+                    type="file"
                     accept="image/jpeg, image/jpg, image/png"
                     onChange={e => handleImageUpload(e, 'image_url_3')}
+                    disabled={uploadingField.image_url_3}
                   />
+                  {uploadingField.image_url_3 && <small>Subiendo...</small>}
+                  {uploadError.image_url_3 && <small className="upload-error-text">⚠ {uploadError.image_url_3}</small>}
                   {newProduct.image_url_3 && (
                     <div style={{marginTop: '10px'}}><img src={newProduct.image_url_3} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
                   )}
@@ -517,23 +557,29 @@ const SellerProducts = () => {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Imagen 4 (Opcional)</label>
-                  <input 
-                    type="file" 
+                  <label>Imagen 4 (Opcional, máximo 4MB)</label>
+                  <input
+                    type="file"
                     accept="image/jpeg, image/jpg, image/png"
                     onChange={e => handleImageUpload(e, 'image_url_4')}
+                    disabled={uploadingField.image_url_4}
                   />
+                  {uploadingField.image_url_4 && <small>Subiendo...</small>}
+                  {uploadError.image_url_4 && <small className="upload-error-text">⚠ {uploadError.image_url_4}</small>}
                   {newProduct.image_url_4 && (
                     <div style={{marginTop: '10px'}}><img src={newProduct.image_url_4} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Imagen 5 (Opcional)</label>
-                  <input 
-                    type="file" 
+                  <label>Imagen 5 (Opcional, máximo 4MB)</label>
+                  <input
+                    type="file"
                     accept="image/jpeg, image/jpg, image/png"
                     onChange={e => handleImageUpload(e, 'image_url_5')}
+                    disabled={uploadingField.image_url_5}
                   />
+                  {uploadingField.image_url_5 && <small>Subiendo...</small>}
+                  {uploadError.image_url_5 && <small className="upload-error-text">⚠ {uploadError.image_url_5}</small>}
                   {newProduct.image_url_5 && (
                     <div style={{marginTop: '10px'}}><img src={newProduct.image_url_5} alt="Preview" style={{height: '60px', borderRadius: '4px', objectFit: 'cover'}} /></div>
                   )}
@@ -610,8 +656,8 @@ const SellerProducts = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={handleCloseModal}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={addingProduct}>
-                  {addingProduct ? (isEditing ? 'Actualizando...' : 'Agregando...') : (isEditing ? 'Actualizar Producto' : 'Guardar Producto')}
+                <button type="submit" className="btn-primary" disabled={addingProduct || isUploadingAnyImage}>
+                  {addingProduct ? (isEditing ? 'Actualizando...' : 'Agregando...') : isUploadingAnyImage ? 'Subiendo imagen...' : (isEditing ? 'Actualizar Producto' : 'Guardar Producto')}
                 </button>
               </div>
             </form>
