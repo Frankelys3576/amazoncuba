@@ -6,6 +6,42 @@ import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import ZelleWarningModal from '../components/ZelleWarningModal';
 import './Cart.css';
 
+// Mismo tope que el backend (orders.service.ts: MAX_ITEM_QUANTITY).
+const MAX_ORDER_QUANTITY = 1000;
+
+// El desplegable anterior solo ofrecía hasta 10 opciones aunque hubiera más
+// stock. Un componente aparte (en vez de un solo estado en Cart) porque
+// cada fila necesita su propio "borrador" mientras se escribe -- confirmar
+// cada tecla contra el contexto del carrito reescribiría el valor a mitad
+// de que el cliente todavía está tecleando un número de varios dígitos.
+const CartQuantityInput = ({ item, onCommit }) => {
+  const maxQuantity = Math.max(1, Math.min(MAX_ORDER_QUANTITY, item.stock || MAX_ORDER_QUANTITY));
+  const [draft, setDraft] = useState(String(item.quantity > maxQuantity ? maxQuantity : item.quantity));
+
+  const clamp = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 1) return 1;
+    return Math.min(Math.floor(n), maxQuantity);
+  };
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={1}
+      max={maxQuantity}
+      className="quantity-input"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        const clamped = clamp(draft);
+        setDraft(String(clamped));
+        onCommit(item.id, clamped);
+      }}
+    />
+  );
+};
+
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, cartTotal, cartCount } = useCart();
   const [isZelleModalOpen, setIsZelleModalOpen] = useState(false);
@@ -70,14 +106,8 @@ const Cart = () => {
                     
                     <div className="cart-item-actions">
                       <div className="quantity-control">
-                        <select 
-                          value={item.quantity > item.stock ? item.stock : item.quantity}
-                          onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
-                        >
-                          {[...Array(Math.min(item.stock, 10)).keys()].map(n => (
-                            <option key={n+1} value={n+1}>Qty: {n+1}</option>
-                          ))}
-                        </select>
+                        <span className="quantity-control-label">Cant:</span>
+                        <CartQuantityInput item={item} onCommit={updateQuantity} />
                       </div>
                       <span className="separator">|</span>
                       <button className="action-link" onClick={() => removeFromCart(item.id)}>Eliminar</button>

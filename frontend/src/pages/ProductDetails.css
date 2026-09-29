@@ -335,12 +335,22 @@
   border: 1px solid var(--amazon-border);
 }
 
-.quantity-selector select {
+.quantity-selector select,
+.quantity-selector input[type="number"] {
   background: transparent;
   border: none;
   font-size: 14px;
   font-family: inherit;
   outline: none;
+}
+
+.quantity-selector input[type="number"] {
+  width: 60px;
+}
+
+.quantity-max-hint {
+  font-size: 12px;
+  color: var(--amazon-text-light);
 }
 
 .btn-block {

@@ -8,6 +8,9 @@ import { getValidImageUrl, handleImageError } from '../utils/imageUtils';
 import ZelleWarningModal from '../components/ZelleWarningModal';
 import './ProductDetails.css';
 
+// Mismo tope que el backend (orders.service.ts: MAX_ITEM_QUANTITY).
+const MAX_ORDER_QUANTITY = 1000;
+
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -118,6 +121,17 @@ const ProductDetails = () => {
   const descriptionText = (product.description || '').replace(/^\[RESERVACIÓN\]\s*/i, '');
   const showZellePrice = product.store_accepts_zelle && product.price_usd;
 
+  // El desplegable anterior solo ofrecía hasta 10 opciones aunque hubiera
+  // más stock; ahora se escribe la cantidad, con el tope real del sistema
+  // (orders.service.ts: MAX_ITEM_QUANTITY = 1000), no un límite artificial
+  // de la interfaz.
+  const maxQuantity = Math.max(1, Math.min(MAX_ORDER_QUANTITY, Number(product.stock) || MAX_ORDER_QUANTITY));
+  const clampQuantity = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 1) return 1;
+    return Math.min(Math.floor(n), maxQuantity);
+  };
+
   // El teléfono de la tienda se guarda a veces con el código de país (53) y a
   // veces sin él -- este cálculo se repetía igual para el link de llamada y
   // el de WhatsApp, así que vive una sola vez aquí.
@@ -125,7 +139,12 @@ const ProductDetails = () => {
   const storePhoneWithCountryCode = storePhoneDigits.startsWith('53') ? storePhoneDigits : `53${storePhoneDigits}`;
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    // Por si el cliente hace clic sin haber salido del campo (blur) todavía
+    // -- p.ej. escribió y le dio Enter, o tocó el botón directo en móvil --
+    // así el carrito nunca recibe un valor vacío o fuera de rango.
+    const finalQuantity = clampQuantity(quantity);
+    if (finalQuantity !== quantity) setQuantity(finalQuantity);
+    addToCart(product, finalQuantity);
     if (product?.store_accepts_zelle) {
       setIsZelleModalOpen(true);
     }
@@ -278,15 +297,17 @@ const ProductDetails = () => {
 
             <div className="quantity-selector">
               <label htmlFor="quantity">Cantidad: </label>
-              <select
+              <input
+                type="number"
                 id="quantity"
+                inputMode="numeric"
+                min={1}
+                max={maxQuantity}
                 value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              >
-                {[...Array(Math.max(1, Math.min(10, Number(product.stock) || 1))).keys()].map(n => (
-                  <option key={n+1} value={n+1}>{n+1}</option>
-                ))}
-              </select>
+                onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+                onBlur={() => setQuantity(clampQuantity(quantity))}
+              />
+              <span className="quantity-max-hint">de {maxQuantity} disponibles</span>
             </div>
 
             <button

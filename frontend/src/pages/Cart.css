@@ -95,12 +95,27 @@
   margin-top: auto;
 }
 
-.quantity-control select {
-  padding: 5px;
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quantity-control-label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.quantity-control select,
+.quantity-control .quantity-input {
+  padding: 5px 8px;
   border-radius: var(--border-radius-sm);
   border: 1px solid #cbd5e1;
   background-color: #f1f5f9;
   outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  width: 56px;
 }
 
 .separator {
