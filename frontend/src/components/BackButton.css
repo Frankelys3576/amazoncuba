@@ -1,0 +1,36 @@
+.back-floating-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 20px;
+  z-index: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--amazon-text, #0f1111);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.back-floating-btn:hover {
+  background-color: #2c2c2c;
+  transform: translateY(-2px);
+}
+
+.back-floating-btn:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 992px) {
+  .back-floating-btn {
+    left: 24px;
+    bottom: 24px;
+  }
+}

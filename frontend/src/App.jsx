@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import BackButton from './components/BackButton';
 import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
@@ -40,6 +41,7 @@ function App() {
             <Route path="/:id" element={<StoreDetails />} />
           </Routes>
         </main>
+        <BackButton />
         <Footer />
       </div>
     </Router>
