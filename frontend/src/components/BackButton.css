@@ -9,19 +9,37 @@
   padding: 10px 16px;
   border: none;
   border-radius: 999px;
-  background-color: var(--amazon-text, #0f1111);
+  background-color: #1565d8;
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 14px rgba(21, 101, 216, 0.4);
   transition: transform 0.15s ease, background-color 0.15s ease;
+  /* Mismo pulso que el selector de provincia/municipio del menú
+     (Navbar.css: nav-location-pulse), para que llame la atención igual. */
+  animation: back-btn-pulse 1.6s ease-in-out infinite;
 }
 
 .back-floating-btn:hover {
-  background-color: #2c2c2c;
+  background-color: #0d4fb0;
   transform: translateY(-2px);
+}
+
+@keyframes back-btn-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(21, 101, 216, 0.4), 0 0 0 0 rgba(21, 101, 216, 0.65);
+  }
+  50% {
+    box-shadow: 0 4px 14px rgba(21, 101, 216, 0.4), 0 0 0 14px rgba(21, 101, 216, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-floating-btn {
+    animation: none;
+  }
 }
 
 .back-floating-btn:active {
